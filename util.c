@@ -18,9 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <sys/socket.h>
 #include <linux/if_arp.h>
-#include "refobj.h"
 #include <unistd.h>
 #include <fcntl.h>
+
+#include "refobj.h"
 
 void setflag(void *obj, void *flag, int flags) {
 	int *flg = flag;

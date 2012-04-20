@@ -17,34 +17,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/un.h>
-#include <linux/if_tun.h>
-#include <linux/if_packet.h>
 #include <linux/if_arp.h>
 #include <linux/ip.h>
-#include <linux/sockios.h>
 #include <netinet/in.h>
-#include <fcntl.h>
-#include <stdlib.h>
+#include <sys/un.h>
+#include <string.h>
 #include <stdio.h>
-#include <errno.h>
-#include <signal.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
 #include <pthread.h>
 #include <sys/mman.h>
 
 #include "taploop.h"
 #include "tlsock.h"
 #include "refobj.h"
-#include "util.h"
 #include "thread.h"
 #include "vlan.h"
-
-/* Use uthash lists
- * Copyright (c) 2007-2011, Troy D. Hanson   http://uthash.sourceforge.net All rights reserved.
- */
-#include "utlist.h"
 
 void frame_handler_ipv4(struct ethhdr *fr, void *packet, int *plen) {
 	struct iphdr *ip;
@@ -157,129 +146,6 @@ static void sig_handler(int sig, siginfo_t *si, void *unused) {
 	exit(0);
 }
 
-void *clientsock_client(void *data) {
-	struct tl_thread *thread = data;
-	int fd = *(int*)thread->data;
-
-	setflag(thread, &thread->flags, TL_THREAD_RUN);
-
-	int len = 256;
-	char buff[256];
-	len = read(fd, buff, len);
-	printf("Connected %s %i\n", buff, len);
-	*(int *)thread->data = -1;
-	close(fd);
-
-	setflag(thread, &thread->flags, TL_THREAD_DONE);
-
-	return NULL;
-}
-
-/*
- * cleanup routine for client sock
- */
-void delclientsock_client(void *data) {
-	int fd = *(int *)data;
-
-	if (fd >= 0) {
-		close(fd);
-	}
-	objunref(data);
-
-	return;
-}
-
-/*
- * client sock server
- */
-void *clientsock_serv(void *data) {
-	struct tl_thread *thread = data;
-	char *sock = thread->data;
-	struct sockaddr_un	adr;
-	int fd;
-	unsigned int salen;
-	fd_set	rd_set, act_set;
-	int selfd;
-	struct	timeval	tv;
-	int *clfd;
-
-	setflag(thread, &thread->flags, TL_THREAD_RUN);
-
-	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
-		return NULL;
-	}
-
-	fcntl(fd, F_SETFD, O_NONBLOCK);
-	memset(&adr, 0, sizeof(adr));
-	adr.sun_family = PF_UNIX;
-	salen = sizeof(adr);
-	strncpy((char *)&adr.sun_path, sock, sizeof(adr.sun_path) -1);
-
-	if (bind(fd, (struct sockaddr *)&adr, salen)) {
-		if (errno == EADDRINUSE) {
-			/* delete old file*/
-			unlink(sock);
-			if (bind(fd, (struct sockaddr *)&adr, sizeof(struct sockaddr_un))) {
-				perror("clientsock_serv (bind)");
-				close(fd);
-				return NULL;
-			}
-		} else {
-			perror("clientsock_serv (bind)");
-			close(fd);
-			return NULL;
-		}
-	}
-
-	if (listen(fd, 10)) {
-		perror("client sock_serv (listen)");
-		close(fd);
-		return NULL;
-	}
-
-	FD_ZERO(&rd_set);
-	FD_SET(fd, &rd_set);
-
-	while (testflag(thread, &thread->flags, TL_THREAD_RUN)) {
-		act_set = rd_set;
-		tv.tv_sec = 0;
-		tv.tv_usec = 2000;
-
-		selfd = select(fd + 1, &act_set, NULL, NULL, &tv);
-
-		/*returned due to interupt continue or timed out*/
-		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
-     			continue;
-		} else if (selfd < 0) {
-			break;
-		}
-
-		if (FD_ISSET(fd, &act_set)) {
-			clfd = objalloc(sizeof(int));
-			if ((*clfd = accept(fd, (struct sockaddr *)&adr, &salen))) {
-				mkthread(clientsock_client, delclientsock_client, clfd, TL_THREAD_NONE);
-			} else {
-				objunref(clfd);
-			}
-		}
-	}
-
-	setflag(thread, &thread->flags, TL_THREAD_DONE);
-	return NULL;
-};
-
-/*
- * cleanup routine for client sock
- */
-void delclientsock_serv(void *data) {
-	char *sock = data;
-
-	/* delete sock*/
-	unlink(sock);
-
-	return;
-}
-
 void *clientcon(void *data) {
 	struct tl_thread *thread = data;
 	char *sock = thread->data;
@@ -352,7 +218,7 @@ int main(int argc, char *argv[]) {
 	manage = mkthread(managethread, NULL, NULL, TL_THREAD_NONE);
 
 	/*client socket to allow client to connect*/
-	mkthread(clientsock_serv, delclientsock_serv, clsock, TL_THREAD_NONE);
+	clientserv_run();
 
 	/* the bellow should be controlled by client not daemon*/
 	if (argc >= 3) {

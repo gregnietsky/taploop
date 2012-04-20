@@ -35,3 +35,5 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
 /* tun/tap clone device and client socket*/
 char	*tundev;
 char	*clsock;
+
+void clientserv_run(void);

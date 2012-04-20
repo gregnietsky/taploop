@@ -18,21 +18,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <sys/un.h>
 #include <linux/if_tun.h>
-#include <linux/if_packet.h>
 #include <linux/if_arp.h>
-#include <linux/ip.h>
-#include <linux/sockios.h>
 #include <netinet/in.h>
+#include <string.h>
 #include <fcntl.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include <signal.h>
 #include <unistd.h>
-#include <pthread.h>
+
+/* use ring buffer af_packet*/
 #include <sys/mman.h>
+#include <linux/if_packet.h>
+#include <linux/sockios.h>
 
 #include "taploop.h"
 #include "tlsock.h"
