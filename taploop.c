@@ -20,6 +20,8 @@
 #include <pthread.h>
 #include <sys/mman.h>
 
+#include "refobj.h"
+
 /* Use uthash lists
  * Copyright (c) 2007-2011, Troy D. Hanson   http://uthash.sourceforge.net All rights reserved.
  */
@@ -44,30 +46,6 @@ enum threadopt {
 	TL_THREAD_DONE	= 1 << 2,
 	/* This is a taploop*/
 	TL_THREAD_TAP	= 1 << 3,
-};
-
-/* ref counted objects*/
-struct ref_obj {
-	int	magic;
-	int	cnt;
-	pthread_mutex_t		lock;
-	void *data;
-};
-
-/* bucket list obj*/
-struct blist_obj {
-	int	bucket;
-	int	hash;
-	struct	blist_obj *next;
-	struct	blist_obj *prev;
-	struct	ref_obj	*data;
-};
-
-/*bucket list to hold hashed objects in buckets*/
-struct bucket_list {
-	unsigned short	buckets;	/* number of buckets to create 2 ^ n masks hash*/
-	struct blist_obj *list;		/* array of blist_obj[buckets]*/
-	int	(*hash_func)(void *data);
 };
 
 /* socket entry*/
@@ -109,87 +87,6 @@ struct threadlist *threads;
 /* tun/tap clone device and client socket*/
 char	*tundev = "/dev/net/tun";
 char	*clsock = "/tmp/tlsock";
-
-void *objalloc(int size) {
-	struct ref_obj *ref;
-	size = size+32;
-	void *robj;
-
-	if ((robj = malloc(size))) {
-		memset(robj, 0, size);
-		ref = (struct ref_obj*)robj;
-		pthread_mutex_init(&ref->lock, NULL);
-		ref->magic = 0xdeadc0de;
-		ref->cnt++;
-		return robj + 32;
-	}
-	return NULL;
-}
-
-int objref(void *data) {
-	int ret = 0;
-
-	if (!data) {
-		return ret;
-	}
-
-	struct ref_obj *ref = data - 32;
-	if ((ref->magic == 0xdeadc0de) && (ref->cnt)) {
-		pthread_mutex_lock(&ref->lock);
-		ref->cnt++;
-		ret = ref->cnt;
-		pthread_mutex_unlock(&ref->lock);
-	}
-	return ret;
-}
-
-int objunref(void *data) {
-	int ret = 0;
-
-	if (!data) {
-		return ret;
-	}
-
-	struct ref_obj *ref = data - 32;
-	if ((ref->magic == 0xdeadc0de) && (ref->cnt)) {
-		pthread_mutex_lock(&ref->lock);
-		ref->cnt--;
-		ret = ref->cnt;
-		pthread_mutex_unlock(&ref->lock);
-		if (!ret) {
-			pthread_mutex_destroy(&ref->lock);
-			free(ref);
-		}
-	}
-	return ret;
-}
-
-int objcnt(void *data) {
-	int ret = -1;
-	struct ref_obj *ref = data - 32;
-	if (ref->magic == 0xdeadc0de) {
-		pthread_mutex_lock(&ref->lock);
-		ret = ref->cnt;
-		pthread_mutex_unlock(&ref->lock);
-	}
-	return ret;
-}
-
-void objlock(void *data) {
-	struct ref_obj *ref = data - 32;
-
-	if (ref->magic == 0xdeadc0de) {
-		pthread_mutex_lock(&ref->lock);
-	}
-}
-
-void objunlock(void *data) {
-	struct ref_obj *ref = data - 32;
-
-	if (ref->magic == 0xdeadc0de) {
-		pthread_mutex_unlock(&ref->lock);
-	}
-}
 
 void setflag(void *obj, void *flag, int flags) {
 	int *flg = flag;

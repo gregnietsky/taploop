@@ -4,18 +4,15 @@
 
 CFLAGS=-g -Wall -I./include
 
-TL_OBJS = taploop.o
+TL_OBJS = taploop.o refobj.o
 
 all: taploop
 
-install:
+install: all
 	echo "Put ME Where";
 
 clean:
 	rm -f taploop *.o core
-
-.o:
-	gcc -g -c $@
 
 taploop: $(TL_OBJS)
 	gcc -g -o $@ $^ -lpthread
