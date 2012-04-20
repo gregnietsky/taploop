@@ -21,8 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <linux/if_ether.h>
 #include <linux/sockios.h>
 #include <netinet/in.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -31,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "refobj.h"
 #include "util.h"
 #include "thread.h"
-#include "utlist.h"
+#include "list.h"
 
 int delete_kernvlan(int fd, char *ifname, int vid) {
 	struct vlan_ioctl_args vifr;
@@ -80,6 +78,7 @@ int create_kernvlan(char *ifname, int vid) {
  */
 void add_kernvlan(char *iface, int vid) {
 	struct taploop *tap = NULL;
+	struct threadlist *cur;
 	struct tl_thread *thread;
 	struct ifreq ifr;
 	struct sockaddr_ll sll;
@@ -95,7 +94,7 @@ void add_kernvlan(char *iface, int vid) {
 
 	/* check for existing loop*/
 	objlock(threads);
-	LL_FOREACH(threads->list, thread) {
+	LIST_FORWARD(threads->list, thread, cur) {
 		if (testflag(thread, &thread->flags, TL_THREAD_TAP)) {
 			tap = thread->data;
 			if (tap && !strncmp(tap->pdev, iface, IFNAMSIZ)) {
@@ -157,7 +156,7 @@ void add_kernvlan(char *iface, int vid) {
 		tlsock->vid = vid;
 		tlsock->flags = TL_SOCKET_8021Q;
 		objlock(tap);
-		LL_APPEND(tap->socks, tlsock);
+		LIST_ADD(tap->socks, tlsock);
 		objunlock(tap);
 	} else {
 		printf("Memmory error\n");

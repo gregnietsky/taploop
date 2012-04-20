@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 
 #include "thread.h"
-#include "utlist.h"
+#include "list.h"
 #include "refobj.h"
 #include "util.h"
 
@@ -53,7 +53,7 @@ struct tl_thread *mkthread(void *func, void *cleanup, void *data, enum threadopt
 	/* am i up and running move ref to list*/
 	if (!pthread_kill(thread->thr, 0)) {
 		objlock(threads);
-		LL_APPEND(threads->list, thread);
+		LIST_ADD(threads->list, thread);
 		objunlock(threads);
 		return thread;
 	} else {
@@ -66,7 +66,7 @@ struct tl_thread *mkthread(void *func, void *cleanup, void *data, enum threadopt
 /*
  * this is run to flag running threads to stop and clean up dead threads
  */
-void checkthread(struct tl_thread *thread, int stop) {
+void checkthread(struct tl_thread *thread, struct threadlist *cur, int stop) {
 	objlock(thread);
 
 	if (stop && (thread->flags & TL_THREAD_RUN) && !(thread->flags & TL_THREAD_DONE)) {
@@ -76,7 +76,7 @@ void checkthread(struct tl_thread *thread, int stop) {
 	}
 
 	if ((thread->flags & TL_THREAD_DONE) || pthread_kill(thread->thr, 0)){
-		LL_DELETE(threads->list, thread);
+		LIST_REMOVE_ENTRY(threads->list, cur);
 		if  (thread->cleanup) {
 			thread->cleanup(thread->data);
 		}
@@ -93,7 +93,8 @@ void checkthread(struct tl_thread *thread, int stop) {
  * setting stop will flag threads to stop
  */
 void verifythreads(int sl, int stop) {
-	struct tl_thread        *thread, *tmp;
+	struct tl_thread        *thread;
+	struct threadlist	*tmp, *cur;
 	pthread_t       me;
 
 	me =  pthread_self();
@@ -104,8 +105,8 @@ void verifythreads(int sl, int stop) {
 			break;
 		}
 
-		LL_FOREACH_SAFE(threads->list , thread, tmp) {
-			checkthread(thread, stop);
+		LIST_FORWARD_SAFE(threads->list , thread, cur, tmp) {
+			checkthread(thread, cur, stop);
 			/*this is my call im done*/
 			if ((pthread_equal(thread->thr, me)) &&
 			    (!(testflag(thread, &thread->flags, TL_THREAD_RUN)))) {
@@ -127,7 +128,6 @@ void *managethread(void *data) {
 	setflag(thread, &thread->flags, TL_THREAD_RUN);
 	verifythreads(100000, 0);
 	setflag(thread, &thread->flags, TL_THREAD_DONE);
-
 	return NULL;
 }
 

@@ -32,16 +32,21 @@ struct tl_thread {
 	enum			threadopt flags;
 	void			*(*cleanup)(void *data);
 	void			*data;
-	struct tl_thread	*next;
 };
 
 /* thread list*/
 struct threadlist {
-	struct tl_thread	*list;
+	struct tl_thread	*data;
+	struct threadlist	*next;
+	struct threadlist	*prev;
+};
+
+struct threadcontainer {
+	struct threadlist	*list;
 };
 
 struct tl_thread *mkthread(void *func, void *cleanup, void *data, enum threadopt flags);
 void verifythreads(int sl, int stop);
 void *managethread(void *data);
 
-struct threadlist *threads;
+struct threadcontainer *threads;

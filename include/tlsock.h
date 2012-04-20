@@ -27,6 +27,13 @@ enum sockopt {
 	TL_SOCKET_8021Q	= 1 << 2,
 };
 
+/* socklist linked list*/
+struct socketlist {
+	struct	tl_socket	*data;
+	struct	socketlist	*next;
+	struct	socketlist	*prev;
+};
+
 /* socket entry*/
 struct tl_socket {
 	int			sock;

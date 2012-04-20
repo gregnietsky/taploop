@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/socket.h>
 #include <linux/if_arp.h>
 
-typedef struct tl_socket tl_socket;
+typedef struct socketlist socketlist;
 
 /* taploop structure defining sockets dev names*/
 struct taploop {
@@ -30,7 +30,7 @@ struct taploop {
 	int		mmap_blks;	/*for mmap ring buffer phy sock*/
 	void		*mmap;		/*mmaap buffer phy sock*/
 	struct		iovec *ring;	/*ring buffer phy*/
-	struct		tl_socket *socks;
+	struct		socketlist *socks;
 };
 
 /* tun/tap clone device and client socket*/
