@@ -29,3 +29,9 @@ struct taploop {
 	struct		iovec *ring;	/*ring buffer phy*/
 	struct		tl_socket *socks;
 };
+
+void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket *sock, struct tl_socket *osock, int offset);
+
+/* tun/tap clone device and client socket*/
+char	*tundev;
+char	*clsock;

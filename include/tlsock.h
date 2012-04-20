@@ -34,3 +34,11 @@ struct tl_socket {
 	enum sockopt		flags;
 	struct tl_socket	*next;
 };
+
+struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy);
+struct tl_socket *phyopen(struct taploop *tap);
+void *stoptap(void *data);
+struct socketlist *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_set *rd_set);
+//void rbuffread(struct taploop *tap);
+void *mainloop(void *data);
+int add_taploop(char *dev, char *name);

@@ -16,7 +16,7 @@
 
 CFLAGS=-g -Wall -I./include
 
-TL_OBJS = taploop.o refobj.o util.o lookup3.o thread.o vlan.o
+TL_OBJS = taploop.o refobj.o util.o lookup3.o thread.o vlan.o tlsock.o
 
 all: taploop
 
