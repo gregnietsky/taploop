@@ -17,9 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <string.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <signal.h>
 #include <pthread.h>
 
@@ -28,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "refobj.h"
 #include "thread.h"
 #include "vlan.h"
+#include "list.h"
 
 void clientserv_run(void);
 
@@ -83,7 +82,7 @@ int main(int argc, char *argv[]) {
 
 	/*init the threadlist start thread manager*/
 	threads = objalloc(sizeof(*threads));
-	threads->list = NULL;
+	LIST_INIT(threads->list, NULL);
 	manage = mkthread(managethread, NULL, NULL, TL_THREAD_NONE);
 
 	/*client socket to allow client to connect*/

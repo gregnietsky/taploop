@@ -477,7 +477,7 @@ int add_taploop(char *dev, char *name) {
 
 	strncpy(tap->pdev, dev, IFNAMSIZ);
 	strncpy(tap->pname, name, IFNAMSIZ);
-	tap->socks = NULL;
+	LIST_INIT(tap->socks, NULL);
 	tap->ring = NULL;
 	tap->mmap = NULL;
 	tap->mmap_size = 0;
