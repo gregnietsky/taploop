@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012  Gregory Nietsky <gregory@distrotetch.co.za> 
+Copyright (C) 2012  Gregory Nietsky <gregory@distrotetch.co.za>
         http://www.distrotech.co.za
 
 This program is free software: you can redistribute it and/or modify
@@ -30,10 +30,6 @@ struct taploop {
 	struct		tl_socket *socks;
 };
 
-void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket *sock, struct tl_socket *osock, int offset);
-
 /* tun/tap clone device and client socket*/
 char	*tundev;
 char	*clsock;
-
-void clientserv_run(void);

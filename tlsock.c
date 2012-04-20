@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012  Gregory Nietsky <gregory@distrotetch.co.za> 
+Copyright (C) 2012  Gregory Nietsky <gregory@distrotetch.co.za>
         http://www.distrotech.co.za
 
 This program is free software: you can redistribute it and/or modify
@@ -38,6 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "util.h"
 #include "vlan.h"
 #include "thread.h"
+#include "packet.h"
 #include "utlist.h"
 
 /* tap the taploop struct

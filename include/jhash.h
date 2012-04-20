@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012  Gregory Nietsky <gregory@distrotetch.co.za> 
+Copyright (C) 2012  Gregory Nietsky <gregory@distrotetch.co.za>
         http://www.distrotech.co.za
 
 This program is free software: you can redistribute it and/or modify
