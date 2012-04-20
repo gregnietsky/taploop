@@ -29,7 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <linux/sockios.h>
 #include <netinet/in.h>
 #include <fcntl.h>
-#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -38,45 +37,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <sys/mman.h>
 
+#include "taploop.h"
 #include "refobj.h"
 #include "util.h"
 #include "thread.h"
+#include "vlan.h"
 
 /* Use uthash lists
  * Copyright (c) 2007-2011, Troy D. Hanson   http://uthash.sourceforge.net All rights reserved.
  */
 #include "utlist.h"
-
-/*socket flags*/
-enum sockopt {
-	TL_SOCKET_NONE	= 0,
-	/*this is the tap socket */
-	TL_SOCKET_VIRT	= 1 << 0,
-	/*this is the physical socket */
-	TL_SOCKET_PHY	= 1 << 1,
-	/*when writing to this socket do so as 802.1q if vid set*/
-	TL_SOCKET_8021Q	= 1 << 2,
-};
-
-/* socket entry*/
-struct tl_socket {
-	int	sock;
-	int	vid;		/* VLAN ID*/
-	enum sockopt flags;
-	struct	tl_socket	*next;
-};
-
-/* taploop structure defining sockets dev names*/
-struct taploop {
-	char	pname[IFNAMSIZ+1];
-	char	pdev[IFNAMSIZ+1];
-	unsigned char	hwaddr[ETH_ALEN];
-	int	mmap_size;	/*for mmap ring buffer phy sock*/
-	int	mmap_blks;	/*for mmap ring buffer phy sock*/
-	void	*mmap;		/*mmaap buffer phy sock*/
-	struct iovec *ring;	/*ring buffer phy*/
-	struct	tl_socket *socks;
-};
 
 /* tun/tap clone device and client socket*/
 char	*tundev = "/dev/net/tun";
@@ -305,139 +275,6 @@ struct tl_socket *phyopen(struct taploop *tap) {
 
 	return tlsock;
 }
-
-int delete_kernvlan(int fd, char *ifname, int vid) {
-	struct vlan_ioctl_args vifr;
-
-	memset(&vifr, 0, sizeof(vifr));
-	snprintf(vifr.device1, IFNAMSIZ, "%s.%i", ifname, vid);
-	vifr.u.VID = vid;
-	vifr.cmd = DEL_VLAN_CMD;
-
-	/*Create the vlan*/
-	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
-		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
-		close(fd);
-		return -1;
-	}
-	close(fd);
-	return 0;
-}
-
-int create_kernvlan(char *ifname, int vid) {
-	struct vlan_ioctl_args vifr;
-	int proto = htons(ETH_P_ALL);
-	int fd;
-
-	memset(&vifr, 0, sizeof(vifr));
-	strncpy(vifr.device1, ifname, IFNAMSIZ);
-	vifr.u.VID = vid;
-	vifr.cmd = ADD_VLAN_CMD;
-
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
-		return -1;
-	}
-
-	/*Create the vlan*/
-	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
-		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
-		close(fd);
-		return -1;
-	}
-	return fd;
-}
-
-/*
- * Create a VLAN on the device
- */
-void add_kernvlan(char *iface, int vid) {
-	struct taploop *tap = NULL;
-	struct tl_thread *thread;
-	struct ifreq ifr;
-	struct sockaddr_ll sll;
-	struct tl_socket *tlsock;
-	int proto = htons(ETH_P_ALL);
-	int fd;
-
-	/*check VID*/
-	if ((vid <= 0 ) || (vid > 0xFFF)) {
-		printf("Requested VID %i is out of range\n", vid);
-		return;
-	}
-
-	/* check for existing loop*/
-	objlock(threads);
-	LL_FOREACH(threads->list, thread) {
-		if (testflag(thread, &thread->flags, TL_THREAD_TAP)) {
-			tap = thread->data;
-			if (tap && !strncmp(tap->pdev, iface, IFNAMSIZ)) {
-				objref(tap);
-				break;
-			}
-			tap = NULL;
-		}
-	}
-	objunlock(threads);
-
-	if (!tap) {
-		return;
-	}
-
-	if ((fd = create_kernvlan(iface, vid)) < 0) {
-		objunref(tap);
-		return;
-	}
-
-	/*set the network dev up*/
-	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s.%i", iface, vid);
-	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
-	if (ioctl(fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-       		perror("ioctl(SIOCSIFFLAGS) failed\n");
-		delete_kernvlan(fd, iface, vid);
-		objunref(tap);
-	        return;
-	}
-
-	/* set the interface index for bind*/
-	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
-		perror("ioctl(SIOCGIFINDEX) failed\n");
-		delete_kernvlan(fd, iface, vid);
-		objunref(tap);
-		return;
-	}
-
-	/*bind to the interface*/
-	memset(&sll, 0, sizeof(sll));
-	sll.sll_family = PF_PACKET;
-	sll.sll_protocol = proto;
-	sll.sll_ifindex = ifr.ifr_ifindex;
-	if (bind(fd, (struct sockaddr *) &sll, sizeof(sll)) < 0) {
-		perror("bind(ETH_P_ALL) failed");
-		delete_kernvlan(fd, iface, vid);
-		objunref(tap);
-		return;
-	}
-
-	/* add the socket to tap socks list we will not add this
-	 * to select FD_SET as its a kernel vlan i may want to mangle
-	 * traffic to it so will keep it on the list.
-	 * when writing to this socket i need not append 802.1Q header
-	 */
-	if ((tlsock = objalloc(sizeof(*tlsock)))) {
-		tlsock->sock = fd;
-		tlsock->vid = vid;
-		tlsock->flags = TL_SOCKET_8021Q;
-		objlock(tap);
-		LL_APPEND(tap->socks, tlsock);
-		objunlock(tap);
-	} else {
-		printf("Memmory error\n");
-		delete_kernvlan(fd, iface, vid);
-	}
-	objunref(tap);
-};
 
 /*
  * close and free a tap loop
