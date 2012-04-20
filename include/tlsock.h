@@ -16,16 +16,21 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-typedef struct tl_socket tl_socket;
+/*socket flags*/
+enum sockopt {
+	TL_SOCKET_NONE	= 0,
+	/*this is the tap socket */
+	TL_SOCKET_VIRT	= 1 << 0,
+	/*this is the physical socket */
+	TL_SOCKET_PHY	= 1 << 1,
+	/*when writing to this socket do so as 802.1q if vid set*/
+	TL_SOCKET_8021Q	= 1 << 2,
+};
 
-/* taploop structure defining sockets dev names*/
-struct taploop {
-	char		pname[IFNAMSIZ+1];
-	char		pdev[IFNAMSIZ+1];
-	unsigned char	hwaddr[ETH_ALEN];
-	int		mmap_size;	/*for mmap ring buffer phy sock*/
-	int		mmap_blks;	/*for mmap ring buffer phy sock*/
-	void		*mmap;		/*mmaap buffer phy sock*/
-	struct		iovec *ring;	/*ring buffer phy*/
-	struct		tl_socket *socks;
+/* socket entry*/
+struct tl_socket {
+	int			sock;
+	int			vid;	/* VLAN ID*/
+	enum sockopt		flags;
+	struct tl_socket	*next;
 };
