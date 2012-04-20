@@ -19,6 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+#include <jhash.h>
+
+#define REFOBJ_MAGIC            0xdeadc0de
 
 /* ref counted objects*/
 struct ref_obj {
@@ -53,7 +56,7 @@ void *objalloc(int size) {
                 memset(robj, 0, size);
                 ref = (struct ref_obj*)robj;
                 pthread_mutex_init(&ref->lock, NULL);
-                ref->magic = 0xdeadc0de;
+                ref->magic = REFOBJ_MAGIC;
                 ref->cnt++;
                 return robj + 32;
         }
@@ -68,7 +71,7 @@ int objref(void *data) {
         }
 
         struct ref_obj *ref = data - 32;
-        if ((ref->magic == 0xdeadc0de) && (ref->cnt)) {
+        if ((ref->magic == REFOBJ_MAGIC) && (ref->cnt)) {
                 pthread_mutex_lock(&ref->lock);
                 ref->cnt++;
                 ret = ref->cnt;
@@ -85,7 +88,7 @@ int objunref(void *data) {
         }
 
         struct ref_obj *ref = data - 32;
-        if ((ref->magic == 0xdeadc0de) && (ref->cnt)) {
+        if ((ref->magic == REFOBJ_MAGIC) && (ref->cnt)) {
                 pthread_mutex_lock(&ref->lock);
                 ref->cnt--;
                 ret = ref->cnt;
@@ -101,7 +104,7 @@ int objunref(void *data) {
 int objcnt(void *data) {
         int ret = -1;
         struct ref_obj *ref = data - 32;
-        if (ref->magic == 0xdeadc0de) {
+        if (ref->magic == REFOBJ_MAGIC) {
                 pthread_mutex_lock(&ref->lock);
                 ret = ref->cnt;
                 pthread_mutex_unlock(&ref->lock);
@@ -112,7 +115,7 @@ int objcnt(void *data) {
 void objlock(void *data) {
         struct ref_obj *ref = data - 32;
 
-        if (ref->magic == 0xdeadc0de) {
+        if (ref->magic == REFOBJ_MAGIC) {
                 pthread_mutex_lock(&ref->lock);
         }
 }
@@ -120,7 +123,7 @@ void objlock(void *data) {
 void objunlock(void *data) {
         struct ref_obj *ref = data - 32;
 
-        if (ref->magic == 0xdeadc0de) {
+        if (ref->magic == REFOBJ_MAGIC) {
                 pthread_mutex_unlock(&ref->lock);
         }
 }
