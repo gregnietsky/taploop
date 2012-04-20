@@ -18,11 +18,12 @@
 #include <signal.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/mman.h>
 
 /* Use uthash lists
  * Copyright (c) 2007-2011, Troy D. Hanson   http://uthash.sourceforge.net All rights reserved.
  */
-#include "uthash/utlist.h"
+#include "utlist.h"
 
 /*socket flags*/
 enum sockopt {
@@ -53,10 +54,26 @@ struct ref_obj {
 	void *data;
 };
 
+/* bucket list obj*/
+struct blist_obj {
+	int	bucket;
+	int	hash;
+	struct	blist_obj *next;
+	struct	blist_obj *prev;
+	struct	ref_obj	*data;
+};
+
+/*bucket list to hold hashed objects in buckets*/
+struct bucket_list {
+	unsigned short	buckets;	/* number of buckets to create 2 ^ n masks hash*/
+	struct blist_obj *list;		/* array of blist_obj[buckets]*/
+	int	(*hash_func)(void *data);
+};
+
 /* socket entry*/
 struct tl_socket {
 	int	sock;
-	int	vid;	/* VLAN ID*/
+	int	vid;		/* VLAN ID*/
 	enum sockopt flags;
 	struct	tl_socket	*next;
 };
@@ -66,6 +83,10 @@ struct taploop {
 	char	pname[IFNAMSIZ+1];
 	char	pdev[IFNAMSIZ+1];
 	unsigned char	hwaddr[ETH_ALEN];
+	int	mmap_size;	/*for mmap ring buffer phy sock*/
+	int	mmap_blks;	/*for mmap ring buffer phy sock*/
+	void	*mmap;		/*mmaap buffer phy sock*/
+	struct iovec *ring;	/*ring buffer phy*/
 	struct	tl_socket *socks;
 };
 
@@ -94,7 +115,7 @@ void *objalloc(int size) {
 	size = size+32;
 	void *robj;
 
-	if (robj = malloc(size)) {
+	if ((robj = malloc(size))) {
 		memset(robj, 0, size);
 		ref = (struct ref_obj*)robj;
 		pthread_mutex_init(&ref->lock, NULL);
@@ -155,16 +176,16 @@ int objcnt(void *data) {
 }
 
 void objlock(void *data) {
-	int ret = -1;
 	struct ref_obj *ref = data - 32;
+
 	if (ref->magic == 0xdeadc0de) {
 		pthread_mutex_lock(&ref->lock);
 	}
 }
 
 void objunlock(void *data) {
-	int ret = -1;
 	struct ref_obj *ref = data - 32;
+
 	if (ref->magic == 0xdeadc0de) {
 		pthread_mutex_unlock(&ref->lock);
 	}
@@ -193,6 +214,23 @@ int testflag(void *obj, void *flag, int flags) {
 	return ret;
 }
 
+/*
+ * read from /dev/random
+ */
+void linrand(void *buf, int len) {
+	int fd = open("/dev/random", O_RDONLY);
+
+	read(fd, buf, len);
+	close(fd);
+}
+
+void randhwaddr(unsigned char *addr) {
+	linrand(addr, ETH_ALEN);
+	addr [0] &= 0xfe;       /* clear multicast bit */
+	addr [0] |= 0x02;       /* set local assignment bit (IEEE802) */
+}
+
+
 /* tap the taploop struct
  * hwaddr used to set the tap device MAC adddress
  */
@@ -200,7 +238,6 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
 	struct ifreq ifr;
 	struct tl_socket *tlsock;
 	int fd;
-	int proto = htons(ETH_P_ALL);
 
 	/* open the tun/tap clone dev*/
  	if ((fd = open(tundev, O_RDWR)) < 0) {
@@ -237,7 +274,7 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
 	        return NULL;
 	}
 
-	if (tlsock = objalloc(sizeof(*tlsock))) {
+	if ((tlsock = objalloc(sizeof(*tlsock)))) {
 		/*passing ref back*/
 		objref(tlsock);
 		tlsock->sock = fd;
@@ -257,8 +294,11 @@ struct tl_socket *phyopen(struct taploop *tap) {
 	struct ifreq ifr;
 	struct sockaddr_ll sll;
 	struct tl_socket *tlsock;
+	struct tpacket_req reqr;
 	int proto = htons(ETH_P_ALL);
-	int fd;
+	int fd, mapsiz = 0;
+	void *rxmmbuf = NULL;
+	struct iovec *ring = NULL;
 
 	/* open network raw socket */
 	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
@@ -305,12 +345,55 @@ struct tl_socket *phyopen(struct taploop *tap) {
 	        return NULL;
 	}
 
-	/* set the interface index for bind*/
-	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
-		perror("ioctl(SIOCGIFINDEX) failed\n");
+
+#ifdef PACKET_MMAP_RX
+	/* Setup the fd for mmap() ring buffer RX*/
+	reqr.tp_block_size=8192; /*multiple of pagesize and power of 2 8192 seems best*/
+	reqr.tp_block_nr=64;
+	reqr.tp_frame_size=2048; /*must be a multiple of TPACKET_ALIGNMENT */
+	reqr.tp_frame_nr= (reqr.tp_block_size / reqr.tp_frame_size) * reqr.tp_block_nr; /*must be exactly frames_per_block*tp_block_nr*/
+	mapsiz = reqr.tp_block_size * reqr.tp_block_nr;
+
+	/*enable RX Ring Buff*/
+	if (setsockopt(fd, SOL_PACKET, PACKET_RX_RING, (char *)&reqr, sizeof(reqr))) {
+		perror("setsockopt(PACKET_RX_RING)");
+		close(fd);
+		return NULL;
+	};
+
+	/*mmap the memory*/
+	if ((rxmmbuf = mmap(NULL, mapsiz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0)) == MAP_FAILED) {
+		perror("mmap()");
 		close(fd);
 		return NULL;
 	}
+
+	/* configure ring buff*/
+	if (ring = objalloc(reqr.tp_frame_nr * sizeof(struct iovec))) {
+		int i;
+		for(i=0; i<reqr.tp_frame_nr; i++) {
+			ring[i].iov_base=(void *)((long)rxmmbuf)+(i*reqr.tp_frame_size);
+			ring[i].iov_len=reqr.tp_frame_size;
+		}
+	} else {
+		munmap(rxmmbuf, mapsiz);
+		close(fd);
+	}
+#endif
+
+	/* set the interface index for bind*/
+	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
+		perror("ioctl(SIOCGIFINDEX) failed\n");
+		if (rxmmbuf) {
+			munmap(rxmmbuf, mapsiz);
+		}
+		close(fd);
+		if (ring) {
+			objunref(ring);
+		}
+		return NULL;
+	}
+
 
 	/*bind to the interface*/
 	memset(&sll, 0, sizeof(sll));
@@ -319,20 +402,39 @@ struct tl_socket *phyopen(struct taploop *tap) {
 	sll.sll_ifindex = ifr.ifr_ifindex;
 	if (bind(fd, (struct sockaddr *) &sll, sizeof(sll)) < 0) {
 		perror("bind(ETH_P_ALL) failed");
+		if (rxmmbuf) {
+			munmap(rxmmbuf, mapsiz);
+		}
 		close(fd);
+		if (ring) {
+			objunref(ring);
+		}
 		return NULL;
 	}
 
-	if (tlsock = objalloc(sizeof(*tlsock))) {
+	if ((tlsock = objalloc(sizeof(*tlsock)))) {
 		/*passing ref back*/
 		objref(tlsock);
 		tlsock->sock = fd;
 		tlsock->vid = 0;
 		tlsock->flags = TL_SOCKET_PHY;
 		objlock(tap);
+		tap->mmap_blks = reqr.tp_frame_nr;
+		tap->mmap_size = reqr.tp_block_size;
+		tap->mmap = rxmmbuf;
+		tap->ring = ring;
 		LL_APPEND(tap->socks, tlsock);
 		objunlock(tap);
+	} else {
+		if (rxmmbuf) {
+			munmap(rxmmbuf, mapsiz);
+		}
+		close(fd);
+		if (ring) {
+			objunref(ring);
+		}
 	}
+
 	return tlsock;
 }
 
@@ -351,6 +453,7 @@ int delete_kernvlan(int fd, char *ifname, int vid) {
 		return -1;
 	}
 	close(fd);
+	return 0;
 }
 
 int create_kernvlan(char *ifname, int vid) {
@@ -386,9 +489,14 @@ void add_kernvlan(char *iface, int vid) {
 	struct ifreq ifr;
 	struct sockaddr_ll sll;
 	struct tl_socket *tlsock;
-	char name[IFNAMSIZ+1];
 	int proto = htons(ETH_P_ALL);
 	int fd;
+
+	/*check VID*/
+	if ((vid <= 0 ) || (vid > 0xFFF)) {
+		printf("Requested VID %i is out of range\n", vid);
+		return;
+	}
 
 	/* check for existing loop*/
 	objlock(threads);
@@ -449,7 +557,7 @@ void add_kernvlan(char *iface, int vid) {
 	 * traffic to it so will keep it on the list.
 	 * when writing to this socket i need not append 802.1Q header
 	 */
-	if (tlsock = objalloc(sizeof(*tlsock))) {
+	if ((tlsock = objalloc(sizeof(*tlsock)))) {
 		tlsock->sock = fd;
 		tlsock->vid = vid;
 		tlsock->flags = TL_SOCKET_8021Q;
@@ -518,27 +626,28 @@ void *stoptap(void *data) {
 		objunref(phy);
 	}
 
+	/* release mmap*/
+	if (tap->mmap) {
+		munmap(tap->mmap, tap->mmap_blks * tap->mmap_size);
+	}
+
+	if (tap->ring) {
+		objunref(tap->ring);
+	}
+
 	objunref(data);
 	return NULL;
 }
 
-void *frame_handler_ipv4(struct ethhdr *fr, void *frame, int *flen) {
+void frame_handler_ipv4(struct ethhdr *fr, void *packet, int *plen) {
 	struct iphdr *ip;
 	unsigned char	*src,*dest;
-	void *packet;
-	int len = *flen;
-	int plen;
 
-	/*get the packet length and payload*/
-	plen = len - sizeof(*fr);
-	packet = frame + (len - plen);
 	ip=(struct iphdr*)packet;
-
 	src=(unsigned char *)&ip->saddr;
 	dest=(unsigned char *)&ip->daddr;
 
 	printf("\tS: %03i.%03i.%03i.%03i D: %03i.%03i.%03i.%03i P:%i\n",src[0], src[1], src[2], src[3], dest[0], dest[1], dest[2], dest[3], ip->protocol);
-	return frame;
 };
 
 /*
@@ -548,72 +657,85 @@ void *frame_handler_ipv4(struct ethhdr *fr, void *frame, int *flen) {
  * PPPoE for pppoe relay to a specified dsl port
  * 802.1x pass this on to a authenticator maybe talk to radius ??
  */
-void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket *sock, struct tl_socket *osock) {
-	struct ethhdr	*fr = buffer;
-	void		*obuff;
+void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket *sock, struct tl_socket *osock, int offset) {
+	struct ethhdr	*fr = buffer+offset;
+	void		*packet;
+	unsigned short	etype, vhdr, vid = 0, cfi = 0, pcp =0;
+	int plen;
 
 	/* i cannot be smaller than a ether header*/
 	if (len < sizeof(*fr)) {
 		return;
 	}
-	fr->h_proto = ntohs(fr->h_proto);
+	etype = ntohs(fr->h_proto);
 
 	printf("Frame Of %i Bytes From %02x:%02x:%02x:%02x:%02x:%02x  To %02x:%02x:%02x:%02x:%02x:%02x type 0x%x\n", len, fr->h_source[0],
 		fr->h_source[1], fr->h_source[2],fr->h_source[3], fr->h_source[4], fr->h_source[5],
-		fr->h_dest[0], fr->h_dest[1], fr->h_dest[2], fr->h_dest[3], fr->h_dest[4], fr->h_dest[5], fr->h_proto);
+		fr->h_dest[0], fr->h_dest[1], fr->h_dest[2], fr->h_dest[3], fr->h_dest[4], fr->h_dest[5], etype);
 
-	/* frame handlers need to return obuff this packet will be written to the socket
-	 * this is a full ether frame and must include eth_hdr
+	/*get the packet length and payload
+	 * 8021Q is handled here so the protocol handlers get the packet
+	 */
+	if (etype == ETH_P_8021Q) {
+		plen = len - (sizeof(*fr));
+		packet = buffer + offset + (len - plen);
+		/* 2 byte VLAN Header*/
+		vhdr = ntohs(*(unsigned short *)packet);
+		/* 2 byte Real Protocol type*/
+		etype = ntohs(*(unsigned short*)(packet+2));
+		packet = packet + 4;
+		plen = plen - 4;
+
+		/* vid is 12 bits*/
+		vid = vhdr & 0xFFF;
+		cfi = (vhdr >> 12) & 0x1;
+		pcp = (vhdr >> 13);
+
+		printf("\tVID %i PCP %i CFI %i type 0x%x\n", vid, pcp, cfi, etype);
+	} else {
+		plen = len - (sizeof(*fr));
+		packet = buffer + offset + (len - plen);
+	}
+
+	/* frame handlers can mangle the packet and header
 	 * osock can be set to a alternate socket as a placehoder i set obuff to buffer
 	 */
 	switch (fr->h_proto) {
-		/* Vlan*/
-		case ETH_P_8021Q:
-			obuff = buffer;
-			break;
 		/* ARP*/
 		case ETH_P_ARP:
-			obuff = buffer;
 			break;
 		/* RARP*/
 		case ETH_P_RARP:
-			obuff = buffer;
 			break;
 		/* IPv4*/
-		case ETH_P_IP :
-			obuff = frame_handler_ipv4(fr, buffer, &len);
+		case ETH_P_IP : frame_handler_ipv4(fr, packet, &plen);
 			break;
 		/* IPv6*/
 		case ETH_P_IPV6:
-			obuff = buffer;
 			break;
 		/* PPPoE [DSL]*/
 		case ETH_P_PPP_DISC:
 		case ETH_P_PPP_SES:
-			obuff = buffer;
 			break;
 		/*802.1x*/
 		case ETH_P_PAE:
-			obuff = buffer;
 			break;
 		/* all other traffic ill pass on*/
 		default:
-			obuff = buffer;
 			break;
 	}
 
-	/* XXXXX
-	 * Need to check if this packet must be striped/added to a vlan
+	/* XXX
+	 * need routines and triggers to strip 802.1Q to phy
 	 */
 
-
-	/*Dispatch the packet if its not nulled and the socket is valid*/
-	if (obuff && osock->sock) {
+	/*Dispatch the packet if its not nulled [plen = 0] and the socket is valid*/
+	if (plen && osock && osock->sock) {
 		objlock(tap);
 		if ((osock->flags & TL_SOCKET_PHY) || (osock->flags & TL_SOCKET_8021Q)) {
-			send(osock->sock, obuff, len, 0);
+			send(osock->sock, buffer, len, 0);
 		} else {
-			write(osock->sock, obuff, len);
+			write(osock->sock, buffer, len);
 		}
 		objunlock(tap);
 	}
@@ -623,8 +745,6 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
  * return a socklist entry and add sock to fd_set
  */
 struct socketlist *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_set *rd_set) {
-	struct	socketlist *sl_ent;
-
 	if (tsock->sock > *maxfd) {
 		*maxfd = tsock->sock;
 	}
@@ -634,14 +754,37 @@ struct socketlist *addsocket(struct taploop *tap, struct  tl_socket *tsock, int 
 };
 
 /*
+void rbuffread(struct taploop *tap) {
+	int i=0;
+
+	while(*(unsigned long*)tap->ring[i].iov_base) {
+		struct tpacket_hdr *h=tap->ring[i].iov_base;
+		struct sockaddr_ll *sll=(void *)h + TPACKET_ALIGN(sizeof(*h));
+		unsigned char *bp=(unsigned char *)h + h->tp_mac;
+
+		printf("%u.%.6u: if%u %i %u bytes\n",
+			h->tp_sec, h->tp_usec,
+			sll->sll_ifindex,
+			sll->sll_pkttype,
+			h->tp_len);
+
+		h->tp_status=0;
+		i= (i == tap->mmap_blks-1) ? 0 : i+1;
+	}
+}
+*/
+
+/*
  * pass data between physical and tap
  */
 void *mainloop(void *data) {
 	struct tl_thread *thread = data;
 	struct taploop	*tap;
+	/* accomodate 802.1Q [4]*/
+	int buffsize = ETH_FRAME_LEN +4;
 	fd_set	rd_set, act_set;
-	char	buffer[ETH_FRAME_LEN];
-	int	maxfd, selfd, rlen, tmp;
+	char	buffer[buffsize];
+	int	maxfd, selfd, rlen;
 	struct	timeval	tv;
 	struct  tl_socket *tlsock, *osock, *phy, *virt, *sl_tmp;
 
@@ -673,17 +816,12 @@ void *mainloop(void *data) {
 
 	/* initialise tap device*/
 	maxfd++;
-	for(;;) {
+	while (testflag(thread, &thread->flags, TL_THREAD_RUN)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 2000;
 
 		selfd = select(maxfd, &act_set, NULL, NULL, &tv);
-
-		/* thread is ending*/
-		if (!testflag(thread, &thread->flags, TL_THREAD_RUN)) {
-			break;
-		}
 
 		/*returned due to interupt continue or timed out*/
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
@@ -695,14 +833,15 @@ void *mainloop(void *data) {
 		objlock(tap);
 		LL_FOREACH_SAFE(tap->socks, tlsock, sl_tmp) {
 			if (FD_ISSET(tlsock->sock, &act_set)) {
-				objunlock(tap);
 				/*set the default output socket can be changed in handler*/
 				/*make sure the socks dont disapear grab a ref as i my use them in a thread elsewhere*/
 				objref(tlsock);
+				objunlock(tap);
+
 				if ((tlsock->flags & TL_SOCKET_PHY) || (tlsock->flags & TL_SOCKET_8021Q)) {
-					rlen = recv(tlsock->sock, buffer, ETH_FRAME_LEN, 0);
+					rlen = recv(tlsock->sock, buffer, ETH_FRAME_LEN+4, 0);
 				} else {
-					rlen = read(tlsock->sock, buffer, ETH_FRAME_LEN);
+					rlen = read(tlsock->sock, buffer, ETH_FRAME_LEN+4);
 				}
 				if (rlen > 0) {
 					if (tlsock->flags & TL_SOCKET_PHY) {
@@ -710,11 +849,7 @@ void *mainloop(void *data) {
 					} else {
 						osock = phy;
 					}
-					objref(tap);
-					objref(osock);
-					process_packet(buffer, rlen, tap, tlsock, osock);
-					objunref(osock);
-					objunref(tap);
+					process_packet(buffer, rlen, tap, tlsock, osock, 0);
 
 				}
 				objunref(tlsock);
@@ -781,13 +916,12 @@ void verifythreads(int sl, int stop) {
 		LL_FOREACH_SAFE(threads->list , thread, tmp) {
 			checkthread(thread, stop);
 			/*this is my call im done*/
-			if (pthread_equal(thread->thr, me)) {
-				if (!(testflag(thread, &thread->flags, TL_THREAD_RUN))) {
-					setflag(thread, &thread->flags, TL_THREAD_DONE);
-					pthread_cancel(me);
-					pthread_detach(me);
-					break;
-				}
+			if ((pthread_equal(thread->thr, me)) &&
+			    (!(testflag(thread, &thread->flags, TL_THREAD_RUN)))) {
+				setflag(thread, &thread->flags, TL_THREAD_DONE);
+				pthread_cancel(me);
+				pthread_detach(me);
+				break;
 			}
 		}
 		objunlock(threads);
@@ -857,7 +991,7 @@ void *managethread(void *data) {
  * allocate and start a phy <-> tap thread
  */
 int add_taploop(char *dev, char *name) {
-	struct taploop		*tmp, *tap = NULL;
+	struct taploop		*tap = NULL;
 	struct tl_thread	*thread;
 
 	/* do not continue on zero  length options*/
@@ -869,21 +1003,25 @@ int add_taploop(char *dev, char *name) {
 	objlock(threads);
 	LL_FOREACH(threads->list, thread) {
 		if (testflag(thread, &thread->flags, TL_THREAD_TAP)) {
-			tmp = thread->data;
-			if (tmp && !strncmp(tmp->pdev, dev, IFNAMSIZ)) {
-				tap = tmp;
+			tap = thread->data;
+			if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
+				objunlock(threads);
+				return -1;
 			}
 		}
 	};
 	objunlock(threads);
 
-	if (tap || !(tap = objalloc(sizeof(*tap)))) {
+	if (!(tap = objalloc(sizeof(*tap)))) {
 		return -1;
 	}
 
 	strncpy(tap->pdev, dev, IFNAMSIZ);
 	strncpy(tap->pname, name, IFNAMSIZ);
 	tap->socks = NULL;
+	tap->ring = NULL;
+	tap->mmap = NULL;
+	tap->mmap_size = 0;
 
 	/* Start thread*/
 	return (mkthread(mainloop, stoptap, tap, TL_THREAD_TAP)) ? 0 : -1;
@@ -928,9 +1066,10 @@ void *clientsock_serv(void *data) {
 	struct tl_thread *thread = data;
 	char *sock = thread->data;
 	struct sockaddr_un	adr;
-	int fd, salen;
+	int fd;
+	unsigned int salen;
 	fd_set	rd_set, act_set;
-	int	maxfd, selfd, rlen, tmp;
+	int selfd;
 	struct	timeval	tv;
 	int *clfd;
 
@@ -970,16 +1109,13 @@ void *clientsock_serv(void *data) {
 
 	FD_ZERO(&rd_set);
 	FD_SET(fd, &rd_set);
-	for(;;) {
+
+	while (testflag(thread, &thread->flags, TL_THREAD_RUN)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 2000;
 
 		selfd = select(fd + 1, &act_set, NULL, NULL, &tv);
-		if (!testflag(thread, &thread->flags, TL_THREAD_RUN)) {
-			break;
-		}
-		objunlock(thread);
 
 		/*returned due to interupt continue or timed out*/
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
@@ -990,7 +1126,7 @@ void *clientsock_serv(void *data) {
 
 		if (FD_ISSET(fd, &act_set)) {
 			clfd = objalloc(sizeof(int));
-			if (*clfd = accept(fd, (struct sockaddr *)&adr, &salen)) {
+			if ((*clfd = accept(fd, (struct sockaddr *)&adr, &salen))) {
 				mkthread(clientsock_client, delclientsock_client, clfd, TL_THREAD_NONE);
 			} else {
 				objunref(clfd);
@@ -999,7 +1135,6 @@ void *clientsock_serv(void *data) {
 	}
 
 	setflag(thread, &thread->flags, TL_THREAD_DONE);
-
 	return NULL;
 };
 
@@ -1019,7 +1154,7 @@ void *clientcon(void *data) {
 	struct tl_thread *thread = data;
 	char *sock = thread->data;
 	struct sockaddr_un	adr;
-	int fd, salen, len, err;
+	int fd, salen;
 
 	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
 		perror("client connect (socket)");
@@ -1035,8 +1170,9 @@ void *clientcon(void *data) {
 		perror("clientcon (connect)");
 		return NULL;
 	}
-	len = write(fd, sock, strlen(sock)+1);
+	write(fd, sock, strlen(sock)+1);
 	close(fd);
+	return NULL;
 }
 
 /*
@@ -1076,35 +1212,36 @@ int main(int argc, char *argv[]) {
 	threads->list = NULL;
 	manage = mkthread(managethread, NULL, NULL, TL_THREAD_NONE);
 
-	if (argc == 3) {
+	/*client socket to allow client to connect*/
+	mkthread(clientsock_serv, delclientsock_serv, clsock, TL_THREAD_NONE);
+
+	/* the bellow should be controlled by client not daemon*/
+	if (argc >= 3) {
 		if (add_taploop(argv[1], argv[2])) {
 			printf("Failed to add taploop %s -> %s\n", argv[1], argv[2]);
 		} else {
-			sleep(3);
 			/*XXX this is for testing add static vlans 100/150/200*/
-			add_kernvlan(argv[1], 100);
-			add_kernvlan(argv[1], 150);
-			add_kernvlan(argv[1], 200);
+			sleep(3);
+			int i;
+			for (i = 3;i < argc;i++ ) {
+				add_kernvlan(argv[1], atoi(argv[i]));
+			}
 		}
 	} else {
-		printf("%s <DEV> <PHY NAME>\n", argv[0]);
+		printf("%s <DEV> <PHY NAME> [<VLAN> .....]\n", argv[0]);
 	}
 
-	/* client socket*/
-	mkthread(clientsock_serv, delclientsock_serv, clsock, TL_THREAD_NONE);
-
-	/* send some data to it*/
+	/* send some data to client socet for testing*/
+	sleep(2);
+	mkthread(clientcon, NULL, clsock, TL_THREAD_NONE);
+	sleep(2);
+	mkthread(clientcon, NULL, clsock, TL_THREAD_NONE);
 	sleep(2);
 	mkthread(clientcon, NULL, clsock, TL_THREAD_NONE);
 
-	sleep(2);
-	mkthread(clientcon, NULL, clsock, TL_THREAD_NONE);
-
-	sleep(2);
-	mkthread(clientcon, NULL, clsock, TL_THREAD_NONE);
-
-	/*preiodically check for done threads and delete them*/
+	/*join the manager thread its the last to go*/
 	pthread_join(manage->thr, NULL);
 
+	/* turn off the lights*/
 	return 0;
 }
