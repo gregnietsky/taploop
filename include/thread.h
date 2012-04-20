@@ -17,27 +17,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 enum threadopt {
-        TL_THREAD_NONE  = 0,
-        /* thread is marked as running*/
-        TL_THREAD_RUN   = 1 << 1,
-        /* thread is marked as complete*/
-        TL_THREAD_DONE  = 1 << 2,
-        /* This is a taploop*/
-        TL_THREAD_TAP   = 1 << 3,
+	TL_THREAD_NONE	= 0,
+	/* thread is marked as running*/
+	TL_THREAD_RUN	= 1 << 1,
+	/* thread is marked as complete*/
+	TL_THREAD_DONE	= 1 << 2,
+	/* This is a taploop*/
+	TL_THREAD_TAP	= 1 << 3,
 };
 
 /* thread struct used to create threads*/
 struct tl_thread {
-        void    *data;
-        enum threadopt flags;
-        void    *(*cleanup)(void *data);
-        pthread_t               thr;
-        struct tl_thread        *next;
+	pthread_t		thr;
+	enum			threadopt flags;
+	void			*(*cleanup)(void *data);
+	void			*data;
+	struct tl_thread	*next;
 };
 
 /* thread list*/
 struct threadlist {
-        struct  tl_thread       *list;
+	struct tl_thread	*list;
 };
 
 struct tl_thread *mkthread(void *func, void *cleanup, void *data, enum threadopt flags);
