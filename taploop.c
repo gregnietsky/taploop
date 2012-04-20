@@ -19,12 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/un.h>
-#include <linux/if.h>
 #include <linux/if_tun.h>
 #include <linux/if_packet.h>
-#include <linux/if_ether.h>
 #include <linux/if_arp.h>
-#include <linux/if_vlan.h>
 #include <linux/ip.h>
 #include <linux/sockios.h>
 #include <netinet/in.h>
@@ -52,23 +49,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* tun/tap clone device and client socket*/
 char	*tundev = "/dev/net/tun";
 char	*clsock = "/tmp/tlsock";
-
-/*
- * read from /dev/random
- */
-void linrand(void *buf, int len) {
-	int fd = open("/dev/random", O_RDONLY);
-
-	read(fd, buf, len);
-	close(fd);
-}
-
-void randhwaddr(unsigned char *addr) {
-	linrand(addr, ETH_ALEN);
-	addr [0] &= 0xfe;       /* clear multicast bit */
-	addr [0] |= 0x02;       /* set local assignment bit (IEEE802) */
-}
-
 
 /* tap the taploop struct
  * hwaddr used to set the tap device MAC adddress

@@ -16,28 +16,53 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <sys/socket.h>
+#include <linux/if_arp.h>
 #include "refobj.h"
+#include <unistd.h>
+#include <fcntl.h>
 
 void setflag(void *obj, void *flag, int flags) {
-        int *flg = flag;
-        objlock(obj);
-        *flg |= flags;
-        objunlock(obj);
+	int *flg = flag;
+
+	objlock(obj);
+	*flg |= flags;
+	objunlock(obj);
 }
 
 void clearflag(void *obj, void *flag, int flags) {
-        int *flg = flag;
-        objlock(obj);
-        *flg &= ~flags;
-        objunlock(obj);
+	int *flg = flag;
+
+	objlock(obj);
+	*flg &= ~flags;
+	objunlock(obj);
 }
 
 int testflag(void *obj, void *flag, int flags) {
-        int *flg = flag;
-        int ret = 0;
-        objlock(obj);
-        ret = (*flg & flags) ? 1 : 0;
-        objunlock(obj);
-        return ret;
+	int *flg = flag;
+	int ret = 0;
+
+	objlock(obj);
+	ret = (*flg & flags) ? 1 : 0;
+	objunlock(obj);
+	return ret;
 }
 
+/*
+ * read from /dev/random
+ */
+void linrand(void *buf, int len) {
+	int fd = open("/dev/random", O_RDONLY);
+
+	read(fd, buf, len);
+	close(fd);
+}
+
+/*
+ * create random MAC address
+ */
+void randhwaddr(unsigned char *addr) {
+	linrand(addr, ETH_ALEN);
+	addr [0] &= 0xfe;       /* clear multicast bit */
+	addr [0] |= 0x02;       /* set local assignment bit (IEEE802) */
+}
