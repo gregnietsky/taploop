@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 "        http://www.distrotech.co.za\n\n"
 "    This program comes with ABSOLUTELY NO WARRANTY\n"
 "    This is free software, and you are welcome to redistribute it\n"
-"    under certain condition\n");
+"    under certain condition\n\n");
 
 	tundev = "/dev/net/tun";
 	clsock = "/tmp/tlsock";

@@ -26,7 +26,7 @@ install: all
 	echo "Put ME Where";
 
 clean:
-	rm -f taploop *.o core
+	rm -f taploop taploopd *.o core
 
 taploop: $(TLC_OBJS)
 	gcc -g -o $@ $^ -lpthread
