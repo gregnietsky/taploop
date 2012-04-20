@@ -16,10 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <linux/if_tun.h>
-#include <linux/if_arp.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <fcntl.h>

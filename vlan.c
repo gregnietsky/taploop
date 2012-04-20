@@ -17,10 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <linux/if_vlan.h>
 #include <linux/if_ether.h>
-#include <linux/if_arp.h>
 #include <linux/sockios.h>
 #include <netinet/in.h>
 #include <stdlib.h>

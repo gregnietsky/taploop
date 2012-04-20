@@ -16,9 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <sys/socket.h>
-#include <linux/if_arp.h>
-#include <sys/un.h>
+#include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -40,31 +38,6 @@ static void sig_handler(int sig, siginfo_t *si, void *unused) {
 	/* flag and clean all threads*/
 	verifythreads(10000, 1);
 	exit(0);
-}
-
-void *clientcon(void *data) {
-	struct tl_thread *thread = data;
-	char *sock = thread->data;
-	struct sockaddr_un	adr;
-	int fd, salen;
-
-	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
-		perror("client connect (socket)");
-		return NULL;
-	}
-
-	salen = sizeof(adr);
-	memset(&adr, 0, salen);
-	adr.sun_family = PF_UNIX;
-	strncpy((char *)&adr.sun_path, sock, sizeof(adr.sun_path) -1);
-
-	if (connect(fd, (struct sockaddr *)&adr, salen)) {
-		perror("clientcon (connect)");
-		return NULL;
-	}
-	write(fd, sock, strlen(sock)+1);
-	close(fd);
-	return NULL;
 }
 
 /*
@@ -131,14 +104,6 @@ int main(int argc, char *argv[]) {
 	} else {
 		printf("%s <DEV> <PHY NAME> [<VLAN> .....]\n", argv[0]);
 	}
-
-	/* send some data to client socet for testing*/
-	sleep(2);
-	mkthread(clientcon, NULL, clsock, TL_THREAD_NONE);
-	sleep(2);
-	mkthread(clientcon, NULL, clsock, TL_THREAD_NONE);
-	sleep(2);
-	mkthread(clientcon, NULL, clsock, TL_THREAD_NONE);
 
 	/*join the manager thread its the last to go*/
 	pthread_join(manage->thr, NULL);

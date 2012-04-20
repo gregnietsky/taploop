@@ -16,23 +16,35 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <sys/socket.h>
-#include <linux/if_arp.h>
+#include <sys/un.h>
+#include <stdio.h>
+#include <unistd.h>
 
-typedef struct tl_socket tl_socket;
+#include "taploop.h"
+#include "refobj.h"
 
-/* taploop structure defining sockets dev names*/
-struct taploop {
-	char		pname[IFNAMSIZ+1];
-	char		pdev[IFNAMSIZ+1];
-	unsigned char	hwaddr[ETH_ALEN];
-	int		mmap_size;	/*for mmap ring buffer phy sock*/
-	int		mmap_blks;	/*for mmap ring buffer phy sock*/
-	void		*mmap;		/*mmaap buffer phy sock*/
-	struct		iovec *ring;	/*ring buffer phy*/
-	struct		tl_socket *socks;
-};
+int main(int argc, char *argv[]) {
+	struct sockaddr_un	adr;
+	int fd, salen;
+	char *sock;
 
-/* tun/tap clone device and client socket*/
-char	*tundev;
-char	*clsock;
+	sock = "/tmp/tlsock";
+
+	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
+		perror("client connect (socket)");
+		return -1;
+	}
+
+	salen = sizeof(adr);
+	memset(&adr, 0, salen);
+	adr.sun_family = PF_UNIX;
+	strncpy((char *)&adr.sun_path, sock, sizeof(adr.sun_path) -1);
+
+	if (connect(fd, (struct sockaddr *)&adr, salen)) {
+		perror("clientcon (connect)");
+		return -1;
+	}
+	write(fd, sock, strlen(sock)+1);
+	close(fd);
+	return 0;
+}

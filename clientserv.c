@@ -16,13 +16,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <sys/socket.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/un.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <linux/if_arp.h>
 
 #include "taploop.h"
 #include "util.h"

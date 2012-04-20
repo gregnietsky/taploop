@@ -18,8 +18,9 @@ CFLAGS=-g -Wall -I./include
 
 TL_OBJS = taploop.o refobj.o util.o lookup3.o thread.o vlan.o tlsock.o \
 		clientserv.o packet.o
+TLC_OBJS = tapclient.o
 
-all: taploop
+all: taploopd taploop
 
 install: all
 	echo "Put ME Where";
@@ -27,5 +28,8 @@ install: all
 clean:
 	rm -f taploop *.o core
 
-taploop: $(TL_OBJS)
+taploop: $(TLC_OBJS)
+	gcc -g -o $@ $^ -lpthread
+
+taploopd: $(TL_OBJS)
 	gcc -g -o $@ $^ -lpthread
