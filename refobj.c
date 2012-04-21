@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 struct ref_obj {
 	int	magic;
 	int	cnt;
+	int	size;
 	pthread_mutex_t	lock;
 	void *data;
 };
@@ -50,16 +51,17 @@ struct bucket_list {
 
 void *objalloc(int size) {
 	struct ref_obj *ref;
-	size = size + refobj_offset;
+	int asize = size + refobj_offset;
 	void *robj;
 
-	if ((robj = malloc(size))) {
-		memset(robj, 0, size);
+	if ((robj = malloc(asize))) {
+		memset(robj, 0, asize);
 		ref = (struct ref_obj*)robj;
 		pthread_mutex_init(&ref->lock, NULL);
 		ref->magic = REFOBJ_MAGIC;
 		ref->cnt++;
 		ref->data = robj + refobj_offset;
+		ref->size = size;
 		return ref->data;
 	}
 	return NULL;
@@ -141,6 +143,11 @@ int objunlock(void *data) {
 	return 0;
 }
 
+/*
+ * a bucket list is a ref obj the "list" element is a
+ * array of "bucket" entries each has a hash
+ * the default is to hash the memory when there is no call back
+ */
 struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 	struct bucket_list *new;
 	struct blist_obj *bucket;
@@ -149,26 +156,34 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 	buckets = (1 << bitmask);
 
 	/* allocate session bucket list memory*/
-        if (!(new = objalloc(sizeof(*new) + (sizeof(struct blist_obj) * buckets)))) {
+	if (!(new = objalloc(sizeof(*new) + (sizeof(struct blist_obj) * buckets)))) {
 		printf("Memory Allocation Error (bucket_list)\n");
 		return NULL;
 	}
 
-        /*initialise each bucket*/
-        new->list = (struct blist_obj *)&new->list;
-        for (cnt = 0; cnt < buckets; cnt++) {
+	/*initialise each bucket*/
+	new->buckets = buckets;
+	new->list = (void *)new + sizeof(*new);
+	for (cnt = 0; cnt < buckets; cnt++) {
 		bucket = (struct blist_obj*)&new->list[cnt];
 		LIST_INIT(bucket, NULL);
-        }
-
+	}
 	return new;
 }
 
-int addtobucket(struct blist_obj *bucket, void *data) {
+int addtobucket(struct bucket_list *blist, void *data) {
 	struct ref_obj *ref = data - refobj_offset;
+	struct blist_obj *lhead;
+	int hash, bucket;
 
-	if (ref->magic == REFOBJ_MAGIC) {
-		LIST_ADD(bucket, ref);
+	if (blist && ref->magic == REFOBJ_MAGIC) {
+		if (!blist->hash_func) {
+			hash = jenhash(data, ref->size, 0);
+		}
+		bucket = hash & (blist->buckets -1);
+		lhead = &blist->list[bucket];
+		printf("Bucket %i HAsh %i\n", bucket, hash);
+		LIST_ADD_HASH(lhead, ref, hash);
 	}
 
 	return 1;

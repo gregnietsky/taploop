@@ -48,9 +48,9 @@ struct hashedlist {
 	if (!head && (!(head = malloc(sizeof(*head))))) { \
 		printf("Could not allocate memory for list head\n"); \
 	} else { \
+		head->data = entry; \
 		head->next = NULL; \
 		head->prev = (entry) ? head : NULL; \
-		head->data = entry; \
 	} \
 }
 
@@ -63,20 +63,24 @@ struct hashedlist {
 		LIST_INIT(_tmp_head, entry) \
 		head = _tmp_head; \
 	} else if (_tmp_head->prev) {\
-		__typeof(head) _ent_head = malloc(sizeof(*_ent_head)); \
+		__typeof(head) _ent_head = NULL; \
+		LIST_INIT(_ent_head, entry) \
 		if (_ent_head) { \
-			_ent_head->data = entry; \
-			_ent_head->next = NULL; \
 			_ent_head->prev = _tmp_head->prev; \
 			_tmp_head->prev->next = _ent_head; \
 			_tmp_head->prev = _ent_head; \
-		} else { \
-			printf("Could not allocate memory for list head\n"); \
 		} \
 	} else { \
 		_tmp_head->data = entry; \
 		_tmp_head->next = NULL; \
 		_tmp_head->prev = _tmp_head; \
+	} \
+}
+
+#define LIST_ADD_HASH(head, entry, bhash) { \
+	LIST_ADD(head, entry); \
+	if (head->prev->data == entry) { \
+		head->hash = bhash; \
 	} \
 }
 
