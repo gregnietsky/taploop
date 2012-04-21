@@ -22,14 +22,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <linux/sockios.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <stdio.h>
 #include <unistd.h>
+
 
 #include "taploop.h"
 #include "tlsock.h"
 #include "refobj.h"
 #include "util.h"
 #include "thread.h"
-#include "list.h"
 
 /*
  * instruct the kernel to remove a VLAN
@@ -98,8 +99,7 @@ void add_kernvlan(char *iface, int vid) {
 	}
 
 	/* check for existing loop*/
-	objlock(threads);
-	LIST_FOREACH_START(threads->list, thread) {
+	BLIST_FOREACH_START(threads->list, thread) {
 		if (testflag(thread, TL_THREAD_TAP)) {
 			tap = thread->data;
 			if (tap && !strncmp(tap->pdev, iface, IFNAMSIZ)) {
@@ -109,8 +109,7 @@ void add_kernvlan(char *iface, int vid) {
 			tap = NULL;
 		}
 	}
-	LIST_FOREACH_END;
-	objunlock(threads);
+	BLIST_FOREACH_END;
 
 	if (!tap) {
 		return;
@@ -162,7 +161,7 @@ void add_kernvlan(char *iface, int vid) {
 		tlsock->vid = vid;
 		tlsock->flags = TL_SOCKET_8021Q;
 		objlock(tap);
-		LIST_ADD(tap->socks, tlsock);
+		BLIST_ADD(tap->socks, tlsock);
 		objunlock(tap);
 	} else {
 		printf("Memmory error\n");

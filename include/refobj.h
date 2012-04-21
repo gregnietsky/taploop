@@ -30,12 +30,14 @@ void *objalloc(int size);
 struct bucket_list *create_bucketlist(int bitmask, void *hash_function);
 
 int addtobucket(struct bucket_list *blist, void *data);
+int bucket_list_cnt(struct bucket_list *blist);
 
 struct bucket_loop *init_bucket_loop(struct bucket_list *blist);
 void stop_bucket_loop(struct bucket_loop *bloop);
 
 void *next_bucket_loop(struct bucket_loop *bloop);
 void remove_bucket_loop(struct bucket_loop *bloop);
+
 
 #define clearflag(obj, flag) objlock(obj); \
 	obj->flags &= ~flag; \

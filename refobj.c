@@ -43,6 +43,7 @@ struct blist_obj {
 /*bucket list to hold hashed objects in buckets*/
 struct bucket_list {
 	unsigned short	buckets;		/* number of buckets to create 2 ^ n masks hash*/
+	int	count;
 	int		(*hash_func)(void *data);
 	struct		blist_obj **list;		/* array of blist_obj[buckets]*/
 };
@@ -184,6 +185,9 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 	return new;
 }
 
+/*
+ * add a ref to the object for the bucket list
+ */
 int addtobucket(struct bucket_list *blist, void *data) {
 	struct ref_obj *ref = data - refobj_offset;
 	struct blist_obj *lhead;
@@ -196,12 +200,19 @@ int addtobucket(struct bucket_list *blist, void *data) {
 		bucket = hash & (blist->buckets -1);
 		lhead = blist->list[bucket];
 		LIST_ADD_HASH(lhead, ref, hash);
+		if (lhead->prev->data == ref) {
+			blist->count++;
+			objref(data);
+		}
 		return 1;
 	}
 	return 0;
 
 }
 
+/*
+ * create a bucket loop and lock the list
+ */
 struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
 	struct bucket_loop *bloop = NULL;
 
@@ -217,6 +228,9 @@ struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
 	return bloop;
 }
 
+/*
+ * release the bucket loop and unref list
+ */
 void stop_bucket_loop(struct bucket_loop *bloop) {
 	if (bloop) {
 		objunlock(bloop->blist);
@@ -225,6 +239,9 @@ void stop_bucket_loop(struct bucket_loop *bloop) {
 	}
 };
 
+/*
+ * return the next object in the lists
+ */
 void *next_bucket_loop(struct bucket_loop *bloop) {
 	struct ref_obj *entry = NULL;
 	void *data = NULL;
@@ -253,9 +270,24 @@ void *next_bucket_loop(struct bucket_loop *bloop) {
 	return data;
 }
 
+/*
+ * remove and unref the current data
+ */
 void remove_bucket_loop(struct bucket_loop *bloop) {
 	if (bloop->cur) {
 		objunref(bloop->cur->data->data);
 		LIST_REMOVE_ENTRY(bloop->blist->list[bloop->bucket], bloop->cur);
+		bloop->blist->count--;
 	}
+}
+
+int bucket_list_cnt(struct bucket_list *blist) {
+	int ret = -1;
+
+	if (blist) {
+		objlock(blist);
+		ret = blist->count;
+		objunlock(blist);
+	}
+	return ret;
 }

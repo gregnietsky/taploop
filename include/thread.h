@@ -35,17 +35,8 @@ struct tl_thread {
 	void			*data;
 };
 
-typedef struct threadlist threadlist;
-
-/* thread list*/
-struct threadlist {
-	struct tl_thread	*data;
-	struct threadlist	*next;
-	struct threadlist	*prev;
-};
-
 struct threadcontainer {
-	struct threadlist	*list;
+	struct bucket_list	*list;
 	struct tl_thread	*manager;
 };
 

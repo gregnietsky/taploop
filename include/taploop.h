@@ -19,8 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/socket.h>
 #include <linux/if_arp.h>
 
-typedef struct socketlist socketlist;
-
 /* taploop structure defining sockets dev names*/
 struct taploop {
 	char		pname[IFNAMSIZ+1];
@@ -30,7 +28,7 @@ struct taploop {
 	int		mmap_blks;	/*for mmap ring buffer phy sock*/
 	void		*mmap;		/*mmaap buffer phy sock*/
 	struct		iovec *ring;	/*ring buffer phy*/
-	struct		socketlist *socks;
+	struct		bucket_list *socks;
 };
 
 /* tun/tap clone device and client socket*/

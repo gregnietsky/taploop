@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 
 #include "thread.h"
-#include "list.h"
 #include "refobj.h"
 
 /*
@@ -53,7 +52,7 @@ struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *d
 	/* am i up and running move ref to list*/
 	if (!pthread_kill(thread->thr, 0)) {
 		objlock(threads);
-		LIST_ADD(threads->list, thread);
+		BLIST_ADD(threads->list, thread);
 		objunlock(threads);
 		return thread;
 	} else {
@@ -82,25 +81,19 @@ int manager_sig(int sig, struct tl_thread *thread) {
  */
 void *managethread(void *data) {
 	struct tl_thread *thread = data;
+	pthread_t me;
 	int stop = 0;
-	pthread_t       me;
 
 	setflag(thread, TL_THREAD_RUN);
 
-	me =  pthread_self();
-	for(;;) {
-		objlock(threads);
-		if (!threads->list) {
-			objunlock(threads);
-			break;
-		}
-
-		LIST_FOREACH_START_SAFE(threads->list , thread) {
+	me = pthread_self();
+	while(bucket_list_cnt(threads->list)) {
+		BLIST_FOREACH_START(threads->list , thread) {
 			/*this is my call im done*/
 			if (pthread_equal(thread->thr, me)) {
 				/* im going to leave the list and try close down all others*/
 				if (!(testflag(thread, TL_THREAD_RUN))) {
-					LIST_REMOVE_CURRENT(threads->list);
+					BLIST_REMOVE_CURRENT;
 					stop = 1;
 				}
 				continue;
@@ -111,20 +104,19 @@ void *managethread(void *data) {
 				thread->flags &= ~TL_THREAD_RUN;
 				objunlock(thread);
 			} else if ((thread->flags & TL_THREAD_DONE) || pthread_kill(thread->thr, 0)){
-				LIST_REMOVE_CURRENT(threads->list);
-				if  (thread->cleanup) {
+				objunlock(thread);
+				BLIST_REMOVE_CURRENT;
+				if (thread->cleanup) {
 					thread->cleanup(thread->data);
 				}
-				objunlock(thread);
 				objunref(thread->data);
 				objunref(thread);
 			} else {
 				objunlock(thread);
 			}
 		}
-		LIST_FOREACH_END;
-		objunlock(threads);
-		usleep(1000000);
+		BLIST_FOREACH_END;
+		sleep(1);
 	}
 	setflag(thread, TL_THREAD_DONE);
 
@@ -137,7 +129,7 @@ void *managethread(void *data) {
  */
 void startthreads(void) {
 	threads = objalloc(sizeof(*threads));
-        LIST_INIT(threads->list, NULL);
+	threads->list = create_bucketlist(5, NULL);
 	threads->manager = mkthread(managethread, NULL, manager_sig, NULL, TL_THREAD_NONE);
 }
 
@@ -164,15 +156,13 @@ void jointhreads(void) {
  * will cause a deadlock.
  */
 int thread_signal(int sig) {
+	struct tl_thread *thread;
+	pthread_t me;
 	int ret = 0;
-	pthread_t       me;
-	struct tl_thread        *thread;
 
-	me =  pthread_self();
-	objlock(threads);
-	LIST_FOREACH_START(threads->list , thread) {
+	me = pthread_self();
+	BLIST_FOREACH_START(threads->list , thread) {
 		if (pthread_equal(thread->thr, me)) {
-			objunlock(threads);
 			if (thread->sighandler) {
 				thread->sighandler(sig, thread);
 				ret = 1;
@@ -182,9 +172,6 @@ int thread_signal(int sig) {
 			break;
 		}
 	}
-	LIST_FOREACH_END;
-	if (!ret) {
-		objunlock(threads);
-	}
+	BLIST_FOREACH_END;
 	return ret;
 }

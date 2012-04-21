@@ -37,7 +37,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "vlan.h"
 #include "thread.h"
 #include "packet.h"
-#include "list.h"
 
 /* tap the taploop struct
  * hwaddr used to set the tap device MAC adddress
@@ -89,7 +88,7 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
 		tlsock->vid = 0;
 		tlsock->flags = TL_SOCKET_VIRT;
 		objlock(tap);
-		LIST_ADD(tap->socks, tlsock);
+		BLIST_ADD(tap->socks, tlsock);
 		objunlock(tap);
 	}
 	return tlsock;
@@ -231,7 +230,7 @@ struct tl_socket *phyopen(struct taploop *tap) {
 		tap->mmap_size = reqr.tp_block_size;
 		tap->mmap = rxmmbuf;
 		tap->ring = ring;
-		LIST_ADD(tap->socks, tlsock);
+		BLIST_ADD(tap->socks, tlsock);
 		objunlock(tap);
 	} else {
 		if (rxmmbuf) {
@@ -262,9 +261,8 @@ void *stoptap(void *data) {
 	strncpy(ifr.ifr_name, tap->pname, sizeof(ifr.ifr_name) - 1);
 
 	/* get physical socket to reconfigure it and drop it*/
-	objlock(tap);
-	LIST_FOREACH_START_SAFE(tap->socks, socket) {
-		LIST_REMOVE_CURRENT(tap->socks);
+	BLIST_FOREACH_START(tap->socks, socket) {
+		BLIST_REMOVE_CURRENT;
 		if (socket->flags & TL_SOCKET_PHY) {
 			phy = socket;
 		} else if (socket->flags & TL_SOCKET_VIRT) {
@@ -278,8 +276,7 @@ void *stoptap(void *data) {
 			objunref(socket);
 		}
 	}
-	LIST_FOREACH_END;
-	objunlock(tap);
+	BLIST_FOREACH_END;
 
 	/*close the tap*/
 	if (virt) {
@@ -317,7 +314,7 @@ void *stoptap(void *data) {
 /*
  * return a socklist entry and add sock to fd_set
  */
-struct socketlist *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_set *rd_set) {
+void *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_set *rd_set) {
 	if (tsock->sock > *maxfd) {
 		*maxfd = tsock->sock;
 	}
@@ -403,13 +400,13 @@ void *mainloop(void *data) {
 			break;
 		}
 
-		objlock(tap);
-		LIST_FOREACH_START(tap->socks, tlsock) {
+		BLIST_FOREACH_START(tap->socks, tlsock) {
 			if (FD_ISSET(tlsock->sock, &act_set)) {
 				/*set the default output socket can be changed in handler*/
 				/*make sure the socks dont disapear grab a ref as i my use them in a thread elsewhere*/
 				objref(tlsock);
-				objunlock(tap);
+
+/*XXXXX optomise i have the ref handle it in packet*/
 
 				if ((tlsock->flags & TL_SOCKET_PHY) || (tlsock->flags & TL_SOCKET_8021Q)) {
 					rlen = recv(tlsock->sock, buffer, ETH_FRAME_LEN+4, 0);
@@ -427,15 +424,9 @@ void *mainloop(void *data) {
 				}
 				objunref(tlsock);
 				break;
-			} else {
-				tlsock = NULL;
 			}
 		}
-		LIST_FOREACH_END;
-		/* i was not nulled above was i not found ??*/
-		if (!tlsock) {
-			objunlock(tap);
-		}
+		BLIST_FOREACH_END;
 	}
 
 	/*remove ref's*/
@@ -458,8 +449,7 @@ int add_taploop(char *dev, char *name) {
 	}
 
 	/* check for existing loop*/
-	objlock(threads);
-	LIST_FOREACH_START(threads->list, thread) {
+	BLIST_FOREACH_START(threads->list, thread) {
 		if (testflag(thread, TL_THREAD_TAP)) {
 			tap = thread->data;
 			if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
@@ -468,8 +458,7 @@ int add_taploop(char *dev, char *name) {
 			}
 		}
 	};
-	LIST_FOREACH_END;
-	objunlock(threads);
+	BLIST_FOREACH_END;
 
 	if (!(tap = objalloc(sizeof(*tap)))) {
 		return -1;
@@ -477,7 +466,7 @@ int add_taploop(char *dev, char *name) {
 
 	strncpy(tap->pdev, dev, IFNAMSIZ);
 	strncpy(tap->pname, name, IFNAMSIZ);
-	LIST_INIT(tap->socks, NULL);
+	tap->socks = create_bucketlist(5, NULL);
 	tap->ring = NULL;
 	tap->mmap = NULL;
 	tap->mmap_size = 0;

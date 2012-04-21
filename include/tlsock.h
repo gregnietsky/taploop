@@ -27,13 +27,6 @@ enum sockopt {
 	TL_SOCKET_8021Q	= 1 << 2,
 };
 
-/* socklist linked list*/
-struct socketlist {
-	struct	tl_socket	*data;
-	struct	socketlist	*next;
-	struct	socketlist	*prev;
-};
-
 /* socket entry*/
 struct tl_socket {
 	int			sock;
@@ -45,7 +38,7 @@ struct tl_socket {
 struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy);
 struct tl_socket *phyopen(struct taploop *tap);
 void *stoptap(void *data);
-struct socketlist *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_set *rd_set);
+void *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_set *rd_set);
 //void rbuffread(struct taploop *tap);
 void *mainloop(void *data);
 int add_taploop(char *dev, char *name);
