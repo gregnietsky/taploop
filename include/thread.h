@@ -53,4 +53,7 @@ struct threadcontainer *threads;
 
 struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *data, enum threadopt flags);
 int thread_signal(int sig);
+
 void startthreads(void);
+void stopthreads(void);
+void jointhreads(void);

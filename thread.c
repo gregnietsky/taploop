@@ -23,7 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "thread.h"
 #include "list.h"
 #include "refobj.h"
-#include "util.h"
 
 /*
  * create a taploop thread
@@ -142,6 +141,20 @@ void startthreads(void) {
 	threads->manager = mkthread(managethread, NULL, manager_sig, NULL, TL_THREAD_NONE);
 }
 
+/*
+ * Stop all running threads
+ * sending hup signal to manager
+ */
+void stopthreads(void) {
+	pthread_kill(threads->manager->thr, SIGHUP);
+}
+
+/*
+ * Join threads
+ */
+void jointhreads(void) {
+	pthread_join(threads->manager->thr, NULL);
+}
 /*
  * find the thread the signal was delivered to
  * if the signal was handled returns 1

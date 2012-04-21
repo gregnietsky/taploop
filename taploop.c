@@ -39,15 +39,13 @@ static void sig_handler(int sig, siginfo_t *si, void *unused) {
 	switch (sig) {
 		case SIGTERM:
 		case SIGINT:
-			pthread_kill(threads->manager->thr, SIGHUP);
+			stopthreads();
 			break;
 		case SIGUSR1:
 		case SIGUSR2:
 		case SIGHUP:
 		case SIGALRM:
-			if (!thread_signal(sig)) {
-				printf("Global signal %i\n", sig);
-			}
+			thread_signal(sig);
 			break;
 	}
 }
@@ -120,7 +118,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	/*join the manager thread its the last to go*/
-	pthread_join(threads->manager->thr, NULL);
+	jointhreads();
 
 	/* turn off the lights*/
 	return 0;
