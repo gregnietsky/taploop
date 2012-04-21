@@ -136,8 +136,8 @@ void *managethread(void *data) {
  * if the signal was handled returns 1
  * if the thread could not be handled returns -1
  * returns 0 if not for thread
- * NB sending a signal to a thread from a thread while threads is locked
- * will cause a deadlock most likely
+ * NB sending a signal to the current thread while threads is locked
+ * will cause a deadlock.
  */
 int thread_signal(int sig) {
 	int ret = 0;
