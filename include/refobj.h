@@ -46,3 +46,18 @@ void remove_bucket_loop(struct bucket_loop *bloop);
 	objunlock(obj)
 
 #define testflag(obj, flag) (objlock(obj) | (obj->flags & flag) | objunlock(obj))
+
+
+#define BLIST_FOREACH_START(blist, entry) { \
+	{ \
+		struct bucket_loop *_fea_bloop; \
+        	_fea_bloop = init_bucket_loop(blist); \
+        	while (_fea_bloop && (entry = next_bucket_loop(_fea_bloop)))
+
+#define BLIST_FOREACH_END stop_bucket_loop(_fea_bloop); \
+		} \
+	}
+
+#define BLIST_REMOVE_CURRENT remove_bucket_loop(_fea_bloop);
+
+#define BLIST_ADD(blist, entry) addtobucket(blist, entry);

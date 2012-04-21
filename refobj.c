@@ -218,9 +218,11 @@ struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
 }
 
 void stop_bucket_loop(struct bucket_loop *bloop) {
-	objunlock(bloop->blist);
-	objunref(bloop->blist);
-	objunref(bloop);
+	if (bloop) {
+		objunlock(bloop->blist);
+		objunref(bloop->blist);
+		objunref(bloop);
+	}
 };
 
 void *next_bucket_loop(struct bucket_loop *bloop) {
