@@ -252,8 +252,7 @@ struct tl_socket *phyopen(struct taploop *tap) {
 void *stoptap(void *data) {
 	struct taploop	 *tap = data;
 	struct ifreq ifr;
-	struct tl_socket *phy = NULL, *virt = NULL, *sl_ent;
-	struct socketlist *sl_cur, *sl_tmp;
+	struct tl_socket *phy = NULL, *virt = NULL, *socket;
 
 	if (!tap) {
 		return NULL;
@@ -264,21 +263,22 @@ void *stoptap(void *data) {
 
 	/* get physical socket to reconfigure it and drop it*/
 	objlock(tap);
-	LIST_FORWARD_SAFE(tap->socks, sl_ent, sl_cur, sl_tmp) {
-		LIST_REMOVE_ENTRY(tap->socks, sl_cur);
-		if (sl_ent->flags & TL_SOCKET_PHY) {
-			phy = sl_ent;
-		} else if (sl_ent->flags & TL_SOCKET_VIRT) {
-			virt = sl_ent;
+	LIST_FOREACH_START_SAFE(tap->socks, socket) {
+		LIST_REMOVE_CURRENT(tap->socks);
+		if (socket->flags & TL_SOCKET_PHY) {
+			phy = socket;
+		} else if (socket->flags & TL_SOCKET_VIRT) {
+			virt = socket;
 		} else {
-			if (sl_ent->flags & TL_SOCKET_8021Q) {
-				delete_kernvlan(sl_ent->sock, tap->pdev, sl_ent->vid);
+			if (socket->flags & TL_SOCKET_8021Q) {
+				delete_kernvlan(socket->sock, tap->pdev, socket->vid);
 			} else {
-				close(sl_ent->sock);
+				close(socket->sock);
 			}
-			objunref(sl_ent);
+			objunref(socket);
 		}
 	}
+	LIST_FOREACH_END;
 	objunlock(tap);
 
 	/*close the tap*/
@@ -360,7 +360,6 @@ void *mainloop(void *data) {
 	int	maxfd, selfd, rlen;
 	struct	timeval	tv;
 	struct  tl_socket *tlsock, *osock, *phy, *virt;
-	struct	socketlist *sl_cur, *sl_tmp;
 
 	if (thread && thread->data) {
 		tap = thread->data;
@@ -405,7 +404,7 @@ void *mainloop(void *data) {
 		}
 
 		objlock(tap);
-		LIST_FORWARD_SAFE(tap->socks, tlsock, sl_cur, sl_tmp) {
+		LIST_FOREACH_START(tap->socks, tlsock) {
 			if (FD_ISSET(tlsock->sock, &act_set)) {
 				/*set the default output socket can be changed in handler*/
 				/*make sure the socks dont disapear grab a ref as i my use them in a thread elsewhere*/
@@ -432,6 +431,7 @@ void *mainloop(void *data) {
 				tlsock = NULL;
 			}
 		}
+		LIST_FOREACH_END;
 		/* i was not nulled above was i not found ??*/
 		if (!tlsock) {
 			objunlock(tap);
@@ -451,7 +451,6 @@ void *mainloop(void *data) {
 int add_taploop(char *dev, char *name) {
 	struct taploop		*tap = NULL;
 	struct tl_thread	*thread;
-	struct threadlist	*cur;
 
 	/* do not continue on zero  length options*/
 	if (!dev || !name || (dev[1] == '\0') || (name[1] == '\0')) {
@@ -460,7 +459,7 @@ int add_taploop(char *dev, char *name) {
 
 	/* check for existing loop*/
 	objlock(threads);
-	LIST_FORWARD(threads->list, thread, cur) {
+	LIST_FOREACH_START(threads->list, thread) {
 		if (testflag(thread, &thread->flags, TL_THREAD_TAP)) {
 			tap = thread->data;
 			if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
@@ -469,6 +468,7 @@ int add_taploop(char *dev, char *name) {
 			}
 		}
 	};
+	LIST_FOREACH_END;
 	objunlock(threads);
 
 	if (!(tap = objalloc(sizeof(*tap)))) {

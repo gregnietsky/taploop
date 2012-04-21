@@ -105,7 +105,7 @@ void verifythreads(int sl, int stop) {
 			break;
 		}
 
-		LIST_FORWARD_SAFE(threads->list , thread, cur, tmp) {
+		LIST_FORLOOP_SAFE(threads->list , thread, cur, tmp) {
 			checkthread(thread, cur, stop);
 			/*this is my call im done*/
 			if ((pthread_equal(thread->thr, me)) &&

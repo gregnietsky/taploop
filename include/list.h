@@ -47,14 +47,10 @@ struct hashedlist {
 #define LIST_INIT(head, entry) { \
 	if (!head && (!(head = malloc(sizeof(*head))))) { \
 		printf("Could not allocate memory for list head\n"); \
-	} else if (entry) { \
+	} else { \
 		head->next = NULL; \
-		head->prev = head; \
+		head->prev = (entry) ? head : NULL; \
 		head->data = entry; \
-	} else {\
-		head->next = NULL; \
-		head->prev = NULL; \
-		head->data = NULL; \
 	} \
 }
 
@@ -66,7 +62,7 @@ struct hashedlist {
 	if (!_tmp_head) { \
 		LIST_INIT(_tmp_head, entry) \
 		head = _tmp_head; \
-	} else if (_tmp_head->data) {\
+	} else if (_tmp_head->prev) {\
 		__typeof(head) _ent_head = malloc(sizeof(*_ent_head)); \
 		if (_ent_head) { \
 			_ent_head->data = entry; \
@@ -88,12 +84,11 @@ struct hashedlist {
  * Loop through a loop forward
  * it is safe to delete items in the loop
  */
-#define LIST_FORWARD_SAFE(head, entry, cur, tmp) \
-	for(cur = head; (cur && (entry = cur->data) && ((tmp = cur->next) || 1)); cur = tmp)
-
-#define LIST_FORWARD(head, entry, cur) \
+#define LIST_FORLOOP(head, entry, cur) \
 	for(cur = head; (cur && (entry = cur->data)); cur = cur->next)
 
+#define LIST_FORLOOP_SAFE(head, entry, cur, tmp) \
+	for(cur = head; (cur && (entry = cur->data) && ((tmp = cur->next) || 1)); cur = tmp)
 
 #define LIST_REMOVE_ENTRY(head, cur) { \
 	if (cur && (head == cur)) { \
@@ -113,6 +108,7 @@ struct hashedlist {
 		free(cur); \
 	} \
 }
+
 /*
  * remove item from list
  * convinent routine to delete a item in list
@@ -121,10 +117,27 @@ struct hashedlist {
 #define LIST_REMOVE_ITEM(head, entry) {\
 	__typeof(head) _tmp_head, _cur_head; \
 	__typeof(entry) _tmp_ent; \
-	LIST_FORWARD_SAFE(head, _tmp_ent, _cur_head, _tmp_head) { \
+	LIST_FORLOOP_SAFE(head, _tmp_ent, _cur_head, _tmp_head) { \
 		if (entry == _tmp_ent) { \
 			LIST_REMOVE_ENTRY(head, _cur_head); \
 			break; \
 		} \
 	} \
 }
+
+/*
+ * the following macros are convinience macros
+ * eliminate the need to worry about the list struct
+ * only deal with the data
+ */
+#define LIST_FOREACH_START_SAFE(head, entry) { \
+	__typeof(head) _tmp_head, _cur_head; \
+	LIST_FORLOOP_SAFE(head, entry, _cur_head, _tmp_head)
+
+#define LIST_FOREACH_START(head, entry) { \
+	__typeof(head) _cur_head; \
+	LIST_FORLOOP(head, entry, _cur_head)
+
+#define LIST_FOREACH_END }
+
+#define LIST_REMOVE_CURRENT(head) LIST_REMOVE_ENTRY(head, _cur_head)
