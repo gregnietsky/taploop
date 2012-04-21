@@ -110,7 +110,7 @@ void *clientsock_serv(void *data) {
 	FD_ZERO(&rd_set);
 	FD_SET(fd, &rd_set);
 
-	while (testflag(thread, &thread->flags, TL_THREAD_RUN)) {
+	while (testflag(thread, TL_THREAD_RUN)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 2000;

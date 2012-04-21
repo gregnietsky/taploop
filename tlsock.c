@@ -389,7 +389,7 @@ void *mainloop(void *data) {
 
 	/* initialise tap device*/
 	maxfd++;
-	while (testflag(thread, &thread->flags, TL_THREAD_RUN)) {
+	while (testflag(thread, TL_THREAD_RUN)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 2000;
@@ -460,7 +460,7 @@ int add_taploop(char *dev, char *name) {
 	/* check for existing loop*/
 	objlock(threads);
 	LIST_FOREACH_START(threads->list, thread) {
-		if (testflag(thread, &thread->flags, TL_THREAD_TAP)) {
+		if (testflag(thread, TL_THREAD_TAP)) {
 			tap = thread->data;
 			if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
 				objunlock(threads);

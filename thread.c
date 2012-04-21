@@ -100,7 +100,7 @@ void *managethread(void *data) {
 			/*this is my call im done*/
 			if (pthread_equal(thread->thr, me)) {
 				/* im going to leave the list and try close down all others*/
-				if (!(testflag(thread, &thread->flags, TL_THREAD_RUN))) {
+				if (!(testflag(thread, TL_THREAD_RUN))) {
 					LIST_REMOVE_CURRENT(threads->list);
 					stop = 1;
 				}

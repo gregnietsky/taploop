@@ -111,12 +111,13 @@ int objcnt(void *data) {
 	return ret;
 }
 
-void objlock(void *data) {
+int objlock(void *data) {
 	struct ref_obj *ref = data - 32;
 
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_lock(&ref->lock);
 	}
+	return 0;
 }
 
 int objtrylock(void *data) {
@@ -128,10 +129,11 @@ int objtrylock(void *data) {
 	return -1;
 }
 
-void objunlock(void *data) {
+int objunlock(void *data) {
 	struct ref_obj *ref = data - 32;
 
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_unlock(&ref->lock);
 	}
+	return 0;
 }

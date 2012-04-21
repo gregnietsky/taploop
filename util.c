@@ -23,16 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "refobj.h"
 
-int testflag(void *obj, void *flag, int flags) {
-	int *flg = flag;
-	int ret = 0;
-
-	objlock(obj);
-	ret = (*flg & flags) ? 1 : 0;
-	objunlock(obj);
-	return ret;
-}
-
 /*
  * read from /dev/random
  */

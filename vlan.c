@@ -100,7 +100,7 @@ void add_kernvlan(char *iface, int vid) {
 	/* check for existing loop*/
 	objlock(threads);
 	LIST_FOREACH_START(threads->list, thread) {
-		if (testflag(thread, &thread->flags, TL_THREAD_TAP)) {
+		if (testflag(thread, TL_THREAD_TAP)) {
 			tap = thread->data;
 			if (tap && !strncmp(tap->pdev, iface, IFNAMSIZ)) {
 				objref(tap);
