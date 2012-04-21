@@ -367,7 +367,7 @@ void *mainloop(void *data) {
 		return NULL;
 	}
 
-	setflag(thread, &thread->flags, TL_THREAD_RUN);
+	setflag(thread, TL_THREAD_RUN);
 	FD_ZERO(&rd_set);
 
 	/* initialise physical device*/
@@ -442,7 +442,7 @@ void *mainloop(void *data) {
 	objunref(virt);
 	objunref(phy);
 
-	setflag(thread, &thread->flags, TL_THREAD_DONE);
+	setflag(thread, TL_THREAD_DONE);
 	return NULL;
 }
 /*

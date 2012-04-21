@@ -16,6 +16,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-void setflag(void *obj, void *flag, int flags);
-void clearflag(void *obj, void *flag, int flags);
 int testflag(void *obj, void *flag, int flags);
+
+#define clearflag(obj, flag) objlock(obj); \
+	obj->flags &= ~flag; \
+	objunlock(obj)
+
+#define setflag(obj, flag) objlock(obj); \
+	obj->flags |= flag; \
+	objunlock(obj)

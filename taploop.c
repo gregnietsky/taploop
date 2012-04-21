@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <pthread.h>
 
 #include "taploop.h"
@@ -26,7 +28,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "refobj.h"
 #include "thread.h"
 #include "vlan.h"
-#include "list.h"
 
 void clientserv_run(void);
 
@@ -38,8 +39,8 @@ static void sig_handler(int sig, siginfo_t *si, void *unused) {
 	switch (sig) {
 		case SIGTERM:
 		case SIGINT:
-			verifythreads(10000, 1);
-			exit(0);
+			pthread_kill(threads->manager->thr, SIGHUP);
+			break;
 		case SIGUSR1:
 		case SIGUSR2:
 		case SIGHUP:
@@ -57,7 +58,6 @@ static void sig_handler(int sig, siginfo_t *si, void *unused) {
 int main(int argc, char *argv[]) {
 	pid_t	daemon;
 	struct sigaction sa;
-	struct tl_thread	*manage;
 
 	printf("Copyright (C) 2012  Gregory Nietsky <gregory@distrotetch.co.za>\n"
 "        http://www.distrotech.co.za\n\n"
@@ -98,9 +98,7 @@ int main(int argc, char *argv[]) {
 	sigaction(SIGALRM, &sa, NULL);
 
 	/*init the threadlist start thread manager*/
-	threads = objalloc(sizeof(*threads));
-	LIST_INIT(threads->list, NULL);
-	manage = mkthread(managethread, NULL, NULL, NULL, TL_THREAD_NONE);
+	startthreads();
 
 	/*client socket to allow client to connect*/
 	clientserv_run();
@@ -122,7 +120,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	/*join the manager thread its the last to go*/
-	pthread_join(manage->thr, NULL);
+	pthread_join(threads->manager->thr, NULL);
 
 	/* turn off the lights*/
 	return 0;

@@ -31,9 +31,11 @@ struct tl_thread {
 	pthread_t		thr;
 	enum			threadopt flags;
 	void			*(*cleanup)(void *data);
-	int			(*sighandler)(int sig, void *data);
+	void			(*sighandler)(int sig, struct tl_thread *thread);
 	void			*data;
 };
+
+typedef struct threadlist threadlist;
 
 /* thread list*/
 struct threadlist {
@@ -44,11 +46,11 @@ struct threadlist {
 
 struct threadcontainer {
 	struct threadlist	*list;
+	struct tl_thread	*manager;
 };
 
-struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *data, enum threadopt flags);
-void verifythreads(int sl, int stop);
-void *managethread(void *data);
-
 struct threadcontainer *threads;
+
+struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *data, enum threadopt flags);
 int thread_signal(int sig);
+void startthreads(void);

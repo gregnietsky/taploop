@@ -31,7 +31,7 @@ void *clientsock_client(void *data) {
 	struct tl_thread *thread = data;
 	int fd = *(int*)thread->data;
 
-	setflag(thread, &thread->flags, TL_THREAD_RUN);
+	setflag(thread, TL_THREAD_RUN);
 
 	int len = 256;
 	char buff[256];
@@ -40,7 +40,7 @@ void *clientsock_client(void *data) {
 	*(int *)thread->data = -1;
 	close(fd);
 
-	setflag(thread, &thread->flags, TL_THREAD_DONE);
+	setflag(thread, TL_THREAD_DONE);
 
 	return NULL;
 }
@@ -73,7 +73,7 @@ void *clientsock_serv(void *data) {
 	struct	timeval	tv;
 	int *clfd;
 
-	setflag(thread, &thread->flags, TL_THREAD_RUN);
+	setflag(thread, TL_THREAD_RUN);
 
 	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
 		return NULL;
@@ -134,7 +134,7 @@ void *clientsock_serv(void *data) {
 		}
 	}
 
-	setflag(thread, &thread->flags, TL_THREAD_DONE);
+	setflag(thread, TL_THREAD_DONE);
 	return NULL;
 };
 

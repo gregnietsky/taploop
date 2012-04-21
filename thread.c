@@ -64,39 +64,29 @@ struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *d
 	return NULL;
 }
 
+
 /*
- * this is run to flag running threads to stop and clean up dead threads
+ * close all threads when we get SIGHUP
  */
-void checkthread(struct tl_thread *thread, struct threadlist *cur, int stop) {
-	objlock(thread);
-
-	if (stop && (thread->flags & TL_THREAD_RUN) && !(thread->flags & TL_THREAD_DONE)) {
-		thread->flags &= ~TL_THREAD_RUN;
-		objunlock(thread);
-		return;
+int manager_sig(int sig, struct tl_thread *thread) {
+	switch(sig) {
+		case SIGHUP:
+			clearflag(thread, TL_THREAD_RUN);
+			break;
 	}
-
-	if ((thread->flags & TL_THREAD_DONE) || pthread_kill(thread->thr, 0)){
-		LIST_REMOVE_ENTRY(threads->list, cur);
-		if  (thread->cleanup) {
-			thread->cleanup(thread->data);
-		}
-		objunlock(thread);
-		objunref(thread->data);
-		objunref(thread);
-		return;
-	}
-	objunlock(thread);
+	return 1;
 }
 
 /*
  * loop through all threads till they stoped
  * setting stop will flag threads to stop
  */
-void verifythreads(int sl, int stop) {
-	struct tl_thread        *thread;
-	struct threadlist	*tmp, *cur;
+void *managethread(void *data) {
+	struct tl_thread *thread = data;
+	int stop = 0;
 	pthread_t       me;
+
+	setflag(thread, TL_THREAD_RUN);
 
 	me =  pthread_self();
 	for(;;) {
@@ -106,29 +96,50 @@ void verifythreads(int sl, int stop) {
 			break;
 		}
 
-		LIST_FORLOOP_SAFE(threads->list , thread, cur, tmp) {
-			checkthread(thread, cur, stop);
+		LIST_FOREACH_START_SAFE(threads->list , thread) {
 			/*this is my call im done*/
-			if ((pthread_equal(thread->thr, me)) &&
-			    (!(testflag(thread, &thread->flags, TL_THREAD_RUN)))) {
-				setflag(thread, &thread->flags, TL_THREAD_DONE);
-				pthread_cancel(me);
-				pthread_detach(me);
-				break;
+			if (pthread_equal(thread->thr, me)) {
+				/* im going to leave the list and try close down all others*/
+				if (!(testflag(thread, &thread->flags, TL_THREAD_RUN))) {
+					LIST_REMOVE_CURRENT(threads->list);
+					stop = 1;
+				}
+				continue;
+			}
+
+			objlock(thread);
+			if (stop && (thread->flags & TL_THREAD_RUN) && !(thread->flags & TL_THREAD_DONE)) {
+				thread->flags &= ~TL_THREAD_RUN;
+				objunlock(thread);
+			} else if ((thread->flags & TL_THREAD_DONE) || pthread_kill(thread->thr, 0)){
+				LIST_REMOVE_CURRENT(threads->list);
+				if  (thread->cleanup) {
+					thread->cleanup(thread->data);
+				}
+				objunlock(thread);
+				objunref(thread->data);
+				objunref(thread);
+			} else {
+				objunlock(thread);
 			}
 		}
+		LIST_FOREACH_END;
 		objunlock(threads);
-		usleep(sl);
+		usleep(1000000);
 	}
+	setflag(thread, TL_THREAD_DONE);
+
+	return NULL;
 }
 
-void *managethread(void *data) {
-	struct tl_thread *thread = data;
-
-	setflag(thread, &thread->flags, TL_THREAD_RUN);
-	verifythreads(1000000, 0);
-	setflag(thread, &thread->flags, TL_THREAD_DONE);
-	return NULL;
+/*
+ * initialise the threadlist
+ * start manager thread
+ */
+void startthreads(void) {
+	threads = objalloc(sizeof(*threads));
+        LIST_INIT(threads->list, NULL);
+	threads->manager = mkthread(managethread, NULL, manager_sig, NULL, TL_THREAD_NONE);
 }
 
 /*
@@ -150,7 +161,7 @@ int thread_signal(int sig) {
 		if (pthread_equal(thread->thr, me)) {
 			objunlock(threads);
 			if (thread->sighandler) {
-				thread->sighandler(sig, thread->data);
+				thread->sighandler(sig, thread);
 				ret = 1;
 			} else {
 				ret = -1;
