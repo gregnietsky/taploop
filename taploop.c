@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 	/*set pid for consistancy i was 0 when born*/
 	daemon = getpid();
 
-	/* Dont want these */
+	/* Dont want these as a daemon*/
 	signal(SIGTSTP, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
 
@@ -78,7 +78,6 @@ int main(int argc, char *argv[]) {
 	sa.sa_sigaction = sig_handler;
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGTERM, &sa, NULL);
-	sigaction(SIGKILL, &sa, NULL);
 
 	/*init the threadlist start thread manager*/
 	threads = objalloc(sizeof(*threads));

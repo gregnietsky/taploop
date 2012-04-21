@@ -84,7 +84,6 @@ int create_kernvlan(char *ifname, int vid) {
  */
 void add_kernvlan(char *iface, int vid) {
 	struct taploop *tap = NULL;
-	struct threadlist *cur;
 	struct tl_thread *thread;
 	struct ifreq ifr;
 	struct sockaddr_ll sll;
