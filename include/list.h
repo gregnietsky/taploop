@@ -56,6 +56,7 @@ struct hashedlist {
 
 /*
  * Add a element to a list head struct
+ * adds entry to tail
  */
 #define LIST_ADD(head, entry) { \
 	__typeof(head) _tmp_head = head; \

@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 typedef struct bucket_list bucket_list;
+typedef struct bucket_loop bucket_loop;
 
 int objlock(void *data);
 int objtrylock(void *data);
@@ -27,6 +28,14 @@ int objref(void *data);
 void *objalloc(int size);
 
 struct bucket_list *create_bucketlist(int bitmask, void *hash_function);
+
+int addtobucket(struct bucket_list *blist, void *data);
+
+struct bucket_loop *init_bucket_loop(struct bucket_list *blist);
+void stop_bucket_loop(struct bucket_loop *bloop);
+
+void *next_bucket_loop(struct bucket_loop *bloop);
+void remove_bucket_loop(struct bucket_loop *bloop);
 
 #define clearflag(obj, flag) objlock(obj); \
 	obj->flags &= ~flag; \
