@@ -31,6 +31,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "thread.h"
 #include "list.h"
 
+/*
+ * instruct the kernel to remove a VLAN
+ */
 int delete_kernvlan(int fd, char *ifname, int vid) {
 	struct vlan_ioctl_args vifr;
 
@@ -39,7 +42,7 @@ int delete_kernvlan(int fd, char *ifname, int vid) {
 	vifr.u.VID = vid;
 	vifr.cmd = DEL_VLAN_CMD;
 
-	/*Create the vlan*/
+	/*Delete the vlan*/
 	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
 		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
 		close(fd);
@@ -49,6 +52,9 @@ int delete_kernvlan(int fd, char *ifname, int vid) {
 	return 0;
 }
 
+/*
+ * instruct the kernel to create a VLAN
+ */
 int create_kernvlan(char *ifname, int vid) {
 	struct vlan_ioctl_args vifr;
 	int proto = htons(ETH_P_ALL);
@@ -87,7 +93,7 @@ void add_kernvlan(char *iface, int vid) {
 	int fd;
 
 	/*check VID*/
-	if ((vid <= 0 ) || (vid > 0xFFF)) {
+	if ((vid <= 1 ) || (vid > 0xFFF)) {
 		printf("Requested VID %i is out of range\n", vid);
 		return;
 	}
