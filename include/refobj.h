@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+typedef struct bucket_list bucket_list;
+
 int objlock(void *data);
 int objtrylock(void *data);
 int objunlock(void *data);
@@ -23,6 +25,8 @@ int objcnt(void *data);
 int objunref(void *data);
 int objref(void *data);
 void *objalloc(int size);
+
+struct bucket_list *create_bucketlist(int bitmask, void *hash_function);
 
 #define clearflag(obj, flag) objlock(obj); \
 	obj->flags &= ~flag; \

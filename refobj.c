@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <pthread.h>
 #include <string.h>
-#include <jhash.h>
+#include "jhash.h"
 #include "list.h"
 
 #define REFOBJ_MAGIC		0xdeadc0de
@@ -42,13 +42,15 @@ struct blist_obj {
 /*bucket list to hold hashed objects in buckets*/
 struct bucket_list {
 	unsigned short	buckets;		/* number of buckets to create 2 ^ n masks hash*/
-	struct		blist_obj *list;		/* array of blist_obj[buckets]*/
 	int		(*hash_func)(void *data);
+	struct		blist_obj *list;		/* array of blist_obj[buckets]*/
 };
+
+#define refobj_offset	sizeof(struct ref_obj);
 
 void *objalloc(int size) {
 	struct ref_obj *ref;
-	size = size+32;
+	size = size + refobj_offset;
 	void *robj;
 
 	if ((robj = malloc(size))) {
@@ -57,7 +59,8 @@ void *objalloc(int size) {
 		pthread_mutex_init(&ref->lock, NULL);
 		ref->magic = REFOBJ_MAGIC;
 		ref->cnt++;
-		return robj + 32;
+		ref->data = robj + refobj_offset;
+		return ref->data;
 	}
 	return NULL;
 }
@@ -69,7 +72,7 @@ int objref(void *data) {
 		return ret;
 	}
 
-	struct ref_obj *ref = data - 32;
+	struct ref_obj *ref = data - refobj_offset;
 	if ((ref->magic == REFOBJ_MAGIC) && (ref->cnt)) {
 		pthread_mutex_lock(&ref->lock);
 		ref->cnt++;
@@ -86,7 +89,7 @@ int objunref(void *data) {
 		return ret;
 	}
 
-	struct ref_obj *ref = data - 32;
+	struct ref_obj *ref = data - refobj_offset;
 	if ((ref->magic == REFOBJ_MAGIC) && (ref->cnt)) {
 		pthread_mutex_lock(&ref->lock);
 		ref->cnt--;
@@ -102,7 +105,7 @@ int objunref(void *data) {
 
 int objcnt(void *data) {
 	int ret = -1;
-	struct ref_obj *ref = data - 32;
+	struct ref_obj *ref = data - refobj_offset;
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_lock(&ref->lock);
 		ret = ref->cnt;
@@ -112,7 +115,7 @@ int objcnt(void *data) {
 }
 
 int objlock(void *data) {
-	struct ref_obj *ref = data - 32;
+	struct ref_obj *ref = data - refobj_offset;
 
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_lock(&ref->lock);
@@ -121,7 +124,7 @@ int objlock(void *data) {
 }
 
 int objtrylock(void *data) {
-	struct ref_obj *ref = data - 32;
+	struct ref_obj *ref = data - refobj_offset;
 
 	if (ref->magic == REFOBJ_MAGIC) {
 		return (pthread_mutex_trylock(&ref->lock)) ? -1 : 0;
@@ -130,10 +133,43 @@ int objtrylock(void *data) {
 }
 
 int objunlock(void *data) {
-	struct ref_obj *ref = data - 32;
+	struct ref_obj *ref = data - refobj_offset;
 
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_unlock(&ref->lock);
 	}
 	return 0;
+}
+
+struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
+	struct bucket_list *new;
+	struct blist_obj *bucket;
+	short int buckets, cnt;
+
+	buckets = (1 << bitmask);
+
+	/* allocate session bucket list memory*/
+        if (!(new = objalloc(sizeof(*new) + (sizeof(struct blist_obj) * buckets)))) {
+		printf("Memory Allocation Error (bucket_list)\n");
+		return NULL;
+	}
+
+        /*initialise each bucket*/
+        new->list = (struct blist_obj *)&new->list;
+        for (cnt = 0; cnt < buckets; cnt++) {
+		bucket = (struct blist_obj*)&new->list[cnt];
+		LIST_INIT(bucket, NULL);
+        }
+
+	return new;
+}
+
+int addtobucket(struct blist_obj *bucket, void *data) {
+	struct ref_obj *ref = data - refobj_offset;
+
+	if (ref->magic == REFOBJ_MAGIC) {
+		LIST_ADD(bucket, ref);
+	}
+
+	return 1;
 }
