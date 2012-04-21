@@ -35,8 +35,20 @@ void clientserv_run(void);
  */
 static void sig_handler(int sig, siginfo_t *si, void *unused) {
 	/* flag and clean all threads*/
-	verifythreads(10000, 1);
-	exit(0);
+	switch (sig) {
+		case SIGTERM:
+		case SIGINT:
+			verifythreads(10000, 1);
+			exit(0);
+		case SIGUSR1:
+		case SIGUSR2:
+		case SIGHUP:
+		case SIGALRM:
+			if (!thread_signal(sig)) {
+				printf("Global signal %i\n", sig);
+			}
+			break;
+	}
 }
 
 /*
@@ -79,10 +91,16 @@ int main(int argc, char *argv[]) {
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGTERM, &sa, NULL);
 
+	/*internal interupts*/
+	sigaction(SIGUSR1, &sa, NULL);
+	sigaction(SIGUSR2, &sa, NULL);
+	sigaction(SIGHUP, &sa, NULL);
+	sigaction(SIGALRM, &sa, NULL);
+
 	/*init the threadlist start thread manager*/
 	threads = objalloc(sizeof(*threads));
 	LIST_INIT(threads->list, NULL);
-	manage = mkthread(managethread, NULL, NULL, TL_THREAD_NONE);
+	manage = mkthread(managethread, NULL, NULL, NULL, TL_THREAD_NONE);
 
 	/*client socket to allow client to connect*/
 	clientserv_run();

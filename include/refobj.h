@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 void objlock(void *data);
+int objtrylock(void *data);
 void objunlock(void *data);
 int objcnt(void *data);
 int objunref(void *data);

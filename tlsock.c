@@ -483,5 +483,5 @@ int add_taploop(char *dev, char *name) {
 	tap->mmap_size = 0;
 
 	/* Start thread*/
-	return (mkthread(mainloop, stoptap, tap, TL_THREAD_TAP)) ? 0 : -1;
+	return (mkthread(mainloop, stoptap, NULL, tap, TL_THREAD_TAP)) ? 0 : -1;
 }

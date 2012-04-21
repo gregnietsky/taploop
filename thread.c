@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*
  * create a taploop thread
  */
-struct tl_thread *mkthread(void *func, void *cleanup, void *data, enum threadopt flags) {
+struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *data, enum threadopt flags) {
 	struct tl_thread *thread;
 
 	if (!(thread = objalloc(sizeof(*thread)))) {
@@ -37,6 +37,7 @@ struct tl_thread *mkthread(void *func, void *cleanup, void *data, enum threadopt
 
 	thread->data = data;
 	thread->cleanup = cleanup;
+	thread->sighandler = sig_handler;
 	thread->flags = 0;
 	thread->flags = flags;
 	/* set this and check this in thread*/
@@ -117,7 +118,6 @@ void verifythreads(int sl, int stop) {
 			}
 		}
 		objunlock(threads);
-
 		usleep(sl);
 	}
 }
@@ -126,8 +126,41 @@ void *managethread(void *data) {
 	struct tl_thread *thread = data;
 
 	setflag(thread, &thread->flags, TL_THREAD_RUN);
-	verifythreads(100000, 0);
+	verifythreads(1000000, 0);
 	setflag(thread, &thread->flags, TL_THREAD_DONE);
 	return NULL;
 }
 
+/*
+ * find the thread the signal was delivered to
+ * if the signal was handled returns 1
+ * if the thread could not be handled returns -1
+ * returns 0 if not for thread
+ * NB sending a signal to a thread from a thread while threads is locked
+ * will cause a deadlock most likely
+ */
+int thread_signal(int sig) {
+	int ret = 0;
+	pthread_t       me;
+	struct tl_thread        *thread;
+
+	me =  pthread_self();
+	objlock(threads);
+	LIST_FOREACH_START(threads->list , thread) {
+		if (pthread_equal(thread->thr, me)) {
+			objunlock(threads);
+			if (thread->sighandler) {
+				thread->sighandler(sig, thread->data);
+				ret = 1;
+			} else {
+				ret = -1;
+			}
+			break;
+		}
+	}
+	LIST_FOREACH_END;
+	if (!ret) {
+		objunlock(threads);
+	}
+	return ret;
+}

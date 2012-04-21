@@ -119,6 +119,15 @@ void objlock(void *data) {
 	}
 }
 
+int objtrylock(void *data) {
+	struct ref_obj *ref = data - 32;
+
+	if (ref->magic == REFOBJ_MAGIC) {
+		return (pthread_mutex_trylock(&ref->lock)) ? -1 : 0;
+	}
+	return -1;
+}
+
 void objunlock(void *data) {
 	struct ref_obj *ref = data - 32;
 
