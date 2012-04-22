@@ -22,17 +22,15 @@ enum threadopt {
 	TL_THREAD_RUN	= 1 << 1,
 	/* thread is marked as complete*/
 	TL_THREAD_DONE	= 1 << 2,
-	/* This is a taploop*/
-	TL_THREAD_TAP	= 1 << 3,
 };
 
-/* thread struct seen by programs*/
+/* thread struct*/
 struct thread_info {
 	void			*data;
 	enum			threadopt flags;
 };
 
-struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *data, enum threadopt flags);
+struct thread_pvt *mkthread(void *func, void *cleanup, void *sig_handler, void *data);
 int thread_signal(int sig);
 
 void startthreads(void);

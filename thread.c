@@ -24,44 +24,51 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "refobj.h"
 
 /* thread struct used to create threads*/
-struct tl_thread {
-	void			*data;
-	enum			threadopt flags;
+struct thread_pvt {
 	pthread_t		thr;
 	void			*(*cleanup)(void *data);
-	void			(*sighandler)(int sig, struct tl_thread *thread);
+	void			(*sighandler)(int sig, struct thread_pvt *thread);
+	struct			thread_info *appinfo;
 };
 
 struct threadcontainer {
 	struct bucket_list	*list;
-	struct tl_thread	*manager;
+	struct thread_pvt	*manager;
 };
 
+/*
+ * Global threads list
+ */
 struct threadcontainer *threads;
 
 /*
- * create a taploop thread
+ * create a thread
  */
-struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *data, enum threadopt flags) {
-	struct tl_thread *thread;
+struct thread_pvt *mkthread(void *func, void *cleanup, void *sig_handler, void *data) {
+	struct thread_pvt *thread;
+	struct thread_info *thread_info;
 
 	if (!(thread = objalloc(sizeof(*thread), NULL))) {
 		return NULL;
 	}
 
-	thread->data = data;
+	if (!(thread_info = objalloc(sizeof(*thread_info), NULL))) {
+		objunref(thread);
+		return NULL;
+	}
+
+	thread_info->data = data;
+	thread_info->flags = 0;
 	thread->cleanup = cleanup;
 	thread->sighandler = sig_handler;
-	thread->flags = 0;
-	thread->flags = flags;
-	/* set this and check this in thread*/
-	thread->flags &= ~TL_THREAD_RUN & ~TL_THREAD_DONE;
+	thread->appinfo = thread_info;
 
 	/* grab a ref to data for thread to make sure it does not go away*/
-	objref(thread->data);
-	if (pthread_create(&thread->thr, NULL, func, thread)) {
+	objref(thread_info->data);
+	if (pthread_create(&thread->thr, NULL, func, thread->appinfo)) {
 		objunref(thread);
-		objunref(thread->data);
+		objunref(thread_info->data);
+		objunref(thread_info);
 		return NULL;
 	}
 
@@ -72,6 +79,8 @@ struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *d
 		objunlock(threads);
 		return thread;
 	} else {
+		objunref(thread_info->data);
+		objunref(thread_info);
 		objunref(thread);
 	}
 
@@ -82,10 +91,10 @@ struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *d
 /*
  * close all threads when we get SIGHUP
  */
-int manager_sig(int sig, struct tl_thread *thread) {
+int manager_sig(int sig, struct thread_pvt *thread) {
 	switch(sig) {
 		case SIGHUP:
-			clearflag(thread, TL_THREAD_RUN);
+			clearflag(thread->appinfo, TL_THREAD_RUN);
 			break;
 	}
 	return 1;
@@ -96,11 +105,12 @@ int manager_sig(int sig, struct tl_thread *thread) {
  * setting stop will flag threads to stop
  */
 void *managethread(void *data) {
-	struct tl_thread *thread = data;
+	struct thread_info *mythread = data;
+	struct thread_pvt *thread;
 	pthread_t me;
 	int stop = 0;
 
-	setflag(thread, TL_THREAD_RUN);
+	setflag(mythread, TL_THREAD_RUN);
 
 	me = pthread_self();
 	while(bucket_list_cnt(threads->list)) {
@@ -108,7 +118,7 @@ void *managethread(void *data) {
 			/*this is my call im done*/
 			if (pthread_equal(thread->thr, me)) {
 				/* im going to leave the list and try close down all others*/
-				if (!(testflag(thread, TL_THREAD_RUN))) {
+				if (!(testflag(mythread, TL_THREAD_RUN))) {
 					BLIST_REMOVE_CURRENT;
 					stop = 1;
 				}
@@ -116,16 +126,17 @@ void *managethread(void *data) {
 			}
 
 			objlock(thread);
-			if (stop && (thread->flags & TL_THREAD_RUN) && !(thread->flags & TL_THREAD_DONE)) {
-				thread->flags &= ~TL_THREAD_RUN;
+			if (stop && (thread->appinfo->flags & TL_THREAD_RUN) && !(thread->appinfo->flags & TL_THREAD_DONE)) {
+				thread->appinfo->flags &= ~TL_THREAD_RUN;
 				objunlock(thread);
-			} else if ((thread->flags & TL_THREAD_DONE) || pthread_kill(thread->thr, 0)){
+			} else if ((thread->appinfo->flags & TL_THREAD_DONE) || pthread_kill(thread->thr, 0)){
 				objunlock(thread);
 				BLIST_REMOVE_CURRENT;
 				if (thread->cleanup) {
-					thread->cleanup(thread->data);
+					thread->cleanup(thread->appinfo->data);
 				}
-				objunref(thread->data);
+				objunref(thread->appinfo->data);
+				objunref(thread->appinfo);
 				objunref(thread);
 			} else {
 				objunlock(thread);
@@ -134,7 +145,7 @@ void *managethread(void *data) {
 		BLIST_FOREACH_END;
 		sleep(1);
 	}
-	setflag(thread, TL_THREAD_DONE);
+	setflag(mythread, TL_THREAD_DONE);
 
 	return NULL;
 }
@@ -146,7 +157,7 @@ void *managethread(void *data) {
 void startthreads(void) {
 	threads = objalloc(sizeof(*threads), NULL);
 	threads->list = create_bucketlist(5, NULL);
-	threads->manager = mkthread(managethread, NULL, manager_sig, NULL, TL_THREAD_NONE);
+	threads->manager = mkthread(managethread, NULL, manager_sig, NULL);
 }
 
 /*
@@ -172,7 +183,7 @@ void jointhreads(void) {
  * will cause a deadlock.
  */
 int thread_signal(int sig) {
-	struct tl_thread *thread;
+	struct thread_pvt *thread;
 	pthread_t me;
 	int ret = 0;
 
