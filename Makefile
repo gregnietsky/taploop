@@ -14,13 +14,14 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CFLAGS=-g -Wall -I./include
+CFLAGS=-g -Wall -Werror -fpic -I./include
+# -static
 
-TL_OBJS = main.o taploop.o refobj.o util.o lookup3.o thread.o vlan.o tlsock.o \
-		clientserv.o packet.o
+CORE_LIB_OBJS = refobj.o lookup3.o thread.o
+TL_OBJS = taploop.o util.o vlan.o tlsock.o clientserv.o packet.o
 TLC_OBJS = tapclient.o
 
-all: taploopd taploop
+all: libdtsdevcore.so libdtsdevrun.so libdtsdev.a taploopd taploop
 
 install: all
 	echo "Put ME Where";
@@ -28,8 +29,26 @@ install: all
 clean:
 	rm -f taploop taploopd *.o core
 
-taploop: $(TLC_OBJS)
-	gcc -g -o $@ $^ -lpthread
+libdtsdevcore.so: $(CORE_LIB_OBJS)
+	gcc -g -shared -o $@ $^ -lpthread
 
-taploopd: $(TL_OBJS)
-	gcc -g -o $@ $^ -lpthread
+libdtsdevrun.so: main.o
+	gcc -g -shared -o $@ $^ -L./ -lpthread -ldtsdevcore
+
+libdtsdevcore.a: $(CORE_LIB_OBJS)
+	ar rcs $@ $^
+
+libdtsdevrun.a: $(CORE_LIB_OBJS) main.o
+	ar rcs $@ $^
+
+taploop: $(TLC_OBJS)
+	gcc -g -o $@ $^ -L./ -lpthread
+
+taploopd.a: $(TL_OBJS)
+	ar rcs $@ $^
+
+taploopd: libdtsdevrun.a taploopd.a
+	gcc -g -o $@ $^ -L./ -lpthread
+
+taploopd.so: $(TL_OBJS)
+	gcc -g -o $@ $^ -L./ -lpthread -ldtsdevcore -ldtsdevrun
