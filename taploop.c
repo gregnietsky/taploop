@@ -47,5 +47,5 @@ int startup(int argc, char *argv[]) {
 	} else {
 		printf("%s <DEV> <PHY NAME> [<VLAN> .....]\n", argv[0]);
 	}
-	return 0;
+	return (0);
 }

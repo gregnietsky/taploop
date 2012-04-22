@@ -71,7 +71,8 @@ pid_t daemonize() {
 	signal(SIGCHLD, SIG_IGN);
 
 	/*set pid for consistancy i was 0 when born*/
-	return getpid();
+	forkpid = getpid();
+	return (forkpid);
 }
 
 void configure_sigact(struct sigaction *sa) {
@@ -126,5 +127,5 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* turn off the lights*/
-	return ret;
+	return (ret);
 }

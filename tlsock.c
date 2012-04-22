@@ -90,7 +90,7 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
 		BLIST_ADD(tap->socks, tlsock);
 		objunlock(tap);
 	}
-	return tlsock;
+	return (tlsock);
 }
 
 /*
@@ -241,7 +241,7 @@ struct tl_socket *phyopen(struct taploop *tap) {
 		}
 	}
 
-	return tlsock;
+	return (tlsock);
 }
 
 /*
@@ -443,7 +443,7 @@ int add_taploop(char *dev, char *name) {
 
 	/* do not continue on zero  length options*/
 	if (!dev || !name || (dev[1] == '\0') || (name[1] == '\0')) {
-		return -1;
+		return (-1);
 	}
 
 	if (!taplist) {
@@ -463,7 +463,7 @@ int add_taploop(char *dev, char *name) {
 	BLIST_FOREACH_END;
 
 	if (tap || !(tap = objalloc(sizeof(*tap), NULL))) {
-		return -1;
+		return (-1);
 	}
 
 	strncpy(tap->pdev, dev, IFNAMSIZ);
@@ -475,5 +475,5 @@ int add_taploop(char *dev, char *name) {
 	BLIST_ADD(taplist, tap);
 
 	/* Start thread*/
-	return (mkthread(mainloop, stoptap, NULL, tap)) ? 0 : -1;
+	return ((mkthread(mainloop, stoptap, NULL, tap)) ? 0 : -1);
 }

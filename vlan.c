@@ -46,10 +46,10 @@ int delete_kernvlan(int fd, char *ifname, int vid) {
 	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
 		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
 		close(fd);
-		return -1;
+		return (-1);
 	}
 	close(fd);
-	return 0;
+	return (0);
 }
 
 /*
@@ -67,16 +67,16 @@ int create_kernvlan(char *ifname, int vid) {
 
 	/* open network raw socket */
 	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
-		return -1;
+		return (-1);
 	}
 
 	/*Create the vlan*/
 	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
 		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
 		close(fd);
-		return -1;
+		return (-1);
 	}
-	return fd;
+	return (fd);
 }
 
 /*

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "thread.h"
 #include "refobj.h"
@@ -54,7 +55,7 @@ struct thread_pvt *mkthread(void *func, void *cleanup, void *sig_handler, void *
 
 	if (!(thread_info = objalloc(sizeof(*thread_info), NULL))) {
 		objunref(thread);
-		return NULL;
+		return (NULL);
 	}
 
 	thread_info->data = data;
@@ -77,7 +78,7 @@ struct thread_pvt *mkthread(void *func, void *cleanup, void *sig_handler, void *
 		objlock(threads);
 		BLIST_ADD(threads->list, thread);
 		objunlock(threads);
-		return thread;
+		return (thread);
 	} else {
 		objunref(thread_info->data);
 		objunref(thread_info);
@@ -97,7 +98,7 @@ int manager_sig(int sig, struct thread_pvt *thread) {
 			clearflag(thread->appinfo, TL_THREAD_RUN);
 			break;
 	}
-	return 1;
+	return (1);
 }
 
 /*
@@ -200,5 +201,5 @@ int thread_signal(int sig) {
 		}
 	}
 	BLIST_FOREACH_END;
-	return ret;
+	return (ret);
 }

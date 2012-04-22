@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 
 	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
 		perror("client connect (socket)");
-		return -1;
+		return (-1);
 	}
 
 	salen = sizeof(adr);
@@ -42,9 +42,9 @@ int main(int argc, char *argv[]) {
 
 	if (connect(fd, (struct sockaddr *)&adr, salen)) {
 		perror("clientcon (connect)");
-		return -1;
+		return (-1);
 	}
 	write(fd, sock, strlen(sock)+1);
 	close(fd);
-	return 0;
+	return (0);
 }

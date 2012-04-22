@@ -78,7 +78,7 @@ void *objalloc(int size,void *destructor) {
 		ref->cnt++;
 		ref->data = robj + refobj_offset;
 		ref->size = size;
-		return ref->data;
+		return (ref->data);
 	}
 	return NULL;
 }
@@ -87,7 +87,7 @@ int objref(void *data) {
 	int ret = 0;
 
 	if (!data) {
-		return ret;
+		return (ret);
 	}
 
 	struct ref_obj *ref = data - refobj_offset;
@@ -97,14 +97,14 @@ int objref(void *data) {
 		ret = ref->cnt;
 		pthread_mutex_unlock(&ref->lock);
 	}
-	return ret;
+	return (ret);
 }
 
 int objunref(void *data) {
 	int ret = -1;
 
 	if (!data) {
-		return ret;
+		return (ret);
 	}
 
 	struct ref_obj *ref = data - refobj_offset;
@@ -118,7 +118,7 @@ int objunref(void *data) {
 			free(ref);
 		}
 	}
-	return ret;
+	return (ret);
 }
 
 int objcnt(void *data) {
@@ -129,7 +129,7 @@ int objcnt(void *data) {
 		ret = ref->cnt;
 		pthread_mutex_unlock(&ref->lock);
 	}
-	return ret;
+	return (ret);
 }
 
 int objlock(void *data) {
@@ -138,16 +138,16 @@ int objlock(void *data) {
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_lock(&ref->lock);
 	}
-	return 0;
+	return (0);
 }
 
 int objtrylock(void *data) {
 	struct ref_obj *ref = data - refobj_offset;
 
 	if (ref->magic == REFOBJ_MAGIC) {
-		return (pthread_mutex_trylock(&ref->lock)) ? -1 : 0;
+		return ((pthread_mutex_trylock(&ref->lock)) ? -1 : 0);
 	}
-	return -1;
+	return (-1);
 }
 
 int objunlock(void *data) {
@@ -156,7 +156,7 @@ int objunlock(void *data) {
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_unlock(&ref->lock);
 	}
-	return 0;
+	return (0);
 }
 
 /*
@@ -182,7 +182,7 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 	for (cnt = 0; cnt < buckets; cnt++) {
 		LIST_INIT(new->list[cnt], NULL);
 	}
-	return new;
+	return (new);
 }
 
 /*
@@ -204,9 +204,9 @@ int addtobucket(struct bucket_list *blist, void *data) {
 			blist->count++;
 			objref(data);
 		}
-		return 1;
+		return (1);
 	}
-	return 0;
+	return (0);
 
 }
 
@@ -225,7 +225,7 @@ struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
 	}
 	objlock(blist);
 
-	return bloop;
+	return (bloop);
 }
 
 /*
@@ -267,7 +267,7 @@ void *next_bucket_loop(struct bucket_loop *bloop) {
 		bloop->head = bloop->head->next;
 	}
 
-	return data;
+	return (data);
 }
 
 /*
@@ -289,5 +289,5 @@ int bucket_list_cnt(struct bucket_list *blist) {
 		ret = blist->count;
 		objunlock(blist);
 	}
-	return ret;
+	return (ret);
 }
