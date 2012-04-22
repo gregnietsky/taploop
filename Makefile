@@ -21,13 +21,13 @@ CORE_LIB_OBJS = refobj.o lookup3.o thread.o
 TL_OBJS = taploop.o util.o vlan.o tlsock.o clientserv.o packet.o
 TLC_OBJS = tapclient.o
 
-all: libdtsdevcore.so libdtsdevrun.so libdtsdev.a taploopd taploop
+all: libdtsdevcore.so libdtsdevrun.so libdtsdevcore.a taploopd taploop
 
 install: all
 	echo "Put ME Where";
 
 clean:
-	rm -f taploop taploopd *.o core
+	rm -f taploop taploopd *.o *.a *.so core
 
 libdtsdevcore.so: $(CORE_LIB_OBJS)
 	gcc -g -shared -o $@ $^ -lpthread
