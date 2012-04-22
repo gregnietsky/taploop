@@ -23,7 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <errno.h>
 
 #include "taploop.h"
-#include "util.h"
 #include "refobj.h"
 #include "thread.h"
 

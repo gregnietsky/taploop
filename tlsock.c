@@ -33,7 +33,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "taploop.h"
 #include "tlsock.h"
 #include "refobj.h"
-#include "util.h"
 #include "vlan.h"
 #include "thread.h"
 #include "packet.h"
