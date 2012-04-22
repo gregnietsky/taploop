@@ -45,7 +45,7 @@ struct threadcontainer *threads;
 struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *data, enum threadopt flags) {
 	struct tl_thread *thread;
 
-	if (!(thread = objalloc(sizeof(*thread)))) {
+	if (!(thread = objalloc(sizeof(*thread), NULL))) {
 		return NULL;
 	}
 
@@ -144,7 +144,7 @@ void *managethread(void *data) {
  * start manager thread
  */
 void startthreads(void) {
-	threads = objalloc(sizeof(*threads));
+	threads = objalloc(sizeof(*threads), NULL);
 	threads->list = create_bucketlist(5, NULL);
 	threads->manager = mkthread(managethread, NULL, manager_sig, NULL, TL_THREAD_NONE);
 }

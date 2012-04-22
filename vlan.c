@@ -152,7 +152,7 @@ void add_kernvlan(char *iface, int vid) {
 	 * traffic to it so will keep it on the list.
 	 * when writing to this socket i need not append 802.1Q header
 	 */
-	if ((tlsock = objalloc(sizeof(*tlsock)))) {
+	if ((tlsock = objalloc(sizeof(*tlsock), NULL))) {
 		tlsock->sock = fd;
 		tlsock->vid = vid;
 		tlsock->flags = TL_SOCKET_8021Q;

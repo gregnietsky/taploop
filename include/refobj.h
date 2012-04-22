@@ -25,7 +25,7 @@ int objunlock(void *data);
 int objcnt(void *data);
 int objunref(void *data);
 int objref(void *data);
-void *objalloc(int size);
+void *objalloc(int size, void *destructor);
 
 struct bucket_list *create_bucketlist(int bitmask, void *hash_function);
 

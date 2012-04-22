@@ -125,7 +125,7 @@ void *clientsock_serv(void *data) {
 		}
 
 		if (FD_ISSET(fd, &act_set)) {
-			clfd = objalloc(sizeof(int));
+			clfd = objalloc(sizeof(int), NULL);
 			if ((*clfd = accept(fd, (struct sockaddr *)&adr, &salen))) {
 				mkthread(clientsock_client, delclientsock_client, NULL, clfd, TL_THREAD_NONE);
 			} else {

@@ -81,7 +81,7 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
 	        return NULL;
 	}
 
-	if ((tlsock = objalloc(sizeof(*tlsock)))) {
+	if ((tlsock = objalloc(sizeof(*tlsock), NULL))) {
 		/*passing ref back*/
 		objref(tlsock);
 		tlsock->sock = fd;
@@ -176,7 +176,7 @@ struct tl_socket *phyopen(struct taploop *tap) {
 	}
 
 	/* configure ring buff*/
-	if (ring = objalloc(reqr.tp_frame_nr * sizeof(struct iovec))) {
+	if (ring = objalloc(reqr.tp_frame_nr * sizeof(struct iovec), NULL)) {
 		int i;
 		for(i=0; i<reqr.tp_frame_nr; i++) {
 			ring[i].iov_base=(void *)((long)rxmmbuf)+(i*reqr.tp_frame_size);
@@ -219,7 +219,7 @@ struct tl_socket *phyopen(struct taploop *tap) {
 		return NULL;
 	}
 
-	if ((tlsock = objalloc(sizeof(*tlsock)))) {
+	if ((tlsock = objalloc(sizeof(*tlsock), NULL))) {
 		/*passing ref back*/
 		objref(tlsock);
 		tlsock->sock = fd;
@@ -463,7 +463,7 @@ int add_taploop(char *dev, char *name) {
 	};
 	BLIST_FOREACH_END;
 
-	if (tap || !(tap = objalloc(sizeof(*tap)))) {
+	if (tap || !(tap = objalloc(sizeof(*tap), NULL))) {
 		return -1;
 	}
 

@@ -65,7 +65,7 @@ struct bucket_loop {
 
 #define refobj_offset	sizeof(struct ref_obj);
 
-void *objalloc(int size) {
+void *objalloc(int size,void *destructor) {
 	struct ref_obj *ref;
 	int asize = size + refobj_offset;
 	void *robj;
@@ -171,7 +171,7 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 	buckets = (1 << bitmask);
 
 	/* allocate session bucket list memory*/
-	if (!(new = objalloc(sizeof(*new) + (sizeof(void*) * buckets)))) {
+	if (!(new = objalloc(sizeof(*new) + (sizeof(void*) * buckets),NULL))) {
 		printf("Memory Allocation Error (bucket_list)\n");
 		return NULL;
 	}
@@ -216,7 +216,7 @@ int addtobucket(struct bucket_list *blist, void *data) {
 struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
 	struct bucket_loop *bloop = NULL;
 
-	if ((bloop = objalloc(sizeof(*bloop))) && objref(blist)) {
+	if ((bloop = objalloc(sizeof(*bloop),NULL)) && objref(blist)) {
 		bloop->blist = blist;
 		bloop->bucket = -1;
 		bloop->head = NULL;
