@@ -19,9 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/un.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/socket.h>
 
-#include "taploop.h"
-#include "refobj.h"
+#include <framework.h>
 
 int main(int argc, char *argv[]) {
 	struct sockaddr_un	adr;
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 		perror("clientcon (connect)");
 		return (-1);
 	}
-	write(fd, sock, strlen(sock)+1);
+	salen = write(fd, sock, strlen(sock)+1);
 	close(fd);
 	return (0);
 }

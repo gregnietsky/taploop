@@ -8,7 +8,7 @@ AC_CONFIG_SRCDIR([framework/thread.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-LT_INIT([disable-shared])
+LT_INIT()
 
 # Checks for programs.
 AC_PROG_CXX
