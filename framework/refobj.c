@@ -196,6 +196,8 @@ int addtobucket(struct bucket_list *blist, void *data) {
 	if (blist && (ref->magic == REFOBJ_MAGIC)) {
 		if (!blist->hash_func) {
 			hash = jenhash(data, ref->size, 0);
+		} else {
+			hash = 0;
 		}
 		bucket = hash & (blist->buckets -1);
 		lhead = blist->list[bucket];

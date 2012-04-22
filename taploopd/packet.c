@@ -120,8 +120,7 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
 		objlock(tap);
 		if ((osock->flags & TL_SOCKET_PHY) || (osock->flags & TL_SOCKET_8021Q)) {
 			send(osock->sock, buffer, len, 0);
-		} else {
-			write(osock->sock, buffer, len);
+		} else if (write(osock->sock, buffer, len)) {
 		}
 		objunlock(tap);
 	}

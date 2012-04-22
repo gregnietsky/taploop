@@ -28,8 +28,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 void linrand(void *buf, int len) {
 	int fd = open("/dev/random", O_RDONLY);
+	int rlen;
 
-	read(fd, buf, len);
+	rlen = read(fd, buf, len);
+	len = rlen;
 	close(fd);
 }
 
