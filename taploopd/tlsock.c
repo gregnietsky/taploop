@@ -30,8 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <linux/if_packet.h>
 #include <linux/sockios.h>
 
-#include <refobj.h>
-#include <thread.h>
+#include <framework.h>
 
 #include "taploop.h"
 #include "tlsock.h"

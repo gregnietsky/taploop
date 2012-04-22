@@ -21,8 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "thread.h"
-#include "refobj.h"
+#include "framework.h"
 
 /* thread struct used to create threads*/
 struct thread_pvt {

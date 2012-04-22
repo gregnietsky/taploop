@@ -22,8 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <fcntl.h>
 #include <errno.h>
 
-#include <refobj.h>
-#include <thread.h>
+#include <framework.h>
 
 #include "taploop.h"
 

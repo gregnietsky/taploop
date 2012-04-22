@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <unistd.h>
 
-#include <refobj.h>
+#include <framework.h>
 
 #include "taploop.h"
 #include "tlsock.h"
