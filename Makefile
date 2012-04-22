@@ -14,41 +14,29 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CFLAGS=-g -Wall -Werror -fpic -I./include
+CFLAGS=-g -Wall -Werror -fpic -I./include -I/usr/include
 # -static
 
-CORE_LIB_OBJS = refobj.o lookup3.o thread.o
-TL_OBJS = taploop.o util.o vlan.o tlsock.o clientserv.o packet.o
-TLC_OBJS = tapclient.o
+CORE_LIB_OBJS = framework/refobj.o framework/lookup3.o framework/thread.o framework/main.o
+TL_OBJS = taploopd/taploop.o taploopd/util.o taploopd/vlan.o taploopd/tlsock.o taploopd/clientserv.o taploopd/packet.o
+TLC_OBJS = taploopd/tapclient.o
 
-all: libdtsdevcore.so libdtsdevrun.so libdtsdevcore.a taploopd taploop
+all: framework/libframework.so framework/libframework.a taploopd/taploopd taploopd/taploop
 
 install: all
 	echo "Put ME Where";
 
 clean:
-	rm -f taploop taploopd *.o *.a *.so core
+	rm -f taploopd/taploop taploopd/taploopd */*.o */*.a */*.so core
 
-libdtsdevcore.so: $(CORE_LIB_OBJS)
+framework/libframework.so: $(CORE_LIB_OBJS)
 	gcc -g -shared -o $@ $^ -lpthread
 
-libdtsdevrun.so: main.o
-	gcc -g -shared -o $@ $^ -L./ -lpthread -ldtsdevcore
-
-libdtsdevcore.a: $(CORE_LIB_OBJS)
+framework/libframework.a: $(CORE_LIB_OBJS)
 	ar rcs $@ $^
 
-libdtsdevrun.a: $(CORE_LIB_OBJS) main.o
-	ar rcs $@ $^
-
-taploop: $(TLC_OBJS)
+taploopd/taploop: $(TLC_OBJS)
 	gcc -g -o $@ $^ -L./ -lpthread
 
-taploopd.a: $(TL_OBJS)
-	ar rcs $@ $^
-
-taploopd: libdtsdevrun.a taploopd.a
+taploopd/taploopd: framework/libframework.a $(TL_OBJS)
 	gcc -g -o $@ $^ -L./ -lpthread
-
-taploopd.so: $(TL_OBJS)
-	gcc -g -o $@ $^ -L./ -lpthread -ldtsdevcore -ldtsdevrun
