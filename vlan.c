@@ -85,7 +85,6 @@ int create_kernvlan(char *ifname, int vid) {
  */
 void add_kernvlan(char *iface, int vid) {
 	struct taploop *tap = NULL;
-	struct tl_thread *thread;
 	struct ifreq ifr;
 	struct sockaddr_ll sll;
 	struct tl_socket *tlsock;
@@ -99,15 +98,12 @@ void add_kernvlan(char *iface, int vid) {
 	}
 
 	/* check for existing loop*/
-	BLIST_FOREACH_START(threads->list, thread) {
-		if (testflag(thread, TL_THREAD_TAP)) {
-			tap = thread->data;
-			if (tap && !strncmp(tap->pdev, iface, IFNAMSIZ)) {
-				objref(tap);
-				break;
-			}
-			tap = NULL;
+	BLIST_FOREACH_START(taplist, tap) {
+		if (tap && !strncmp(tap->pdev, iface, IFNAMSIZ)) {
+			objref(tap);
+			break;
 		}
+		tap = NULL;
 	}
 	BLIST_FOREACH_END;
 

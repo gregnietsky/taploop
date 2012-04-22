@@ -43,7 +43,7 @@ struct blist_obj {
 /*bucket list to hold hashed objects in buckets*/
 struct bucket_list {
 	unsigned short	buckets;		/* number of buckets to create 2 ^ n masks hash*/
-	int	count;
+	unsigned int	count;
 	int		(*hash_func)(void *data);
 	struct		blist_obj **list;		/* array of blist_obj[buckets]*/
 };

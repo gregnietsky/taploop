@@ -23,6 +23,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "thread.h"
 #include "refobj.h"
 
+/* thread struct used to create threads*/
+struct tl_thread {
+	void			*data;
+	enum			threadopt flags;
+	pthread_t		thr;
+	void			*(*cleanup)(void *data);
+	void			(*sighandler)(int sig, struct tl_thread *thread);
+};
+
+struct threadcontainer {
+	struct bucket_list	*list;
+	struct tl_thread	*manager;
+};
+
+struct threadcontainer *threads;
+
 /*
  * create a taploop thread
  */

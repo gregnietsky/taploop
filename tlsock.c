@@ -348,7 +348,7 @@ void rbuffread(struct taploop *tap) {
  * pass data between physical and tap
  */
 void *mainloop(void *data) {
-	struct tl_thread *thread = data;
+	struct thread_info *thread = data;
 	struct taploop	*tap;
 	/* accomodate 802.1Q [4]*/
 	int buffsize = ETH_FRAME_LEN +4;
@@ -441,26 +441,29 @@ void *mainloop(void *data) {
  */
 int add_taploop(char *dev, char *name) {
 	struct taploop		*tap = NULL;
-	struct tl_thread	*thread;
 
 	/* do not continue on zero  length options*/
 	if (!dev || !name || (dev[1] == '\0') || (name[1] == '\0')) {
 		return -1;
 	}
 
+	if (!taplist) {
+		taplist = create_bucketlist(5, NULL);
+	}
+
 	/* check for existing loop*/
-	BLIST_FOREACH_START(threads->list, thread) {
-		if (testflag(thread, TL_THREAD_TAP)) {
-			tap = thread->data;
-			if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
-				objunlock(threads);
-				return -1;
-			}
+	BLIST_FOREACH_START(taplist, tap) {
+		objlock(tap);
+		if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
+			break;
+		} else {
+			tap = NULL;
 		}
+		objunlock(tap);
 	};
 	BLIST_FOREACH_END;
 
-	if (!(tap = objalloc(sizeof(*tap)))) {
+	if (tap || !(tap = objalloc(sizeof(*tap)))) {
 		return -1;
 	}
 
@@ -470,6 +473,7 @@ int add_taploop(char *dev, char *name) {
 	tap->ring = NULL;
 	tap->mmap = NULL;
 	tap->mmap_size = 0;
+	BLIST_ADD(taplist, tap);
 
 	/* Start thread*/
 	return (mkthread(mainloop, stoptap, NULL, tap, TL_THREAD_TAP)) ? 0 : -1;

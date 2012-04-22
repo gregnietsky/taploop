@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "thread.h"
 
 void *clientsock_client(void *data) {
-	struct tl_thread *thread = data;
+	struct thread_info *thread = data;
 	int fd = *(int*)thread->data;
 
 	setflag(thread, TL_THREAD_RUN);
@@ -63,7 +63,7 @@ void delclientsock_client(void *data) {
  * client sock server
  */
 void *clientsock_serv(void *data) {
-	struct tl_thread *thread = data;
+	struct thread_info *thread = data;
 	char *sock = thread->data;
 	struct sockaddr_un	adr;
 	int fd;

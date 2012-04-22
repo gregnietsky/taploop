@@ -26,21 +26,11 @@ enum threadopt {
 	TL_THREAD_TAP	= 1 << 3,
 };
 
-/* thread struct used to create threads*/
-struct tl_thread {
-	pthread_t		thr;
-	enum			threadopt flags;
-	void			*(*cleanup)(void *data);
-	void			(*sighandler)(int sig, struct tl_thread *thread);
+/* thread struct seen by programs*/
+struct thread_info {
 	void			*data;
+	enum			threadopt flags;
 };
-
-struct threadcontainer {
-	struct bucket_list	*list;
-	struct tl_thread	*manager;
-};
-
-struct threadcontainer *threads;
 
 struct tl_thread *mkthread(void *func, void *cleanup, void *sig_handler, void *data, enum threadopt flags);
 int thread_signal(int sig);
