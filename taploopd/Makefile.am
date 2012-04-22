@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
-AM_CFLAGS = -g -Wall -Werror -fpic -I./include -I../include -I/usr/include
+AM_CFLAGS = -g -Wall -Werror -I./include -I../framework/include
 
 bin_PROGRAMS = taploopd
 taploopd_SOURCES = taploop.c util.c vlan.c tlsock.c clientserv.c packet.c

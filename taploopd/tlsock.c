@@ -30,11 +30,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <linux/if_packet.h>
 #include <linux/sockios.h>
 
+#include <refobj.h>
+#include <thread.h>
+
 #include "taploop.h"
 #include "tlsock.h"
-#include "refobj.h"
 #include "vlan.h"
-#include "thread.h"
 #include "packet.h"
 
 /* tap the taploop struct

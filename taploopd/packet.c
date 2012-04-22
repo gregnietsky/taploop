@@ -21,9 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <unistd.h>
 
+#include <refobj.h>
+
 #include "taploop.h"
 #include "tlsock.h"
-#include "refobj.h"
 
 void frame_handler_ipv4(struct ethhdr *fr, void *packet, int *plen) {
 	struct iphdr *ip;

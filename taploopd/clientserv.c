@@ -22,9 +22,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <fcntl.h>
 #include <errno.h>
 
+#include <refobj.h>
+#include <thread.h>
+
 #include "taploop.h"
-#include "refobj.h"
-#include "thread.h"
 
 void *clientsock_client(void *data) {
 	struct thread_info *thread = data;

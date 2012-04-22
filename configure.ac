@@ -11,15 +11,17 @@ AC_CONFIG_MACRO_DIR([m4])
 LT_INIT([disable-shared])
 
 # Checks for programs.
-AC_PROG_CC
-AC_PROG_INSTALL
+AC_PROG_CXX
 AC_PROG_AWK
+AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MKDIR_P
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lpthread':
-AC_CHECK_LIB([pthread], [main])
+AC_CHECK_LIB(pthread, pthread_create)
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/param.h sys/socket.h unistd.h])
@@ -37,5 +39,7 @@ AC_FUNC_MALLOC
 AC_FUNC_MMAP
 AC_CHECK_FUNCS([memset munmap select socket])
 
-AC_CONFIG_FILES([Makefile framework/Makefile taploopd/Makefile])
+AC_CONFIG_FILES([Makefile
+                 framework/Makefile
+                 taploopd/Makefile])
 AC_OUTPUT

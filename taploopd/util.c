@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "refobj.h"
+#include <refobj.h>
 
 /*
  * read from /dev/random
