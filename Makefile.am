@@ -1,3 +1,6 @@
-SUBDIRS = framework taploopd
+if FRAMEWORK_SYSTEM 
+ FRAMEWORK_DIR = framework
+endif
+SUBDIRS = $(FRAMEWORK_DIR) src
 
 ACLOCAL_AMFLAGS = -I m4
