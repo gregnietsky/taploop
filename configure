@@ -617,6 +617,13 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+FRAMEWORK_SYSTEM_FALSE
+FRAMEWORK_SYSTEM_TRUE
+FRAMEWORK_INSTALL_FALSE
+FRAMEWORK_INSTALL_TRUE
+FRAMEWORK_SOURCES
+FRAMEWORK_INCL
+FRAMEWORK_LIBS
 CXXCPP
 am__fastdepCXX_FALSE
 am__fastdepCXX_TRUE
@@ -743,6 +750,9 @@ enable_dependency_tracking
 with_gnu_ld
 with_sysroot
 enable_libtool_lock
+with_system_framework
+enable_framework_install
+enable_world_peace
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1384,6 +1394,10 @@ Optional Features:
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
   --disable-libtool-lock  avoid locking (might break parallel builds)
+  --enable-framework-install
+                          Install the framework library please note this
+                          superseeds the --with-system-framewok option.
+  --enable-world-peace    Yeah right .....
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1393,6 +1407,7 @@ Optional Packages:
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-sysroot=DIR Search for dependent libraries within DIR
                         (or the compiler's sysroot if not specified).
+  --with-system-framework Use the system framework not the packaged version
 
 Some influential environment variables:
   CC          C compiler command
@@ -16052,6 +16067,99 @@ _ACEOF
 fi
 
 
+
+# Check whether --with-system-framework was given.
+if test "${with_system_framework+set}" = set; then :
+  withval=$with_system_framework;
+fi
+
+# Check whether --enable-framework-install was given.
+if test "${enable_framework_install+set}" = set; then :
+  enableval=$enable_framework_install;
+fi
+
+# Check whether --enable-world-peace was given.
+if test "${enable_world_peace+set}" = set; then :
+  enableval=$enable_world_peace;
+fi
+
+
+if test "$enable_framework_install" != "yes"; then :
+  if test "$with_system_framework" = "yes"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for startthreads in -lframework-0.1" >&5
+$as_echo_n "checking for startthreads in -lframework-0.1... " >&6; }
+if ${ac_cv_lib_framework_0_1_startthreads+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lframework-0.1  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char startthreads ();
+int
+main ()
+{
+return startthreads ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_framework_0_1_startthreads=yes
+else
+  ac_cv_lib_framework_0_1_startthreads=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_framework_0_1_startthreads" >&5
+$as_echo "$ac_cv_lib_framework_0_1_startthreads" >&6; }
+if test "x$ac_cv_lib_framework_0_1_startthreads" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBFRAMEWORK_0_1 1
+_ACEOF
+
+  LIBS="-lframework-0.1 $LIBS"
+
+fi
+
+fi
+fi
+
+if test "$ac_cv_lib_framework_0_1_startthreads" != yes ; then
+ FRAMEWORK_INCL="-I../framework/include"
+ FRAMEWORK_LIBS="../framework/libframework-0.1.la"
+fi;
+
+
+
+
+
+ if test "$enable_framework_install" = yes; then
+  FRAMEWORK_INSTALL_TRUE=
+  FRAMEWORK_INSTALL_FALSE='#'
+else
+  FRAMEWORK_INSTALL_TRUE='#'
+  FRAMEWORK_INSTALL_FALSE=
+fi
+
+ if test "$ac_cv_lib_framework_0_1_startthreads" != yes; then
+  FRAMEWORK_SYSTEM_TRUE=
+  FRAMEWORK_SYSTEM_FALSE='#'
+else
+  FRAMEWORK_SYSTEM_TRUE='#'
+  FRAMEWORK_SYSTEM_FALSE=
+fi
+
+
 # Checks for header files.
 for ac_header in fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/param.h sys/socket.h unistd.h
 do :
@@ -16626,7 +16734,7 @@ fi
 done
 
 
-ac_config_files="$ac_config_files Makefile framework/Makefile taploopd/Makefile"
+ac_config_files="$ac_config_files Makefile framework/Makefile src/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -16759,6 +16867,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${FRAMEWORK_INSTALL_TRUE}" && test -z "${FRAMEWORK_INSTALL_FALSE}"; then
+  as_fn_error $? "conditional \"FRAMEWORK_INSTALL\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${FRAMEWORK_SYSTEM_TRUE}" && test -z "${FRAMEWORK_SYSTEM_FALSE}"; then
+  as_fn_error $? "conditional \"FRAMEWORK_SYSTEM\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
@@ -17745,7 +17861,7 @@ do
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "framework/Makefile") CONFIG_FILES="$CONFIG_FILES framework/Makefile" ;;
-    "taploopd/Makefile") CONFIG_FILES="$CONFIG_FILES taploopd/Makefile" ;;
+    "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

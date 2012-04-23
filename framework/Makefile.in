@@ -36,7 +36,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 subdir = framework
-DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
+DIST_COMMON = $(am__include_HEADERS_DIST) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
@@ -77,11 +77,14 @@ am__uninstall_files_from_dir = { \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
-LTLIBRARIES = $(lib_LTLIBRARIES)
+LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
 libframework_0_1_la_LIBADD =
 am_libframework_0_1_la_OBJECTS = refobj.lo lookup3.lo thread.lo \
 	main.lo
 libframework_0_1_la_OBJECTS = $(am_libframework_0_1_la_OBJECTS)
+@FRAMEWORK_INSTALL_FALSE@am_libframework_0_1_la_rpath =
+@FRAMEWORK_INSTALL_TRUE@am_libframework_0_1_la_rpath = -rpath \
+@FRAMEWORK_INSTALL_TRUE@	$(libdir)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -97,6 +100,7 @@ LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(libframework_0_1_la_SOURCES)
 DIST_SOURCES = $(libframework_0_1_la_SOURCES)
+am__include_HEADERS_DIST = include/framework.h
 HEADERS = $(include_HEADERS)
 ETAGS = etags
 CTAGS = ctags
@@ -129,6 +133,9 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FRAMEWORK_INCL = @FRAMEWORK_INCL@
+FRAMEWORK_LIBS = @FRAMEWORK_LIBS@
+FRAMEWORK_SOURCES = @FRAMEWORK_SOURCES@
 GREP = @GREP@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -221,9 +228,10 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CFLAGS = -g -Wall -Werror -I./include
 ACLOCAL_AMFLAGS = -I m4
-lib_LTLIBRARIES = libframework-0.1.la
+@FRAMEWORK_INSTALL_TRUE@lib_LTLIBRARIES = libframework-0.1.la
+@FRAMEWORK_INSTALL_TRUE@include_HEADERS = include/framework.h
+@FRAMEWORK_INSTALL_FALSE@noinst_LTLIBRARIES = libframework-0.1.la
 libframework_0_1_la_SOURCES = refobj.c lookup3.c thread.c main.c
-include_HEADERS = include/framework.h
 all: all-am
 
 .SUFFIXES:
@@ -289,8 +297,17 @@ clean-libLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
+
+clean-noinstLTLIBRARIES:
+	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
+	@list='$(noinst_LTLIBRARIES)'; for p in $$list; do \
+	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
+	  test "$$dir" != "$$p" || dir=.; \
+	  echo "rm -f \"$${dir}/so_locations\""; \
+	  rm -f "$${dir}/so_locations"; \
+	done
 libframework-0.1.la: $(libframework_0_1_la_OBJECTS) $(libframework_0_1_la_DEPENDENCIES) $(EXTRA_libframework_0_1_la_DEPENDENCIES) 
-	$(LINK) -rpath $(libdir) $(libframework_0_1_la_OBJECTS) $(libframework_0_1_la_LIBADD) $(LIBS)
+	$(LINK) $(am_libframework_0_1_la_rpath) $(libframework_0_1_la_OBJECTS) $(libframework_0_1_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -470,7 +487,7 @@ maintainer-clean-generic:
 clean: clean-am
 
 clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
-	mostlyclean-am
+	clean-noinstLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -541,15 +558,16 @@ uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libLTLIBRARIES clean-libtool ctags distclean \
-	distclean-compile distclean-generic distclean-libtool \
-	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-includeHEADERS install-info \
-	install-info-am install-libLTLIBRARIES install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
+	clean-libLTLIBRARIES clean-libtool clean-noinstLTLIBRARIES \
+	ctags distclean distclean-compile distclean-generic \
+	distclean-libtool distclean-tags distdir dvi dvi-am html \
+	html-am info info-am install install-am install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am \
+	install-includeHEADERS install-info install-info-am \
+	install-libLTLIBRARIES install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-includeHEADERS \
