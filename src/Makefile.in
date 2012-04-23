@@ -53,7 +53,7 @@ am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(sbindir)"
 PROGRAMS = $(bin_PROGRAMS) $(sbin_PROGRAMS)
 am_taploop_OBJECTS = tapclient.$(OBJEXT)
 taploop_OBJECTS = $(am_taploop_OBJECTS)
-taploop_DEPENDENCIES =
+taploop_LDADD = $(LDADD)
 am_taploopd_OBJECTS = taploop.$(OBJEXT) util.$(OBJEXT) vlan.$(OBJEXT) \
 	tlsock.$(OBJEXT) clientserv.$(OBJEXT) packet.$(OBJEXT)
 taploopd_OBJECTS = $(am_taploopd_OBJECTS)
@@ -201,7 +201,6 @@ top_srcdir = @top_srcdir@
 AM_CFLAGS = -g -Wall -Werror -I./include $(FRAMEWORK_INCL)
 ACLOCAL_AMFLAGS = -I m4
 taploop_SOURCES = tapclient.c
-taploop_LDADD = -lpthread
 taploopd_SOURCES = taploop.c util.c vlan.c tlsock.c clientserv.c packet.c
 taploopd_LDADD = $(FRAMEWORK_LIBS)
 all: all-am

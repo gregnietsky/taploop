@@ -3,7 +3,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 bin_PROGRAMS = taploop
 taploop_SOURCES = tapclient.c
-taploop_LDADD = -lpthread
 
 sbin_PROGRAMS = taploopd
 taploopd_SOURCES = taploop.c util.c vlan.c tlsock.c clientserv.c packet.c
