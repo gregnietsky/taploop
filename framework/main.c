@@ -23,6 +23,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "framework.h"
 
+
+void startthreads(void);
+void stopthreads(void);
+void jointhreads(void);
+int thread_signal(int sig);
+
 /*
  * handle signals to cleanup gracefully on exit
  */
@@ -95,17 +101,11 @@ struct prog_core {
 };
 
 /*
- * the program meat starts here predeclaring it
- * programner needs to write a startup func to run
- */
-int startup(int argc, char *argv[]);
-
-/*
  * daemonise and start socket
  */
 int main(int argc, char *argv[]) {
 	struct prog_core	core_info;
-	int ret;
+	int *ret = 0;
 
 	/*prinit out a GNU licence summary*/
 	printgnu("2012", "Gregory Nietsky", "gregory@distrotetch.co.za", "http://www.distrotech.co.za");
@@ -117,7 +117,9 @@ int main(int argc, char *argv[]) {
 	/*init the threadlist start thread manager*/
 	startthreads();
 
-	ret = startup(argc, argv);
+	if (startup) {
+		ret = startup(argc, argv);
+	}
 
 	/*join the manager thread its the last to go*/
 	if (!ret) {
@@ -127,5 +129,5 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* turn off the lights*/
-	return (ret);
+	return (*ret);
 }

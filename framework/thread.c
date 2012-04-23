@@ -44,7 +44,7 @@ struct threadcontainer *threads;
 /*
  * create a thread
  */
-struct thread_pvt *mkthread(void *func, void *cleanup, void *sig_handler, void *data) {
+struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handler, void *data) {
 	struct thread_pvt *thread;
 	struct thread_info *thread_info;
 
@@ -157,7 +157,7 @@ void *managethread(void *data) {
 void startthreads(void) {
 	threads = objalloc(sizeof(*threads), NULL);
 	threads->list = create_bucketlist(5, NULL);
-	threads->manager = mkthread(managethread, NULL, manager_sig, NULL);
+	threads->manager = framework_mkthread(managethread, NULL, manager_sig, NULL);
 }
 
 /*

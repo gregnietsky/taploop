@@ -475,5 +475,5 @@ int add_taploop(char *dev, char *name) {
 	BLIST_ADD(taplist, tap);
 
 	/* Start thread*/
-	return ((mkthread(mainloop, stoptap, NULL, tap)) ? 0 : -1);
+	return ((framework_mkthread(mainloop, stoptap, NULL, tap)) ? 0 : -1);
 }

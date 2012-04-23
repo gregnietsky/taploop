@@ -33,12 +33,7 @@ struct thread_info {
 typedef struct bucket_list bucket_list;
 typedef struct bucket_loop bucket_loop;
 
-struct thread_pvt *mkthread(void *func, void *cleanup, void *sig_handler, void *data);
-int thread_signal(int sig);
-
-void startthreads(void);
-void stopthreads(void);
-void jointhreads(void);
+struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handler, void *data);
 
 int objlock(void *data);
 int objtrylock(void *data);
@@ -58,7 +53,17 @@ void stop_bucket_loop(struct bucket_loop *bloop);
 
 void *next_bucket_loop(struct bucket_loop *bloop);
 void remove_bucket_loop(struct bucket_loop *bloop);
+int framework_init(int argc, char *argv[], void *startup);
 
+/*
+ * the program meat starts here predeclaring it
+ * programner needs to write a startup func to run
+ * and set this variable to point to it the framework
+ * will initialise and run this function
+ *
+ * THERE MUST BE NO MAIN FUNCTION MAIN IS IN THE FRAMEWORK
+ */
+int *(*startup)(int, char **);
 
 #define clearflag(obj, flag) objlock(obj); \
 	obj->flags &= ~flag; \

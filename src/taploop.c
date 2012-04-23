@@ -20,13 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <framework.h>
+
 #include "taploop.h"
 #include "tlsock.h"
 #include "vlan.h"
 
 void clientserv_run(void);
 
-int main(int argc, char *argv[]) {
+int  *client_startup(int argc, char **argv) {
 	/*client socket to allow client to connect*/
 	tundev = "/dev/net/tun";
 	clsock = "/tmp/tlsock";
@@ -49,3 +51,5 @@ int main(int argc, char *argv[]) {
 	}
 	return (0);
 }
+
+int *(*startup)(int, char **) = client_startup;

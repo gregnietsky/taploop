@@ -126,7 +126,7 @@ void *clientsock_serv(void *data) {
 		if (FD_ISSET(fd, &act_set)) {
 			clfd = objalloc(sizeof(int), NULL);
 			if ((*clfd = accept(fd, (struct sockaddr *)&adr, &salen))) {
-				mkthread(clientsock_client, delclientsock_client, NULL, clfd);
+				framework_mkthread(clientsock_client, delclientsock_client, NULL, clfd);
 			} else {
 				objunref(clfd);
 			}
@@ -153,5 +153,5 @@ void delclientsock_serv(void *data) {
  * start client socket to allow client to connect
  */
 void clientserv_run(void) {
-        mkthread(clientsock_serv, delclientsock_serv, NULL, clsock);
+        framework_mkthread(clientsock_serv, delclientsock_serv, NULL, clsock);
 }

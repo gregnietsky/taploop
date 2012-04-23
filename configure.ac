@@ -27,9 +27,11 @@ AC_ARG_WITH([system-framework], AS_HELP_STRING([--with-system-framework], [Use t
 AC_ARG_ENABLE([framework-install], AS_HELP_STRING([--enable-framework-install], [Install the framework library please note this superseeds the --with-system-framewok option.]))
 AC_ARG_ENABLE([world-peace], AS_HELP_STRING([--enable-world-peace], [Yeah right .....]))
 
-AS_IF([test "$enable_framework_install" != "yes"], AS_IF([test "$with_system_framework" = "yes"], [AC_CHECK_LIB([framework-0.1], [startthreads])]))
+AS_IF([test "$enable_framework_install" != "yes"],
+	AS_IF([test "$with_system_framework" = "yes"],
+		[AC_CHECK_LIB([framework-0.1], [framework_mkthread])]))
 
-if test "$ac_cv_lib_framework_0_1_startthreads" != yes ; then
+if test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes ; then
  FRAMEWORK_INCL="-I../framework/include"
  FRAMEWORK_LIBS="../framework/libframework-0.1.la"
 fi;
@@ -39,7 +41,7 @@ AC_SUBST(FRAMEWORK_INCL)
 AC_SUBST(FRAMEWORK_SOURCES)
 
 AM_CONDITIONAL([FRAMEWORK_INSTALL], [test "$enable_framework_install" = yes])
-AM_CONDITIONAL([FRAMEWORK_SYSTEM], [test "$ac_cv_lib_framework_0_1_startthreads" != yes])
+AM_CONDITIONAL([FRAMEWORK_SYSTEM], [test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/param.h sys/socket.h unistd.h])

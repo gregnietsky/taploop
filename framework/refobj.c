@@ -135,7 +135,7 @@ int objcnt(void *data) {
 int objlock(void *data) {
 	struct ref_obj *ref = data - refobj_offset;
 
-	if (ref->magic == REFOBJ_MAGIC) {
+	if (data && ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_lock(&ref->lock);
 	}
 	return (0);
