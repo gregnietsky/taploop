@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 void clientserv_run(void);
 
-int  client_startup(int argc, char *argv[]) {
+FRAMEWORK_MAIN("Gregory Hinton Nietsky", "gregory@distrotetch.co.za", "http://www.distrotech.co.za", 2012) {
 	/*client socket to allow client to connect*/
 	tundev = "/dev/net/tun";
 	clsock = "/tmp/tlsock";
@@ -51,5 +51,3 @@ int  client_startup(int argc, char *argv[]) {
 	}
 	return (0);
 }
-
-FRAMEWORK_MAIN("Gregory Hinton Nietsky", "gregory@distrotetch.co.za", "http://www.distrotech.co.za", 2012, client_startup)

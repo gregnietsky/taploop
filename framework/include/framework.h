@@ -99,15 +99,17 @@ void remove_bucket_loop(struct bucket_loop *bloop);
 
 #define BLIST_ADD(blist, entry) addtobucket(blist, entry);
 
-#define FRAMEWORK_MAIN(name, email, www, year, startup) \
+#define FRAMEWORK_MAIN(name, email, www, year) \
+	int  framework_main(int argc, char *argv[]); \
+	struct framework_core *core_info; \
 	int  main(int argc, char *argv[]) { \
-		struct framework_core *core_info; \
 		int res; \
 		core_info = framework_mkcore(name, email, www, year); \
-		res = framework_init(argc, argv, startup, core_info); \
+		res = framework_init(argc, argv, framework_main, core_info); \
 		framework_free(core_info); \
 		return (res); \
-	}
+	} \
+	int  framework_main(int argc, char *argv[]) \
 
 #define ALLOC_CONST(const_var, val) { \
 		char *tmp_char; \
