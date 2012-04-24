@@ -64,9 +64,9 @@ int framework_threadok(void *data) {
 	struct thread_pvt *thr = data;
 
 	if (thr && (thr->magic == THREAD_MAGIC)) {
-		return testflag(thr, TL_THREAD_RUN);
+		return (testflag(thr, TL_THREAD_RUN));
 	}
-	return 0;
+	return (0);
 }
 
 void *threadwrap(void *data) {
@@ -79,7 +79,7 @@ void *threadwrap(void *data) {
 		setflag(thread, TL_THREAD_DONE);
 	}
 
-	return ret;
+	return (ret);
 }
 
 /*

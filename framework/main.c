@@ -54,7 +54,7 @@ static void sig_handler(int sig, siginfo_t *si, void *unused) {
  * Print gnu snippet at program run
  */
 void printgnu(struct framework_core *ci) {
-	printf("%s\nCopyright (C) %i %s <%s>\n"
+	printf("%s\n\nCopyright (C) %i %s <%s>\n"
 "        %s\n\n"
 "    This program comes with ABSOLUTELY NO WARRANTY\n"
 "    This is free software, and you are welcome to redistribute it\n"
@@ -103,10 +103,10 @@ int lockpidfile(struct framework_core *ci) {
 		lck_fd = -1;
 	} else {
 		ci->flock = -1;
-		return 0;
+		return (0);
 	}
 	ci->flock = lck_fd;
-	return lck_fd;
+	return (lck_fd);
 }
 
 /*
@@ -198,7 +198,7 @@ int framework_init(int argc, char *argv[], void *callback, struct framework_core
 	if (lockpidfile(core_info) < 0) {
 		printf("Could not lock pid file Exiting\n");
 		framework_free(core_info);
-		return -1;
+		return (-1);
 	}
 
 	/* interupt handler close clean on term so physical is reset*/
@@ -208,7 +208,7 @@ int framework_init(int argc, char *argv[], void *callback, struct framework_core
 	if (!startthreads()) {
 		printf("Memory Error could not start threads\n");
 		framework_free(core_info);
-		return -1;
+		return (-1);
 	}
 
 	/*run the code from the application*/
