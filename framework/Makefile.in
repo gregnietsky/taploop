@@ -229,6 +229,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -I./include $(DEVELOPER_CFLAGS)
+EXTRA_DIST = include
 @FRAMEWORK_INSTALL_TRUE@lib_LTLIBRARIES = libframework-0.1.la
 @FRAMEWORK_INSTALL_TRUE@include_HEADERS = include/framework.h
 @FRAMEWORK_INSTALL_FALSE@noinst_LTLIBRARIES = libframework-0.1.la

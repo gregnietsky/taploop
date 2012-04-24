@@ -230,9 +230,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+ACLOCAL_AMFLAGS = -I m4
 @FRAMEWORK_SYSTEM_TRUE@FRAMEWORK_DIR = framework
 SUBDIRS = $(FRAMEWORK_DIR) src
-ACLOCAL_AMFLAGS = -I m4
+EXTRA_DIST = LICENSE
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

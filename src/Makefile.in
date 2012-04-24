@@ -201,6 +201,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -I./include $(FRAMEWORK_INCL) $(DEVELOPER_CFLAGS)
+EXTRA_DIST = include
 taploop_SOURCES = tapclient.c
 taploopd_SOURCES = taploop.c util.c vlan.c tlsock.c clientserv.c packet.c
 taploopd_LDADD = $(FRAMEWORK_LIBS)

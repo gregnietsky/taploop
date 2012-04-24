@@ -1,5 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -I./include $(DEVELOPER_CFLAGS)
+EXTRA_DIST = include
 
 if FRAMEWORK_INSTALL
        lib_LTLIBRARIES = libframework-0.1.la
