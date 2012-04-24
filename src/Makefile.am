@@ -1,5 +1,5 @@
-AM_CFLAGS = -g -Wall -Werror -I./include $(FRAMEWORK_INCL)
 ACLOCAL_AMFLAGS = -I m4
+AM_CFLAGS = -I./include $(FRAMEWORK_INCL) $(DEVELOPER_CFLAGS)
 
 bin_PROGRAMS = taploop
 taploop_SOURCES = tapclient.c

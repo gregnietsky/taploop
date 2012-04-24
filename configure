@@ -621,6 +621,7 @@ FRAMEWORK_SYSTEM_FALSE
 FRAMEWORK_SYSTEM_TRUE
 FRAMEWORK_INSTALL_FALSE
 FRAMEWORK_INSTALL_TRUE
+DEVELOPER_CFLAGS
 FRAMEWORK_SOURCES
 FRAMEWORK_INCL
 FRAMEWORK_LIBS
@@ -752,6 +753,7 @@ with_sysroot
 enable_libtool_lock
 with_system_framework
 enable_framework_install
+enable_dev_mode
 enable_world_peace
 '
       ac_precious_vars='build_alias
@@ -1397,6 +1399,7 @@ Optional Features:
   --enable-framework-install
                           Install the framework library please note this
                           superseeds the --with-system-framewok option.
+  --enable-dev-mode       Developer mode -g -Wall -Werror
   --enable-world-peace    Yeah right .....
 
 Optional Packages:
@@ -15189,6 +15192,11 @@ if test "${enable_framework_install+set}" = set; then :
   enableval=$enable_framework_install;
 fi
 
+# Check whether --enable-dev-mode was given.
+if test "${enable_dev_mode+set}" = set; then :
+  enableval=$enable_dev_mode;
+fi
+
 # Check whether --enable-world-peace was given.
 if test "${enable_world_peace+set}" = set; then :
   enableval=$enable_world_peace;
@@ -15249,6 +15257,11 @@ if test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes ; then
  FRAMEWORK_INCL="-I../framework/include"
  FRAMEWORK_LIBS="../framework/libframework-0.1.la"
 fi;
+
+if test "$enable_dev_mode" = "yes" ; then
+ DEVELOPER_CFLAGS="-g -Wall -Werror"
+fi;
+
 
 
 

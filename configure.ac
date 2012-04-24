@@ -27,6 +27,7 @@ AC_CHECK_LIB([pthread], [pthread_create])
 
 AC_ARG_WITH([system-framework], AS_HELP_STRING([--with-system-framework], [Use the system framework not the packaged version]))
 AC_ARG_ENABLE([framework-install], AS_HELP_STRING([--enable-framework-install], [Install the framework library please note this superseeds the --with-system-framewok option.]))
+AC_ARG_ENABLE([dev-mode], AS_HELP_STRING([--enable-dev-mode], [Developer mode -g -Wall -Werror]))
 AC_ARG_ENABLE([world-peace], AS_HELP_STRING([--enable-world-peace], [Yeah right .....]))
 
 AS_IF([test "$enable_framework_install" != "yes"],
@@ -38,9 +39,14 @@ if test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes ; then
  FRAMEWORK_LIBS="../framework/libframework-0.1.la"
 fi;
 
+if test "$enable_dev_mode" = "yes" ; then
+ DEVELOPER_CFLAGS="-g -Wall -Werror"
+fi;
+
 AC_SUBST(FRAMEWORK_LIBS)
 AC_SUBST(FRAMEWORK_INCL)
 AC_SUBST(FRAMEWORK_SOURCES)
+AC_SUBST(DEVELOPER_CFLAGS)
 
 AM_CONDITIONAL([FRAMEWORK_INSTALL], [test "$enable_framework_install" = yes])
 AM_CONDITIONAL([FRAMEWORK_SYSTEM], [test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes])
