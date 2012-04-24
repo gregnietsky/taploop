@@ -75,7 +75,7 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
 	/*set the network dev up*/
 	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
 	if (ioctl(phy->sock, SIOCSIFFLAGS, &ifr ) < 0 ) {
-       		perror("ioctl(SIOCSIFFLAGS) failed\n");
+       		perror("ioctl(SIOCSIFFLAGS) failed");
 		close(fd);
 	        return NULL;
 	}
@@ -117,7 +117,7 @@ struct tl_socket *phyopen(struct taploop *tap) {
 	/*down the device before renameing*/
 	ifr.ifr_flags &= ~IFF_UP & ~IFF_RUNNING;
 	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-       		perror("ioctl(SIOCSIFFLAGS) failed\n");
+       		perror("ioctl(SIOCSIFFLAGS) failed");
 		close(fd);
 	        return NULL;
 	}
@@ -146,7 +146,7 @@ struct tl_socket *phyopen(struct taploop *tap) {
 	/*set the device up*/
 	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST | IFF_PROMISC | IFF_NOARP | IFF_ALLMULTI;
 	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-       		perror("ioctl(SIOCSIFFLAGS) failed\n");
+       		perror("ioctl(SIOCSIFFLAGS) failed");
 		close(fd);
 	        return NULL;
 	}
@@ -346,9 +346,8 @@ void rbuffread(struct taploop *tap) {
 /*
  * pass data between physical and tap
  */
-void *mainloop(void *data) {
-	struct thread_info *thread = data;
-	struct taploop	*tap;
+void *mainloop(void **data) {
+	struct taploop	*tap = *data;
 	/* accomodate 802.1Q [4]*/
 	int buffsize = ETH_FRAME_LEN +4;
 	fd_set	rd_set, act_set;
@@ -357,13 +356,10 @@ void *mainloop(void *data) {
 	struct	timeval	tv;
 	struct  tl_socket *tlsock, *osock, *phy, *virt;
 
-	if (thread && thread->data) {
-		tap = thread->data;
-	} else {
+	if (!tap) {
 		return NULL;
 	}
 
-	setflag(thread, TL_THREAD_RUN);
 	FD_ZERO(&rd_set);
 
 	/* initialise physical device*/
@@ -385,7 +381,7 @@ void *mainloop(void *data) {
 
 	/* initialise tap device*/
 	maxfd++;
-	while (testflag(thread, TL_THREAD_RUN)) {
+	while (framework_threadok(data)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 2000;
@@ -432,7 +428,6 @@ void *mainloop(void *data) {
 	objunref(virt);
 	objunref(phy);
 
-	setflag(thread, TL_THREAD_DONE);
 	return NULL;
 }
 /*

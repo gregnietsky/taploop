@@ -19,16 +19,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
-#include <stdlib.h>
 
 #include "framework.h"
 
-/* thread struct used to create threads*/
+#define THREAD_MAGIC 0xfeedf158
+
+enum threadopt {
+        TL_THREAD_NONE  = 0,
+        /* thread is marked as running*/
+        TL_THREAD_RUN   = 1 << 1,
+        /* thread is marked as complete*/
+        TL_THREAD_DONE  = 1 << 2,
+};
+
+/*
+ * thread struct used to create threads
+ * data needs to be first element
+ */
 struct thread_pvt {
+	void			*data;
+	int			magic;
 	pthread_t		thr;
 	void			*(*cleanup)(void *data);
+	void			*(*func)(void **data);
 	void			(*sighandler)(int sig, struct thread_pvt *thread);
-	struct			thread_info *appinfo;
+	enum                    threadopt flags;
 };
 
 struct threadcontainer {
@@ -42,33 +57,53 @@ struct threadcontainer {
 struct threadcontainer *threads;
 
 /*
+ * let threads check there status by passing in a pointer to
+ * there data
+ */
+int framework_threadok(void *data) {
+	struct thread_pvt *thr = data;
+
+	if (thr && (thr->magic == THREAD_MAGIC)) {
+		return testflag(thr, TL_THREAD_RUN);
+	}
+	return 0;
+}
+
+void *threadwrap(void *data) {
+	struct thread_pvt *thread = data;
+	void *ret = NULL;
+
+	if (thread && thread->func) {
+		setflag(thread, TL_THREAD_RUN);
+		ret = thread->func(&thread->data);
+		setflag(thread, TL_THREAD_DONE);
+	}
+
+	return ret;
+}
+
+/*
  * create a thread
  */
 struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handler, void *data) {
 	struct thread_pvt *thread;
-	struct thread_info *thread_info;
 
 	if (!(thread = objalloc(sizeof(*thread), NULL))) {
 		return NULL;
 	}
 
-	if (!(thread_info = objalloc(sizeof(*thread_info), NULL))) {
-		objunref(thread);
-		return (NULL);
-	}
-
-	thread_info->data = data;
-	thread_info->flags = 0;
+	thread->data = data;
+	thread->flags = 0;
 	thread->cleanup = cleanup;
 	thread->sighandler = sig_handler;
-	thread->appinfo = thread_info;
+	thread->func = func;
+	thread->magic = THREAD_MAGIC;
 
 	/* grab a ref to data for thread to make sure it does not go away*/
-	objref(thread_info->data);
-	if (pthread_create(&thread->thr, NULL, func, thread->appinfo)) {
+	objref(thread->data);
+	if (pthread_create(&thread->thr, NULL, threadwrap, thread)) {
 		objunref(thread);
-		objunref(thread_info->data);
-		objunref(thread_info);
+		objunref(thread->data);
 		return NULL;
 	}
 
@@ -79,8 +114,7 @@ struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handl
 		objunlock(threads);
 		return (thread);
 	} else {
-		objunref(thread_info->data);
-		objunref(thread_info);
+		objunref(thread->data);
 		objunref(thread);
 	}
 
@@ -94,7 +128,7 @@ struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handl
 int manager_sig(int sig, struct thread_pvt *thread) {
 	switch(sig) {
 		case SIGHUP:
-			clearflag(thread->appinfo, TL_THREAD_RUN);
+			clearflag(thread, TL_THREAD_RUN);
 			break;
 	}
 	return (1);
@@ -104,13 +138,11 @@ int manager_sig(int sig, struct thread_pvt *thread) {
  * loop through all threads till they stoped
  * setting stop will flag threads to stop
  */
-void *managethread(void *data) {
-	struct thread_info *mythread = data;
+void *managethread(void **data) {
+	struct thread_pvt *mythread = threads->manager;
 	struct thread_pvt *thread;
 	pthread_t me;
 	int stop = 0;
-
-	setflag(mythread, TL_THREAD_RUN);
 
 	me = pthread_self();
 	while(bucket_list_cnt(threads->list)) {
@@ -126,17 +158,16 @@ void *managethread(void *data) {
 			}
 
 			objlock(thread);
-			if (stop && (thread->appinfo->flags & TL_THREAD_RUN) && !(thread->appinfo->flags & TL_THREAD_DONE)) {
-				thread->appinfo->flags &= ~TL_THREAD_RUN;
+			if (stop && (thread->flags & TL_THREAD_RUN) && !(thread->flags & TL_THREAD_DONE)) {
+				thread->flags &= ~TL_THREAD_RUN;
 				objunlock(thread);
-			} else if ((thread->appinfo->flags & TL_THREAD_DONE) || pthread_kill(thread->thr, 0)){
+			} else if ((thread->flags & TL_THREAD_DONE) || pthread_kill(thread->thr, 0)){
 				objunlock(thread);
 				BLIST_REMOVE_CURRENT;
 				if (thread->cleanup) {
-					thread->cleanup(thread->appinfo->data);
+					thread->cleanup(thread->data);
 				}
-				objunref(thread->appinfo->data);
-				objunref(thread->appinfo);
+				objunref(thread->data);
 				objunref(thread);
 			} else {
 				objunlock(thread);
@@ -145,7 +176,6 @@ void *managethread(void *data) {
 		BLIST_FOREACH_END;
 		sleep(1);
 	}
-	setflag(mythread, TL_THREAD_DONE);
 
 	return NULL;
 }

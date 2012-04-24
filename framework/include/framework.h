@@ -16,21 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-enum threadopt {
-	TL_THREAD_NONE	= 0,
-	/* thread is marked as running*/
-	TL_THREAD_RUN	= 1 << 1,
-	/* thread is marked as complete*/
-	TL_THREAD_DONE	= 1 << 2,
-};
-
-/* thread struct*/
-struct thread_info {
-	int			magic;
-	enum			threadopt flags;
-	void			*data;
-};
-
 /*these can be set int the application */
 struct framework_core {
 	const char *developer;
@@ -48,18 +33,26 @@ struct framework_core {
  * Initialise the framework
  */
 int framework_init(int argc, char *argv[], void *startup, struct framework_core *core_info);
+
 /*
  * Setup the run enviroment
  */
 struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile);
+
 /*
  * Run a thread under the framework
  */
 struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handler, void *data);
+
 /*
  * Shutdown framework
  */
 void framework_shutdown(void);
+
+/*
+ * Test if the thread is running when passed data from thread
+ */
+int framework_threadok(void *data);
 
 /*
  * ref counted objects

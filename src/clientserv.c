@@ -26,20 +26,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "taploop.h"
 
-void *clientsock_client(void *data) {
-	struct thread_info *thread = data;
-	int fd = *(int*)thread->data;
-
-	setflag(thread, TL_THREAD_RUN);
-
+void *clientsock_client(void **data) {
+	int *fdptr = *data;
+	int fd = *fdptr;
 	int len = 256;
 	char buff[256];
+
 	len = read(fd, buff, len);
 	printf("Connected %s %i\n", buff, len);
-	*(int *)thread->data = -1;
+	*fdptr = -1;
 	close(fd);
-
-	setflag(thread, TL_THREAD_DONE);
 
 	return NULL;
 }
@@ -61,9 +57,8 @@ void delclientsock_client(void *data) {
 /*
  * client sock server
  */
-void *clientsock_serv(void *data) {
-	struct thread_info *thread = data;
-	char *sock = thread->data;
+void *clientsock_serv(void **data) {
+	char *sock = *data;
 	struct sockaddr_un	adr;
 	int fd;
 	unsigned int salen;
@@ -71,8 +66,6 @@ void *clientsock_serv(void *data) {
 	int selfd;
 	struct	timeval	tv;
 	int *clfd;
-
-	setflag(thread, TL_THREAD_RUN);
 
 	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
 		return NULL;
@@ -109,7 +102,7 @@ void *clientsock_serv(void *data) {
 	FD_ZERO(&rd_set);
 	FD_SET(fd, &rd_set);
 
-	while (testflag(thread, TL_THREAD_RUN)) {
+	while (framework_threadok(data)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 2000;
@@ -133,7 +126,6 @@ void *clientsock_serv(void *data) {
 		}
 	}
 
-	setflag(thread, TL_THREAD_DONE);
 	return NULL;
 };
 
