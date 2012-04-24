@@ -114,10 +114,10 @@ struct framework_core *framework_mkcore(char *name, char *email, char *web, int 
 	ALLOC_CONST(core_info->developer, name);
 	ALLOC_CONST(core_info->email, email);
 	ALLOC_CONST(core_info->www, web);
+	core_info->year = year;
 
 	return (core_info);
 }
-
 
 /*
  * free core
