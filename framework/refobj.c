@@ -172,7 +172,6 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 
 	/* allocate session bucket list memory*/
 	if (!(new = objalloc(sizeof(*new) + (sizeof(void*) * buckets),NULL))) {
-		printf("Memory Allocation Error (bucket_list)\n");
 		return NULL;
 	}
 

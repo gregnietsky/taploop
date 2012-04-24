@@ -154,17 +154,18 @@ void *managethread(void *data) {
  * initialise the threadlist
  * start manager thread
  */
-void startthreads(void) {
+int startthreads(void) {
 	threads = objalloc(sizeof(*threads), NULL);
 	threads->list = create_bucketlist(5, NULL);
 	threads->manager = framework_mkthread(managethread, NULL, manager_sig, NULL);
+	return (threads && threads->list && threads->manager);
 }
 
 /*
  * Stop all running threads
  * sending hup signal to manager
  */
-void stopthreads(void) {
+void framework_shutdown(void) {
 	pthread_kill(threads->manager->thr, SIGHUP);
 }
 

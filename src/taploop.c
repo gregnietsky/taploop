@@ -25,10 +25,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "taploop.h"
 #include "tlsock.h"
 #include "vlan.h"
+#include "config.h"
 
 void clientserv_run(void);
 
-FRAMEWORK_MAIN("Gregory Hinton Nietsky", "gregory@distrotetch.co.za", "http://www.distrotech.co.za", 2012) {
+FRAMEWORK_MAIN("Taploop Network Stack",
+		"Gregory Hinton Nietsky",
+		PACKAGE_BUGREPORT,
+		"http://www.distrotech.co.za",
+		2012,
+		"/var/run/taploopd") {
 	/*client socket to allow client to connect*/
 	tundev = "/dev/net/tun";
 	clsock = "/tmp/tlsock";

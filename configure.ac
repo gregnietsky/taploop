@@ -52,7 +52,7 @@ AM_CONDITIONAL([FRAMEWORK_INSTALL], [test "$enable_framework_install" = yes])
 AM_CONDITIONAL([FRAMEWORK_SYSTEM], [test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes])
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/param.h sys/socket.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/param.h sys/socket.h unistd.h sys/file.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T

@@ -26,8 +26,9 @@ enum threadopt {
 
 /* thread struct*/
 struct thread_info {
-	void			*data;
+	int			magic;
 	enum			threadopt flags;
+	void			*data;
 };
 
 /*these can be set int the application */
@@ -35,13 +36,13 @@ struct framework_core {
 	const char *developer;
 	const char *email;
 	const char *www;
+	const char *runfile;
+	const char *progname;
 	int  year;
+	int  flock;
 	long	my_pid;
 	struct sigaction *sa;
 };
-
-typedef struct bucket_list bucket_list;
-typedef struct bucket_loop bucket_loop;
 
 /*
  * Initialise the framework
@@ -50,14 +51,19 @@ int framework_init(int argc, char *argv[], void *startup, struct framework_core 
 /*
  * Setup the run enviroment
  */
-struct framework_core *framework_mkcore(char *name, char *email, char *web, int year);
+struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile);
 /*
- * Free run enviroment
+ * Run a thread under the framework
  */
-void framework_free(struct framework_core *core_info);
-
 struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handler, void *data);
+/*
+ * Shutdown framework
+ */
+void framework_shutdown(void);
 
+/*
+ * ref counted objects
+ */
 int objlock(void *data);
 int objtrylock(void *data);
 int objunlock(void *data);
@@ -66,14 +72,21 @@ int objunref(void *data);
 int objref(void *data);
 void *objalloc(int size, void *destructor);
 
-struct bucket_list *create_bucketlist(int bitmask, void *hash_function);
-int addtobucket(struct bucket_list *blist, void *data);
-int bucket_list_cnt(struct bucket_list *blist);
-struct bucket_loop *init_bucket_loop(struct bucket_list *blist);
-void stop_bucket_loop(struct bucket_loop *bloop);
-void *next_bucket_loop(struct bucket_loop *bloop);
-void remove_bucket_loop(struct bucket_loop *bloop);
+/*
+ * hashed bucket lists
+ */
+void *create_bucketlist(int bitmask, void *hash_function);
+int addtobucket(void *blist, void *data);
+int bucket_list_cnt(void *blist);
+struct bucket_loop *init_bucket_loop(void *blist);
+void stop_bucket_loop(void *bloop);
+void *next_bucket_loop(void *bloop);
+void remove_bucket_loop(void *bloop);
 
+
+/*
+ * atomic flag routines for (obj)->flags
+ */
 #define clearflag(obj, flag) objlock(obj); \
 	obj->flags &= ~flag; \
 	objunlock(obj)
@@ -99,15 +112,12 @@ void remove_bucket_loop(struct bucket_loop *bloop);
 
 #define BLIST_ADD(blist, entry) addtobucket(blist, entry);
 
-#define FRAMEWORK_MAIN(name, email, www, year) \
+#define FRAMEWORK_MAIN(progname, name, email, www, year, runfile) \
 	int  framework_main(int argc, char *argv[]); \
 	struct framework_core *core_info; \
 	int  main(int argc, char *argv[]) { \
-		int res; \
-		core_info = framework_mkcore(name, email, www, year); \
-		res = framework_init(argc, argv, framework_main, core_info); \
-		framework_free(core_info); \
-		return (res); \
+		core_info = framework_mkcore(progname, name, email, www, year, runfile); \
+		return (framework_init(argc, argv, framework_main, core_info)); \
 	} \
 	int  framework_main(int argc, char *argv[]) \
 

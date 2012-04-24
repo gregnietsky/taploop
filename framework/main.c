@@ -21,12 +21,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/file.h>
 
 #include "framework.h"
 
 
-void startthreads(void);
-void stopthreads(void);
+int startthreads(void);
 void jointhreads(void);
 int thread_signal(int sig);
 
@@ -38,7 +39,7 @@ static void sig_handler(int sig, siginfo_t *si, void *unused) {
 	switch (sig) {
 		case SIGTERM:
 		case SIGINT:
-			stopthreads();
+			framework_shutdown();
 			break;
 		case SIGUSR1:
 		case SIGUSR2:
@@ -53,11 +54,11 @@ static void sig_handler(int sig, siginfo_t *si, void *unused) {
  * Print gnu snippet at program run
  */
 void printgnu(struct framework_core *ci) {
-	printf("Copyright (C) %i %s <%s>\n"
+	printf("%s\nCopyright (C) %i %s <%s>\n"
 "        %s\n\n"
 "    This program comes with ABSOLUTELY NO WARRANTY\n"
 "    This is free software, and you are welcome to redistribute it\n"
-"    under certain condition\n\n", ci->year, ci->developer, ci->email, ci->www);
+"    under certain condition\n\n", ci->progname, ci->year, ci->developer, ci->email, ci->www);
 }
 
 pid_t daemonize() {
@@ -82,6 +83,35 @@ pid_t daemonize() {
 	return (forkpid);
 }
 
+/*
+ * create pid / run file and hold a exclusive lock on it
+ */
+int lockpidfile(struct framework_core *ci) {
+	int lck_fd = -1;
+	char pidstr[12];
+
+	sprintf(pidstr,"%i\n", (int)ci->my_pid);
+	if (ci->runfile &&
+	    ((lck_fd = open(ci->runfile, O_RDWR|O_CREAT, 0640)) > 0) &&
+	    (!flock(lck_fd, LOCK_EX | LOCK_NB))) {
+		if (write(lck_fd, pidstr, strlen(pidstr)) < 0) {
+			close(lck_fd);
+			lck_fd = -1;
+		}
+	} else if (lck_fd) {
+		close(lck_fd);
+		lck_fd = -1;
+	} else {
+		ci->flock = -1;
+		return 0;
+	}
+	ci->flock = lck_fd;
+	return lck_fd;
+}
+
+/*
+ * set up signal handler
+ */
 void configure_sigact(struct sigaction *sa) {
 	sa->sa_flags = SA_SIGINFO | SA_RESTART;
 	sigemptyset(&sa->sa_mask);
@@ -99,7 +129,7 @@ void configure_sigact(struct sigaction *sa) {
 /*
  * initialise core
  */
-struct framework_core *framework_mkcore(char *name, char *email, char *web, int year) {
+struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile) {
 	struct framework_core *core_info = NULL;
 
 	if (!(core_info = malloc(sizeof(*core_info)))) {
@@ -114,6 +144,8 @@ struct framework_core *framework_mkcore(char *name, char *email, char *web, int 
 	ALLOC_CONST(core_info->developer, name);
 	ALLOC_CONST(core_info->email, email);
 	ALLOC_CONST(core_info->www, web);
+	ALLOC_CONST(core_info->runfile, runfile);
+	ALLOC_CONST(core_info->progname, progname);
 	core_info->year = year;
 
 	return (core_info);
@@ -123,19 +155,30 @@ struct framework_core *framework_mkcore(char *name, char *email, char *web, int 
  * free core
  */
 void framework_free(struct framework_core *ci) {
-	if (ci) {
-		if (ci->developer) {
-			free((char *)ci->developer);
+	if (!ci) {
+		return;
+	}
+
+	if (ci->developer) {
+		free((char *)ci->developer);
+	}
+	if (ci->email) {
+		free((char *)ci->email);
+	}
+	if (ci->www) {
+		free((char *)ci->www);
+	}
+	if (ci->sa) {
+		free(ci->sa);
+	}
+	if (ci->flock >= 0) {
+		close(ci->flock);
+	}
+	if (ci->runfile) {
+		if (ci->flock >= 0) {
+			unlink(ci->runfile);
 		}
-		if (ci->email) {
-			free((char *)ci->email);
-		}
-		if (ci->www) {
-			free((char *)ci->www);
-		}
-		if (ci->sa) {
-			free((char *)ci->sa);
-		}
+		free((char *)ci->runfile);
 	}
 }
 
@@ -148,13 +191,25 @@ int framework_init(int argc, char *argv[], void *callback, struct framework_core
 
 	/*prinit out a GNU licence summary*/
 	printgnu(core_info);
+
+	/* fork the process to daemonize it*/
 	core_info->my_pid = daemonize();
+
+	if (lockpidfile(core_info) < 0) {
+		printf("Could not lock pid file Exiting\n");
+		framework_free(core_info);
+		return -1;
+	}
 
 	/* interupt handler close clean on term so physical is reset*/
 	configure_sigact(core_info->sa);
 
 	/*init the threadlist start thread manager*/
-	startthreads();
+	if (!startthreads()) {
+		printf("Memory Error could not start threads\n");
+		framework_free(core_info);
+		return -1;
+	}
 
 	/*run the code from the application*/
 	if (callback) {
@@ -166,9 +221,10 @@ int framework_init(int argc, char *argv[], void *callback, struct framework_core
 	if (!ret) {
 		jointhreads();
 	} else {
-		stopthreads();
+		framework_shutdown();
 	}
 
 	/* turn off the lights*/
+	framework_free(core_info);
 	return (ret);
 }
