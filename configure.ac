@@ -5,7 +5,6 @@ AC_PREREQ([2.68])
 AC_INIT([taploop],[0.1],[gregory@distrotech.co.za])
 AC_CONFIG_SRCDIR([framework/thread.c])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
 AC_PROG_CXX
@@ -52,7 +51,7 @@ AM_CONDITIONAL([FRAMEWORK_INSTALL], [test "$enable_framework_install" = yes])
 AM_CONDITIONAL([FRAMEWORK_SYSTEM], [test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes])
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/param.h sys/socket.h unistd.h sys/file.h])
+AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
