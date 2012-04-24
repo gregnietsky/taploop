@@ -17,11 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <sys/un.h>
 #include <linux/limits.h>
-#include <unistd.h>
-#include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -31,7 +28,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 struct framework_sockthread {
 	char sock[PATH_MAX+1];
 	int mask;
-	int fd;
 	void *(*client)(void **data);
 	void *(*cleanup)(void **data);
 };
@@ -115,19 +111,10 @@ void *clientsock_serv(void **data) {
 		}
 	}
 
-	return NULL;
-};
-
-/*
- * cleanup routine for client sock
- */
-void delclientsock_serv(void *data) {
-	struct framework_sockthread *unsock = data;
-
-	/* delete sock*/
+	close(fd);
 	unlink(unsock->sock);
 
-	return;
+	return NULL;
 }
 
 void framework_unixsocket(char *sock, int mask, void *connectfunc, void *cleanup) {
@@ -138,5 +125,5 @@ void framework_unixsocket(char *sock, int mask, void *connectfunc, void *cleanup
 	unsock->mask = mask;
 	unsock->client = connectfunc;
 	unsock->cleanup = cleanup;
-	framework_mkthread(clientsock_serv, delclientsock_serv, NULL, unsock);
+	framework_mkthread(clientsock_serv, NULL, NULL, unsock);
 }
