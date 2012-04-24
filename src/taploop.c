@@ -16,8 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <unistd.h>
-#include <stdlib.h>
+#include <sys/stat.h>
 #include <stdio.h>
 
 #include <framework.h>
@@ -27,7 +26,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "vlan.h"
 #include "config.h"
 
-void clientserv_run(void);
+void *clientsock_client(void **data);
+void delclientsock_client(void *data);
 
 FRAMEWORK_MAIN("Taploop Network Stack",
 		"Gregory Hinton Nietsky",
@@ -38,8 +38,10 @@ FRAMEWORK_MAIN("Taploop Network Stack",
 
 	/*client socket to allow client to connect*/
 	tundev = "/dev/net/tun";
-	clsock = "/tmp/tlsock";
-	clientserv_run();
+        int mask;
+
+        mask = S_IXUSR | S_IWGRP | S_IRGRP | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH;
+        framework_unixsocket("/tmp/tlsock", mask, clientsock_client, delclientsock_client);
 
 	/* the bellow should be controlled by client not daemon*/
 	if (argc >= 3) {

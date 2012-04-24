@@ -35,5 +35,3 @@ struct bucket_list	*taplist;
 
 /* tun/tap clone device and client socket*/
 char	*tundev;
-char	*clsock;
-

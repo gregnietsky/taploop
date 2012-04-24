@@ -29,29 +29,17 @@ struct framework_core {
 	struct sigaction *sa;
 };
 
-/*
- * Initialise the framework
- */
+/*Initialise the framework */
 int framework_init(int argc, char *argv[], void *startup, struct framework_core *core_info);
-
-/*
- * Setup the run enviroment
- */
+/* Setup the run enviroment*/
 struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile);
-
-/*
- * Run a thread under the framework
- */
+/* Run a thread under the framework */
 struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handler, void *data);
-
-/*
- * Shutdown framework
- */
+/* Shutdown framework*/
 void framework_shutdown(void);
-
-/*
- * Test if the thread is running when passed data from thread
- */
+/* UNIX Socket*/
+void framework_unixsocket(char *sock, int mask, void *connectfunc, void *cleanup);
+/* Test if the thread is running when passed data from thread */
 int framework_threadok(void *data);
 
 /*
