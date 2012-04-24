@@ -3,12 +3,9 @@
 
 AC_PREREQ([2.68])
 AC_INIT([taploop],[0.1],[gregory@distrotech.co.za])
-AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([framework/thread.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
-
-LT_INIT()
 
 # Checks for programs.
 AC_PROG_CXX
@@ -21,6 +18,11 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 
 # Checks for libraries.
+#Framework changes
+AM_INIT_AUTOMAKE
+AC_CONFIG_MACRO_DIR([m4])
+LT_INIT()
+
 AC_CHECK_LIB([pthread], [pthread_create])
 
 AC_ARG_WITH([system-framework], AS_HELP_STRING([--with-system-framework], [Use the system framework not the packaged version]))
