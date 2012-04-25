@@ -42,6 +42,7 @@ struct blist_obj {
 
 /*bucket list to hold hashed objects in buckets*/
 struct bucket_list {
+	unsigned short  bitmask;
 	unsigned short	buckets;		/* number of buckets to create 2 ^ n masks hash*/
 	unsigned int	count;
 	int		(*hash_func)(void *data);
@@ -177,6 +178,7 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 
 	/*initialise each bucket*/
 	new->buckets = buckets;
+	new->bitmask = bitmask;
 	new->list = (void *)new + sizeof(*new);
 	for (cnt = 0; cnt < buckets; cnt++) {
 		LIST_INIT(new->list[cnt], NULL);
@@ -190,7 +192,7 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 int addtobucket(struct bucket_list *blist, void *data) {
 	struct ref_obj *ref = data - refobj_offset;
 	struct blist_obj *lhead;
-	int hash, bucket;
+	unsigned int hash, bucket;
 
 	if (blist && (ref->magic == REFOBJ_MAGIC)) {
 		if (!blist->hash_func) {
@@ -198,7 +200,7 @@ int addtobucket(struct bucket_list *blist, void *data) {
 		} else {
 			hash = 0;
 		}
-		bucket = hash & (blist->buckets -1);
+		bucket = ((hash >> (32 - blist->bitmask)) & ((1 << blist->bitmask) - 1));
 		lhead = blist->list[bucket];
 		LIST_ADD_HASH(lhead, ref, hash);
 		if (lhead->prev->data == ref) {
