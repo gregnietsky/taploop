@@ -42,25 +42,25 @@ struct blist_obj {
 
 /*bucket list to hold hashed objects in buckets*/
 struct bucket_list {
-	unsigned short  bitmask;
-	unsigned short	buckets;		/* number of buckets to create 2 ^ n masks hash*/
+	unsigned short	bucketbits;		/* number of buckets to create 2 ^ n masks hash*/
 	unsigned int	count;
 	int		(*hash_func)(void *data);
 	struct		blist_obj **list;		/* array of blist_obj[buckets]*/
+	pthread_mutex_t *locks;		/* locks for each bucket [buckets]*/
+	int		*version;	/* version of the bucket to detect changes*/
 };
 
 /*
  * buckets are more complex than linked lists
  * to loop through them we will use a structure
  * that holds the bucket and head it needs to
- * be initialised and destroyed it will lock
- * the bucketlist for the duration
+ * be initialised and destroyed.
  */
 struct bucket_loop {
 	struct bucket_list *blist;
 	int bucket;
+	int version;
 	struct blist_obj *head;
-	/* this is for deletion purposes*/
 	struct blist_obj *cur;
 };
 
@@ -172,17 +172,26 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 	buckets = (1 << bitmask);
 
 	/* allocate session bucket list memory*/
-	if (!(new = objalloc(sizeof(*new) + (sizeof(void*) * buckets),NULL))) {
+	if (!(new = objalloc(sizeof(*new) + (sizeof(void*) + sizeof(pthread_mutex_t) + sizeof(int)) * buckets,NULL))) {
 		return NULL;
 	}
 
 	/*initialise each bucket*/
-	new->buckets = buckets;
-	new->bitmask = bitmask;
+	new->bucketbits = bitmask;
 	new->list = (void *)new + sizeof(*new);
 	for (cnt = 0; cnt < buckets; cnt++) {
 		LIST_INIT(new->list[cnt], NULL);
 	}
+
+	/*next pointer is pointer to locks*/
+	new->locks = (void *)&new->list[buckets];
+	for (cnt = 0; cnt < buckets; cnt++) {
+		pthread_mutex_init(&new->locks[cnt], NULL);
+	}
+
+	/*Next up version array*/
+	new->version = (void *)&new->locks[buckets];
+
 	return (new);
 }
 
@@ -191,8 +200,9 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
  */
 int addtobucket(struct bucket_list *blist, void *data) {
 	struct ref_obj *ref = data - refobj_offset;
-	struct blist_obj *lhead;
+	struct blist_obj *lhead, *tmp;
 	unsigned int hash, bucket;
+	int direct;
 
 	if (blist && (ref->magic == REFOBJ_MAGIC)) {
 		if (!blist->hash_func) {
@@ -200,13 +210,70 @@ int addtobucket(struct bucket_list *blist, void *data) {
 		} else {
 			hash = 0;
 		}
-		bucket = ((hash >> (32 - blist->bitmask)) & ((1 << blist->bitmask) - 1));
+		bucket = ((hash >> (32 - blist->bucketbits)) & ((1 << blist->bucketbits) - 1));
+
+
+		pthread_mutex_lock(&blist->locks[bucket]);
 		lhead = blist->list[bucket];
-		LIST_ADD_HASH(lhead, ref, hash);
-		if (lhead->prev->data == ref) {
-			blist->count++;
-			objref(data);
+		/*no head or non null head*/
+		if (!lhead || lhead->prev) {
+			LIST_INIT(tmp, ref);
+			if (!tmp) {
+				pthread_mutex_unlock(&blist->locks[bucket]);
+				return (0);
+			}
+			tmp->hash = hash;
+
+			/*become new head*/
+			if (hash < lhead->hash) {
+				tmp->next = lhead;
+				tmp->prev = lhead->prev;
+				lhead->prev = tmp;
+				blist->list[bucket] = tmp;
+			/*new tail*/
+			} else if (hash > lhead->prev->hash) {
+				tmp->prev = lhead->prev;
+				lhead->prev->next = tmp;
+				lhead->prev = tmp;
+			/*insert entry*/
+			} else {
+				/*if the hash bit shifted signed is neg go in rev last 1/2*/
+				if ((hash << blist->bucketbits) < 0) {
+					do {
+					;	lhead = lhead->prev;
+					} while ((lhead->hash > hash) && lhead->prev);
+				} else {
+					while(lhead && lhead->next && (lhead->next->hash < hash)) {
+						lhead = lhead->next;
+					}
+				}
+
+				/*insert data sorted by hash*/
+				tmp->next = lhead->next;
+				tmp->prev = lhead;
+
+				if (lhead->next) {
+					lhead->next->prev = tmp;
+				} else {
+					blist->list[bucket]->prev = tmp;
+				}
+				lhead->next = tmp;
+			}
+		} else {
+			/*set NULL head*/
+			lhead->data = ref;
+			lhead->prev = lhead;
+			lhead->next = NULL;
+			lhead->hash = hash;
 		}
+
+		objref(data);
+		blist->version[bucket]++;
+		pthread_mutex_unlock(&blist->locks[bucket]);
+
+		objlock(blist);
+		blist->count++;
+		objunlock(blist);
 		return (1);
 	}
 	return (0);
@@ -221,12 +288,15 @@ struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
 
 	if ((bloop = objalloc(sizeof(*bloop),NULL)) && objref(blist)) {
 		bloop->blist = blist;
-		bloop->bucket = -1;
-		bloop->head = NULL;
+		bloop->bucket = 0;
+		objref(blist);
+		pthread_mutex_lock(&blist->locks[bloop->bucket]);
+		bloop->head = blist->list[0];
+		bloop->version = blist->version[0];
+		pthread_mutex_unlock(&blist->locks[bloop->bucket]);
 	} else if (bloop) {
 		objunref(bloop);
 	}
-	objlock(blist);
 
 	return (bloop);
 }
@@ -236,30 +306,28 @@ struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
  */
 void stop_bucket_loop(struct bucket_loop *bloop) {
 	if (bloop) {
-		objunlock(bloop->blist);
 		objunref(bloop->blist);
 		objunref(bloop);
 	}
 };
 
 /*
- * return the next object in the lists
+ * return the next object (+ref) in the list
  */
 void *next_bucket_loop(struct bucket_loop *bloop) {
+	struct bucket_list *blist = bloop->blist;
 	struct ref_obj *entry = NULL;
 	void *data = NULL;
 
-	if (bloop->bucket < 0) {
-		bloop->bucket = 0;
-		bloop->head = bloop->blist->list[0];
-	}
-
+	pthread_mutex_lock(&blist->locks[bloop->bucket]);
 	while (!bloop->head || !bloop->head->prev) {
+		pthread_mutex_unlock(&blist->locks[bloop->bucket]);
 		bloop->bucket++;
-		if (bloop->bucket < bloop->blist->buckets) {
-			bloop->head = bloop->blist->list[bloop->bucket];
+		if (bloop->bucket < (1 << blist->bucketbits)) {
+			pthread_mutex_lock(&blist->locks[bloop->bucket]);
+			bloop->head = blist->list[bloop->bucket];
 		} else {
-			break;
+			return NULL;
 		}
 	}
 
@@ -267,8 +335,10 @@ void *next_bucket_loop(struct bucket_loop *bloop) {
 		bloop->cur = bloop->head;
 		entry = (bloop->head->data) ? bloop->head->data : NULL;
 		data = (entry) ? entry->data : NULL;
+		objref(data);
 		bloop->head = bloop->head->next;
 	}
+	pthread_mutex_unlock(&blist->locks[bloop->bucket]);
 
 	return (data);
 }
@@ -277,10 +347,20 @@ void *next_bucket_loop(struct bucket_loop *bloop) {
  * remove and unref the current data
  */
 void remove_bucket_loop(struct bucket_loop *bloop) {
+	struct bucket_list *blist = bloop->blist;
+	int bucket = bloop->bucket;
+
 	if (bloop->cur) {
+		pthread_mutex_lock(&blist->locks[bucket]);
+		LIST_REMOVE_ENTRY(blist->list[bucket], bloop->cur);
 		objunref(bloop->cur->data->data);
-		LIST_REMOVE_ENTRY(bloop->blist->list[bloop->bucket], bloop->cur);
-		bloop->blist->count--;
+		blist->version[bucket]++;
+		bloop->version++;
+		pthread_mutex_unlock(&blist->locks[bucket]);
+
+		objlock(blist);
+		blist->count--;
+		objunlock(blist);
 	}
 }
 
