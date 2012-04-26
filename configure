@@ -1399,7 +1399,7 @@ Optional Features:
   --enable-framework-install
                           Install the framework library please note this
                           superseeds the --with-system-framewok option.
-  --enable-dev-mode       Developer mode -g -Wall -Werror
+  --enable-dev-mode       Developer mode -g -Wall -Werror -pedantic-errors
   --enable-world-peace    Yeah right .....
 
 Optional Packages:
@@ -15258,7 +15258,7 @@ if test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes ; then
 fi;
 
 if test "$enable_dev_mode" = "yes" ; then
- DEVELOPER_CFLAGS="-g -Wall -Werror"
+ DEVELOPER_CFLAGS="-g -Wall -Werror -pedantic-errors"
 fi;
 
 
