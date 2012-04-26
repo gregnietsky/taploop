@@ -17,17 +17,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <sys/socket.h>
-#include <sys/un.h>
+#include <linux/un.h>
 #include <linux/limits.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
+#include <string.h>
 
 #include "framework.h"
 
 /* UNIX socket thread*/
 struct framework_sockthread {
-	char sock[PATH_MAX+1];
+	char sock[UNIX_PATH_MAX+1];
 	int mask;
+	int family;
+	int protocol;
 	void *(*client)(void **data);
 	void *(*cleanup)(void **data);
 };
@@ -46,7 +50,7 @@ void *clientsock_serv(void **data) {
 	int *clfd;
 	int fd;
 
-	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
+	if ((fd = socket(PF_UNIX, unsock->protocol, 0)) < 0) {
 		return NULL;
 	}
 
@@ -117,13 +121,14 @@ void *clientsock_serv(void **data) {
 	return NULL;
 }
 
-void framework_unixsocket(char *sock, int mask, void *connectfunc, void *cleanup) {
+void framework_unixsocket(char *sock, int protocol, int mask, void *connectfunc, void *cleanup) {
 	struct framework_sockthread *unsock;
 
 	unsock = objalloc(sizeof(*unsock), NULL);
-	strncpy(unsock->sock, sock, PATH_MAX);
+	strncpy(unsock->sock, sock, UNIX_PATH_MAX);
 	unsock->mask = mask;
 	unsock->client = connectfunc;
 	unsock->cleanup = cleanup;
+	unsock->protocol = protocol;
 	framework_mkthread(clientsock_serv, NULL, NULL, unsock);
 }

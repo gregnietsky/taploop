@@ -41,7 +41,7 @@ FRAMEWORK_MAIN("Taploop Network Stack",
         int mask;
 
         mask = S_IXUSR | S_IWGRP | S_IRGRP | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH;
-        framework_unixsocket("/tmp/tlsock", mask, clientsock_client, delclientsock_client);
+        framework_unixsocket("/tmp/tlsock", SOCK_STREAM, mask, clientsock_client, delclientsock_client);
 
 	/* the bellow should be controlled by client not daemon*/
 	if (argc >= 3) {

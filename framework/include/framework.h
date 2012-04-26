@@ -38,7 +38,7 @@ struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handl
 /* Shutdown framework*/
 void framework_shutdown(void);
 /* UNIX Socket*/
-void framework_unixsocket(char *sock, int mask, void *connectfunc, void *cleanup);
+void framework_unixsocket(char *sock, int protocol, int mask, void *connectfunc, void *cleanup);
 /* Test if the thread is running when passed data from thread */
 int framework_threadok(void *data);
 
