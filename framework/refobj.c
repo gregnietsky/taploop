@@ -60,6 +60,7 @@ struct bucket_loop {
 	struct bucket_list *blist;
 	int bucket;
 	int version;
+	unsigned int hash;
 	struct blist_obj *head;
 	struct blist_obj *cur;
 };
@@ -180,7 +181,9 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 	new->bucketbits = bitmask;
 	new->list = (void *)new + sizeof(*new);
 	for (cnt = 0; cnt < buckets; cnt++) {
-		LIST_INIT(new->list[cnt], NULL);
+		if (new->list[cnt] = malloc(sizeof(*new->list[cnt]))) {
+			memset(new->list[cnt], 0, sizeof(*new->list[cnt]));
+		}
 	}
 
 	/*next pointer is pointer to locks*/
@@ -193,6 +196,22 @@ struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
 	new->version = (void *)&new->locks[buckets];
 
 	return (new);
+}
+
+struct blist_obj *blist_gotohash(struct blist_obj *cur, unsigned int hash, int bucketbits) {
+	struct blist_obj *lhead = cur;
+
+	if ((hash << bucketbits) < 0) {
+		do {
+			lhead = lhead->prev;
+		} while ((lhead->hash > hash) && lhead->prev->next);
+	} else {
+		while (lhead && lhead->next && (lhead->next->hash < hash)) {
+			lhead = lhead->next;
+		}
+	}
+
+	return lhead;
 }
 
 /*
@@ -217,12 +236,13 @@ int addtobucket(struct bucket_list *blist, void *data) {
 		lhead = blist->list[bucket];
 		/*no head or non null head*/
 		if (!lhead || lhead->prev) {
-			LIST_INIT(tmp, ref);
-			if (!tmp) {
+			if (!(tmp = malloc(sizeof(*tmp)))) {
 				pthread_mutex_unlock(&blist->locks[bucket]);
 				return (0);
 			}
+			memset(tmp, 0, sizeof(*tmp));
 			tmp->hash = hash;
+			tmp->data = ref;
 
 			/*become new head*/
 			if (hash < lhead->hash) {
@@ -233,22 +253,12 @@ int addtobucket(struct bucket_list *blist, void *data) {
 			/*new tail*/
 			} else if (hash > lhead->prev->hash) {
 				tmp->prev = lhead->prev;
+				tmp->next = NULL;
 				lhead->prev->next = tmp;
 				lhead->prev = tmp;
 			/*insert entry*/
 			} else {
-				/*if the hash bit shifted signed is neg go in rev last 1/2*/
-				if ((hash << blist->bucketbits) < 0) {
-					do {
-					;	lhead = lhead->prev;
-					} while ((lhead->hash > hash) && lhead->prev);
-				} else {
-					while(lhead && lhead->next && (lhead->next->hash < hash)) {
-						lhead = lhead->next;
-					}
-				}
-
-				/*insert data sorted by hash*/
+				lhead = blist_gotohash(lhead, hash, blist->bucketbits);
 				tmp->next = lhead->next;
 				tmp->prev = lhead;
 
@@ -316,10 +326,20 @@ void stop_bucket_loop(struct bucket_loop *bloop) {
  */
 void *next_bucket_loop(struct bucket_loop *bloop) {
 	struct bucket_list *blist = bloop->blist;
+	struct blist_obj *test = blist->list[bloop->bucket];
 	struct ref_obj *entry = NULL;
 	void *data = NULL;
 
+	/* bucket has changed unexpectedly i need to go to the */
 	pthread_mutex_lock(&blist->locks[bloop->bucket]);
+	if (bloop->hash && (blist->version[bloop->bucket] != bloop->version)) {
+		bloop->head = blist_gotohash(blist->list[bloop->bucket], bloop->hash + 1, blist->bucketbits);
+		/*if head has gone find next suitable ignore any added*/
+		while (bloop->head && (bloop->head->hash < bloop->hash)) {
+			bloop->head = bloop->head->next;
+		}
+	}
+
 	while (!bloop->head || !bloop->head->prev) {
 		pthread_mutex_unlock(&blist->locks[bloop->bucket]);
 		bloop->bucket++;
@@ -337,6 +357,7 @@ void *next_bucket_loop(struct bucket_loop *bloop) {
 		data = (entry) ? entry->data : NULL;
 		objref(data);
 		bloop->head = bloop->head->next;
+		bloop->hash = (bloop->head) ? bloop->head->hash : 0;
 	}
 	pthread_mutex_unlock(&blist->locks[bloop->bucket]);
 
