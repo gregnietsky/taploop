@@ -106,13 +106,14 @@ int objref(void *data) {
 }
 
 int objunref(void *data) {
+	struct ref_obj *ref;
 	int ret = -1;
 
 	if (!data) {
 		return (ret);
 	}
 
-	struct ref_obj *ref = data - refobj_offset;
+	ref = data - refobj_offset;
 	if ((ref->magic == REFOBJ_MAGIC) && (ref->cnt)) {
 		pthread_mutex_lock(&ref->lock);
 		ref->cnt--;
@@ -129,6 +130,7 @@ int objunref(void *data) {
 int objcnt(void *data) {
 	int ret = -1;
 	struct ref_obj *ref = data - refobj_offset;
+
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_lock(&ref->lock);
 		ret = ref->cnt;
@@ -300,16 +302,15 @@ struct bucket_loop *init_bucket_loop(void *bucket_list) {
 	struct bucket_list *blist = bucket_list;
 	struct bucket_loop *bloop = NULL;
 
-	if ((bloop = objalloc(sizeof(*bloop),NULL)) && objref(blist)) {
+	if ((bloop = objalloc(sizeof(*bloop),NULL))) {
+		objref(blist);
 		bloop->blist = blist;
 		bloop->bucket = 0;
-		objref(blist);
 		pthread_mutex_lock(&blist->locks[bloop->bucket]);
 		bloop->head = blist->list[0];
+		bloop->head_hash = bloop->head->hash;
 		bloop->version = blist->version[0];
 		pthread_mutex_unlock(&blist->locks[bloop->bucket]);
-	} else if (bloop) {
-		objunref(bloop);
 	}
 
 	return (bloop);
