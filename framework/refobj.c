@@ -122,6 +122,7 @@ int objunref(void *data) {
 		if (!ret) {
 			pthread_mutex_destroy(&ref->lock);
 			free(ref);
+			data = NULL;
 		}
 	}
 	return (ret);
