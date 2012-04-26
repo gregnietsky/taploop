@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdint.h>
+
 /*these can be set int the application */
 struct framework_core {
 	const char *developer;
@@ -64,6 +66,12 @@ void stop_bucket_loop(void *bloop);
 void *next_bucket_loop(void *bloop);
 void remove_bucket_loop(void *bloop);
 
+/*include jenkins hash burttlebob*/
+uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
+
+/*easter egg copied from <linux/jhash.h>*/
+#define JHASH_INITVAL           0xdeadbeef
+#define jenhash(key, length, initval)   hashlittle(key, length, (initval) ? initval : JHASH_INITVAL);
 
 /*
  * atomic flag routines for (obj)->flags

@@ -18,9 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <pthread.h>
 #include <string.h>
-#include "jhash.h"
+#include <stdlib.h>
+#include "framework.h"
 #include "list.h"
 
+/* add one for ref obj's*/
 #define REFOBJ_MAGIC		0xdeadc0de
 
 /* ref counted objects*/
@@ -167,7 +169,7 @@ int objunlock(void *data) {
  * array of "bucket" entries each has a hash
  * the default is to hash the memory when there is no call back
  */
-struct bucket_list *create_bucketlist(int bitmask, void *hash_function) {
+void *create_bucketlist(int bitmask, void *hash_function) {
 	struct bucket_list *new;
 	short int buckets, cnt;
 
@@ -218,7 +220,8 @@ struct blist_obj *blist_gotohash(struct blist_obj *cur, unsigned int hash, int b
 /*
  * add a ref to the object for the bucket list
  */
-int addtobucket(struct bucket_list *blist, void *data) {
+int addtobucket(void *bucket_list, void *data) {
+	struct bucket_list *blist = bucket_list;
 	struct ref_obj *ref = data - refobj_offset;
 	struct blist_obj *lhead, *tmp;
 	unsigned int hash, bucket;
@@ -294,7 +297,8 @@ int addtobucket(struct bucket_list *blist, void *data) {
 /*
  * create a bucket loop and lock the list
  */
-struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
+struct bucket_loop *init_bucket_loop(void *bucket_list) {
+	struct bucket_list *blist = bucket_list;
 	struct bucket_loop *bloop = NULL;
 
 	if ((bloop = objalloc(sizeof(*bloop),NULL)) && objref(blist)) {
@@ -315,7 +319,9 @@ struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
 /*
  * release the bucket loop and unref list
  */
-void stop_bucket_loop(struct bucket_loop *bloop) {
+void stop_bucket_loop(void *bucket_loop) {
+	struct bucket_loop *bloop = bucket_loop;
+
 	if (bloop) {
 		objunref(bloop->blist);
 		objunref(bloop);
@@ -325,7 +331,8 @@ void stop_bucket_loop(struct bucket_loop *bloop) {
 /*
  * return the next object (+ref) in the list
  */
-void *next_bucket_loop(struct bucket_loop *bloop) {
+void *next_bucket_loop(void *bucket_loop) {
+	struct bucket_loop *bloop = bucket_loop;
 	struct bucket_list *blist = bloop->blist;
 	struct ref_obj *entry = NULL;
 	void *data = NULL;
@@ -368,7 +375,8 @@ void *next_bucket_loop(struct bucket_loop *bloop) {
 /*
  * remove and unref the current data
  */
-void remove_bucket_loop(struct bucket_loop *bloop) {
+void remove_bucket_loop(void *bucket_loop) {
+	struct bucket_loop *bloop = bucket_loop;
 	struct bucket_list *blist = bloop->blist;
 	int bucket = bloop->bucket;
 
@@ -395,7 +403,8 @@ void remove_bucket_loop(struct bucket_loop *bloop) {
 	}
 }
 
-int bucket_list_cnt(struct bucket_list *blist) {
+int bucket_list_cnt(void *bucket_list) {
+	struct bucket_list *blist = bucket_list;
 	int ret = -1;
 
 	if (blist) {
