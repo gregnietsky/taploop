@@ -388,7 +388,7 @@ void *mainloop(void **data) {
 
 	/* initialise tap device*/
 	maxfd++;
-	while (framework_threadok(data)) {
+	while (framework_threadok(data) && !tap->stop) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 2000;
@@ -437,6 +437,7 @@ void *mainloop(void **data) {
 
 	return NULL;
 }
+
 /*
  * allocate and start a phy <-> tap thread
  */
@@ -458,12 +459,13 @@ int add_taploop(char *dev, char *name) {
 	while (bloop && (tap = next_bucket_loop(bloop))) {
 		objlock(tap);
 		if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
+			objunlock(tap);
+			objunref(tap);
 			break;
-		} else {
-			tap = NULL;
 		}
 		objunlock(tap);
 		objunref(tap);
+		tap = NULL;
 	};
 	stop_bucket_loop(bloop);
 
@@ -481,4 +483,47 @@ int add_taploop(char *dev, char *name) {
 
 	/* Start thread*/
 	return ((framework_mkthread(mainloop, stoptap, NULL, tap)) ? 0 : -1);
+}
+
+/*
+ * stop a phy <-> tap thread
+ */
+int del_taploop(char *dev, char *name) {
+	struct taploop		*tap = NULL;
+	struct bucket_loop *bloop;
+
+	/* do not continue on zero  length options*/
+	if (!dev || !name || (dev[1] == '\0') || (name[1] == '\0')) {
+		return (-1);
+	}
+
+	if (!taplist) {
+		taplist = create_bucketlist(5, NULL);
+	}
+
+	/* check for existing loop*/
+	bloop = init_bucket_loop(taplist);
+	while (bloop && (tap = next_bucket_loop(bloop))) {
+		if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
+			remove_bucket_loop(bloop);
+			break;
+		}
+		objunlock(tap);
+		objunref(tap);
+		tap = NULL;
+	};
+	stop_bucket_loop(bloop);
+
+	if (!tap) {
+		return (-1);
+	}
+
+
+	/* Stop tap*/
+	objlock(tap);
+	tap->stop = 1;
+	objunlock(tap);
+	objunref(tap);
+
+	return 0;
 }

@@ -42,3 +42,4 @@ void *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_se
 //void rbuffread(struct taploop *tap);
 void *mainloop(void **data);
 int add_taploop(char *dev, char *name);
+int del_taploop(char *dev, char *name);

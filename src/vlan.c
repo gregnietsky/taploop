@@ -82,7 +82,7 @@ int create_kernvlan(char *ifname, int vid) {
 /*
  * Create a VLAN on the device
  */
-void add_kernvlan(char *iface, int vid) {
+int add_kernvlan(char *iface, int vid) {
 	struct taploop *tap = NULL;
 	struct ifreq ifr;
 	struct sockaddr_ll sll;
@@ -94,7 +94,7 @@ void add_kernvlan(char *iface, int vid) {
 	/*check VID*/
 	if ((vid <= 1 ) || (vid > 0xFFF)) {
 		printf("Requested VID %i is out of range\n", vid);
-		return;
+		return -1;
 	}
 
 	/* check for existing loop*/
@@ -109,12 +109,12 @@ void add_kernvlan(char *iface, int vid) {
 	stop_bucket_loop(bloop);
 
 	if (!tap) {
-		return;
+		return -1;
 	}
 
 	if ((fd = create_kernvlan(iface, vid)) < 0) {
 		objunref(tap);
-		return;
+		return -1;
 	}
 
 	/*set the network dev up*/
@@ -125,7 +125,7 @@ void add_kernvlan(char *iface, int vid) {
        		perror("ioctl(SIOCSIFFLAGS) failed\n");
 		delete_kernvlan(fd, iface, vid);
 		objunref(tap);
-	        return;
+	        return -1;
 	}
 
 	/* set the interface index for bind*/
@@ -133,7 +133,7 @@ void add_kernvlan(char *iface, int vid) {
 		perror("ioctl(SIOCGIFINDEX) failed\n");
 		delete_kernvlan(fd, iface, vid);
 		objunref(tap);
-		return;
+		return -1;
 	}
 
 	/*bind to the interface*/
@@ -145,7 +145,7 @@ void add_kernvlan(char *iface, int vid) {
 		perror("bind(ETH_P_ALL) failed");
 		delete_kernvlan(fd, iface, vid);
 		objunref(tap);
-		return;
+		return -1;
 	}
 
 	/* add the socket to tap socks list we will not add this
@@ -165,4 +165,5 @@ void add_kernvlan(char *iface, int vid) {
 		delete_kernvlan(fd, iface, vid);
 	}
 	objunref(tap);
+	return 0;
 };

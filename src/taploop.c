@@ -17,15 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <sys/stat.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-
 #include <framework.h>
 
 #include "taploop.h"
-#include "tlsock.h"
-#include "vlan.h"
 #include "config.h"
 
 void *clientsock_client(void **data);
@@ -42,23 +37,9 @@ FRAMEWORK_MAIN("Taploop Network Stack",
 	tundev = "/dev/net/tun";
         int mask;
 
+	/* start up and listen for client connections from taploop*/
         mask = S_IXUSR | S_IWGRP | S_IRGRP | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH;
         framework_unixsocket("/tmp/tlsock", SOCK_STREAM, mask, clientsock_client, delclientsock_client);
 
-	/* the bellow should be controlled by client not daemon*/
-	if (argc >= 3) {
-		if (add_taploop(argv[1], argv[2])) {
-			printf("Failed to add taploop %s -> %s\n", argv[1], argv[2]);
-		} else {
-			/*XXX this is for testing add static vlans 100/150/200*/
-			sleep(3);
-			int i;
-			for (i = 3;i < argc;i++ ) {
-				add_kernvlan(argv[1], atoi(argv[i]));
-			}
-		}
-	} else {
-		printf("%s <DEV> <PHY NAME> [<VLAN> .....]\n", argv[0]);
-	}
 	return (0);
 }

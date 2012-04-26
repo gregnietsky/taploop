@@ -250,8 +250,13 @@ int addtobucket(void *bucket_list, void *data) {
 			tmp->hash = hash;
 			tmp->data = ref;
 
+			/*there is no head*/
+			if (!lhead) {
+				blist->list[bucket] = tmp;
+				tmp->prev = tmp;
+				tmp->next = NULL;
 			/*become new head*/
-			if (hash < lhead->hash) {
+			} else if (hash < lhead->hash) {
 				tmp->next = lhead;
 				tmp->prev = lhead->prev;
 				lhead->prev = tmp;
@@ -309,7 +314,9 @@ struct bucket_loop *init_bucket_loop(void *bucket_list) {
 		bloop->bucket = 0;
 		pthread_mutex_lock(&blist->locks[bloop->bucket]);
 		bloop->head = blist->list[0];
-		bloop->head_hash = bloop->head->hash;
+		if (bloop->head) {
+			bloop->head_hash = bloop->head->hash;
+		};
 		bloop->version = blist->version[0];
 		pthread_mutex_unlock(&blist->locks[bloop->bucket]);
 	}

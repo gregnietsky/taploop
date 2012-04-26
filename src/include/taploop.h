@@ -29,6 +29,7 @@ struct taploop {
 	void		*mmap;		/*mmaap buffer phy sock*/
 	struct		iovec *ring;	/*ring buffer phy*/
 	struct		bucket_list *socks;
+	int		stop;
 };
 
 struct bucket_list	*taplist;

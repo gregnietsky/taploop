@@ -25,15 +25,61 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <framework.h>
 
 #include "taploop.h"
+#include "client.h"
+#include "tlsock.h"
+#include "vlan.h"
+
+void client_tap(enum client_action act, struct client_tap *ctap, struct client_response *res) {
+	switch (act) {
+		case CA_ADD:
+			res->error = add_taploop(ctap->device, ctap->name);
+			snprintf(res->message, sizeof(res->message) - 1, "Adding TAP %s %s", ctap->device, ctap->name);
+			break;
+		case CA_REM:
+			res->error = del_taploop(ctap->device, ctap->name);
+			snprintf(res->message, sizeof(res->message) - 1, "Removing TAP %s", ctap->device);
+			break;
+	}
+
+}
+
+void client_vlan(enum client_action act, struct client_vlan *cvlan, struct client_response *res) {
+	switch (act) {
+		case CA_ADD:
+			res->error = add_kernvlan(cvlan->device, cvlan->vid);
+			snprintf(res->message, sizeof(res->message) - 1, "Adding VLAN %s.%i", cvlan->device, cvlan->vid);
+			break;
+		case CA_REM:
+			res->error = -1;
+			snprintf(res->message, sizeof(res->message) - 1, "Removing VLAN %s.%i Not Supported", cvlan->device, cvlan->vid);
+			break;
+	}
+
+}
 
 void *clientsock_client(void **data) {
+	struct client_command cmd;
+	struct client_response res;
 	int *fdptr = *data;
 	int fd = *fdptr;
 	int len = 256;
-	char buff[256];
 
-	len = read(fd, buff, len);
-	printf("Connected %s %i\n", buff, len);
+	len = read(fd, &cmd, sizeof(cmd));
+
+	if (len != sizeof(cmd)) {
+		printf("Invalid Command\n");
+		goto out;
+	}
+
+	switch (cmd.datatype) {
+		case CD_TAP: client_tap(cmd.action, &cmd.payload.tap, &res);
+			break;
+		case CD_VLAN: client_vlan(cmd.action, &cmd.payload.vlan, &res);
+			break;
+	}
+
+	len = write(fd, &res, sizeof(res));
+out:
 	*fdptr = -1;
 	close(fd);
 

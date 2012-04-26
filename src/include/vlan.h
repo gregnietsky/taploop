@@ -18,4 +18,4 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 int delete_kernvlan(int fd, char *ifname, int vid);
 int create_kernvlan(char *ifname, int vid);
-void add_kernvlan(char *iface, int vid);
+int add_kernvlan(char *iface, int vid);
