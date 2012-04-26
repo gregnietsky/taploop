@@ -60,7 +60,8 @@ struct bucket_loop {
 	struct bucket_list *blist;
 	int bucket;
 	int version;
-	unsigned int hash;
+	unsigned int head_hash;
+	unsigned int cur_hash;
 	struct blist_obj *head;
 	struct blist_obj *cur;
 };
@@ -326,16 +327,15 @@ void stop_bucket_loop(struct bucket_loop *bloop) {
  */
 void *next_bucket_loop(struct bucket_loop *bloop) {
 	struct bucket_list *blist = bloop->blist;
-	struct blist_obj *test = blist->list[bloop->bucket];
 	struct ref_obj *entry = NULL;
 	void *data = NULL;
 
-	/* bucket has changed unexpectedly i need to go to the */
 	pthread_mutex_lock(&blist->locks[bloop->bucket]);
-	if (bloop->hash && (blist->version[bloop->bucket] != bloop->version)) {
-		bloop->head = blist_gotohash(blist->list[bloop->bucket], bloop->hash + 1, blist->bucketbits);
+	if (bloop->head_hash && (blist->version[bloop->bucket] != bloop->version)) {
+		/* bucket has changed unexpectedly i need to ff/rew to hash*/
+		bloop->head = blist_gotohash(blist->list[bloop->bucket], bloop->head_hash + 1, blist->bucketbits);
 		/*if head has gone find next suitable ignore any added*/
-		while (bloop->head && (bloop->head->hash < bloop->hash)) {
+		while (bloop->head && (bloop->head->hash < bloop->head_hash)) {
 			bloop->head = bloop->head->next;
 		}
 	}
@@ -357,7 +357,8 @@ void *next_bucket_loop(struct bucket_loop *bloop) {
 		data = (entry) ? entry->data : NULL;
 		objref(data);
 		bloop->head = bloop->head->next;
-		bloop->hash = (bloop->head) ? bloop->head->hash : 0;
+		bloop->head_hash = (bloop->head) ? bloop->head->hash : 0;
+		bloop->cur_hash = (bloop->cur) ? bloop->cur->hash : 0;
 	}
 	pthread_mutex_unlock(&blist->locks[bloop->bucket]);
 
@@ -371,8 +372,17 @@ void remove_bucket_loop(struct bucket_loop *bloop) {
 	struct bucket_list *blist = bloop->blist;
 	int bucket = bloop->bucket;
 
+	pthread_mutex_lock(&blist->locks[bloop->bucket]);
+	/*if the bucket has altered need to verify i can remove*/
+	if (bloop->cur_hash && (blist->version[bloop->bucket] != bloop->version)) {
+		bloop->cur = blist_gotohash(blist->list[bloop->bucket], bloop->cur_hash + 1, blist->bucketbits);
+		if (bloop->cur->hash != bloop->cur_hash) {
+			pthread_mutex_unlock(&blist->locks[bucket]);
+			return;
+		}
+	}
+
 	if (bloop->cur) {
-		pthread_mutex_lock(&blist->locks[bucket]);
 		LIST_REMOVE_ENTRY(blist->list[bucket], bloop->cur);
 		objunref(bloop->cur->data->data);
 		blist->version[bucket]++;
