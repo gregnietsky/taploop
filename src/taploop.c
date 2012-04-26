@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 
 void *clientsock_client(void **data);
-void delclientsock_client(void *data);
+void *delclientsock_client(void *data);
 
 FRAMEWORK_MAIN("Taploop Network Stack",
 		"Gregory Hinton Nietsky",
@@ -33,9 +33,10 @@ FRAMEWORK_MAIN("Taploop Network Stack",
 		2012,
 		"/var/run/taploopd") {
 
+        int mask;
+
 	/*client socket to allow client to connect*/
 	tundev = "/dev/net/tun";
-        int mask;
 
 	/* start up and listen for client connections from taploop*/
         mask = S_IXUSR | S_IWGRP | S_IRGRP | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH;

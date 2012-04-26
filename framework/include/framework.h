@@ -31,16 +31,21 @@ struct framework_core {
 	struct sigaction *sa;
 };
 
+typedef void    *(*threadcleanup)(void*);
+typedef void    *(*threadfunc)(void**);
+typedef int     (*threadsighandler)(int, void*);
+typedef	int	(*frameworkfunc)(int, char**);
+
 /*Initialise the framework */
-int framework_init(int argc, char *argv[], void *startup, struct framework_core *core_info);
+int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info);
 /* Setup the run enviroment*/
 struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile);
 /* Run a thread under the framework */
-struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handler, void *data);
+struct thread_pvt *framework_mkthread(threadfunc, threadcleanup, threadsighandler, void *data);
 /* Shutdown framework*/
 void framework_shutdown(void);
 /* UNIX Socket*/
-void framework_unixsocket(char *sock, int protocol, int mask, void *connectfunc, void *cleanup);
+void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connectfunc, threadcleanup cleanup);
 /* Test if the thread is running when passed data from thread */
 int framework_threadok(void *data);
 

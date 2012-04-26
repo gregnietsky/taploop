@@ -29,7 +29,7 @@ enum threadopt {
         /* thread is marked as running*/
         TL_THREAD_RUN   = 1 << 1,
         /* thread is marked as complete*/
-        TL_THREAD_DONE  = 1 << 2,
+        TL_THREAD_DONE  = 1 << 2
 };
 
 /*
@@ -40,9 +40,9 @@ struct thread_pvt {
 	void			*data;
 	int			magic;
 	pthread_t		thr;
-	void			*(*cleanup)(void *data);
-	void			*(*func)(void **data);
-	void			(*sighandler)(int sig, struct thread_pvt *thread);
+	threadcleanup		cleanup;
+	threadfunc		func;
+	threadsighandler	sighandler;
 	enum                    threadopt flags;
 };
 
@@ -85,7 +85,7 @@ void *threadwrap(void *data) {
 /*
  * create a thread
  */
-struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handler, void *data) {
+struct thread_pvt *framework_mkthread(threadfunc func, threadcleanup cleanup, threadsighandler sig_handler, void *data) {
 	struct thread_pvt *thread;
 
 	if (!(thread = objalloc(sizeof(*thread), NULL))) {
@@ -125,7 +125,9 @@ struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handl
 /*
  * close all threads when we get SIGHUP
  */
-int manager_sig(int sig, struct thread_pvt *thread) {
+int manager_sig(int sig, void *data) {
+	struct thread_pvt *thread = data;
+
 	switch(sig) {
 		case SIGHUP:
 			clearflag(thread, TL_THREAD_RUN);
@@ -141,7 +143,7 @@ int manager_sig(int sig, struct thread_pvt *thread) {
 void *managethread(void **data) {
 	struct thread_pvt *mythread = threads->manager;
 	struct thread_pvt *thread;
-	struct bucket_loop *bloop;;
+	struct bucket_loop *bloop;
 	pthread_t me;
 	int stop = 0;
 

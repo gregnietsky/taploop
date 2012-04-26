@@ -166,4 +166,4 @@ int add_kernvlan(char *iface, int vid) {
 	}
 	objunref(tap);
 	return 0;
-};
+}

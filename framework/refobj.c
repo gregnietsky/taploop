@@ -72,8 +72,10 @@ struct bucket_loop {
 
 void *objalloc(int size,void *destructor) {
 	struct ref_obj *ref;
-	int asize = size + refobj_offset;
-	void *robj;
+	int asize;
+	char *robj;
+
+	asize  = size + refobj_offset;
 
 	if ((robj = malloc(asize))) {
 		memset(robj, 0, asize);
@@ -89,13 +91,17 @@ void *objalloc(int size,void *destructor) {
 }
 
 int objref(void *data) {
+	char *ptr = data;
+	struct ref_obj *ref;
 	int ret = 0;
+
+	ptr = ptr - refobj_offset;
+	ref = (struct ref_obj*)ptr;
 
 	if (!data) {
 		return (ret);
 	}
 
-	struct ref_obj *ref = data - refobj_offset;
 	if ((ref->magic == REFOBJ_MAGIC) && (ref->cnt)) {
 		pthread_mutex_lock(&ref->lock);
 		ref->cnt++;
@@ -106,6 +112,7 @@ int objref(void *data) {
 }
 
 int objunref(void *data) {
+	char *ptr = data;
 	struct ref_obj *ref;
 	int ret = -1;
 
@@ -113,7 +120,9 @@ int objunref(void *data) {
 		return (ret);
 	}
 
-	ref = data - refobj_offset;
+	ptr = ptr - refobj_offset;
+	ref = (struct ref_obj*)ptr;
+
 	if ((ref->magic == REFOBJ_MAGIC) && (ref->cnt)) {
 		pthread_mutex_lock(&ref->lock);
 		ref->cnt--;
@@ -129,8 +138,12 @@ int objunref(void *data) {
 }
 
 int objcnt(void *data) {
+	char *ptr = data;
 	int ret = -1;
-	struct ref_obj *ref = data - refobj_offset;
+	struct ref_obj *ref;
+
+	ptr = ptr - refobj_offset;
+	ref = (struct ref_obj*)ptr;
 
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_lock(&ref->lock);
@@ -141,7 +154,11 @@ int objcnt(void *data) {
 }
 
 int objlock(void *data) {
-	struct ref_obj *ref = data - refobj_offset;
+	char *ptr = data;
+	struct ref_obj *ref;
+
+	ptr = ptr - refobj_offset;
+	ref = (struct ref_obj*)ptr;
 
 	if (data && ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_lock(&ref->lock);
@@ -150,7 +167,11 @@ int objlock(void *data) {
 }
 
 int objtrylock(void *data) {
-	struct ref_obj *ref = data - refobj_offset;
+	char *ptr = data;
+	struct ref_obj *ref;
+
+	ptr = ptr - refobj_offset;
+	ref = (struct ref_obj*)ptr;
 
 	if (ref->magic == REFOBJ_MAGIC) {
 		return ((pthread_mutex_trylock(&ref->lock)) ? -1 : 0);
@@ -159,7 +180,11 @@ int objtrylock(void *data) {
 }
 
 int objunlock(void *data) {
-	struct ref_obj *ref = data - refobj_offset;
+	char *ptr = data;
+	struct ref_obj *ref;
+
+	ptr = ptr - refobj_offset;
+	ref = (struct ref_obj*)ptr;
 
 	if (ref->magic == REFOBJ_MAGIC) {
 		pthread_mutex_unlock(&ref->lock);
@@ -185,7 +210,7 @@ void *create_bucketlist(int bitmask, void *hash_function) {
 
 	/*initialise each bucket*/
 	new->bucketbits = bitmask;
-	new->list = (void *)new + sizeof(*new);
+	new->list = (void *)((char*)new + sizeof(*new));
 	for (cnt = 0; cnt < buckets; cnt++) {
 		if ((new->list[cnt] = malloc(sizeof(*new->list[cnt])))) {
 			memset(new->list[cnt], 0, sizeof(*new->list[cnt]));
@@ -224,10 +249,14 @@ struct blist_obj *blist_gotohash(struct blist_obj *cur, unsigned int hash, int b
  * add a ref to the object for the bucket list
  */
 int addtobucket(void *bucket_list, void *data) {
+	char *ptr = data;
 	struct bucket_list *blist = bucket_list;
-	struct ref_obj *ref = data - refobj_offset;
+	struct ref_obj *ref;
 	struct blist_obj *lhead, *tmp;
 	unsigned int hash, bucket;
+
+	ptr = ptr - refobj_offset;
+	ref = (struct ref_obj*)ptr;
 
 	if (blist && (ref->magic == REFOBJ_MAGIC)) {
 		if (!blist->hash_func) {
@@ -334,7 +363,7 @@ void stop_bucket_loop(void *bucket_loop) {
 		objunref(bloop->blist);
 		objunref(bloop);
 	}
-};
+}
 
 /*
  * return the next object (+ref) in the list

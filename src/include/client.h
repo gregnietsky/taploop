@@ -21,12 +21,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 enum client_action {
 	CA_ADD		=	1 << 0,
-	CA_REM		=	1 << 1,
+	CA_REM		=	1 << 1
 };
 
 enum client_acttype {
 	CD_TAP		=	1 << 0,
-	CD_VLAN		=	1 << 1,
+	CD_VLAN		=	1 << 1
 };
 
 struct client_tap {

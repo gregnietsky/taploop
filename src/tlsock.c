@@ -326,7 +326,7 @@ void *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_se
 	FD_SET(tsock->sock, rd_set);
 
 	return NULL;
-};
+}
 
 /*
 void rbuffread(struct taploop *tap) {
@@ -355,9 +355,8 @@ void rbuffread(struct taploop *tap) {
 void *mainloop(void **data) {
 	struct taploop	*tap = *data;
 	/* accomodate 802.1Q [4]*/
-	int buffsize = ETH_FRAME_LEN +4;
 	fd_set	rd_set, act_set;
-	char	buffer[buffsize];
+	char	buffer[ETH_FRAME_LEN+4];
 	int	maxfd, selfd, rlen;
 	struct	timeval	tv;
 	struct  tl_socket *tlsock, *osock, *phy, *virt;

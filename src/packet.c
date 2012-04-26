@@ -35,7 +35,7 @@ void frame_handler_ipv4(struct ethhdr *fr, void *packet, int *plen) {
 	dest=(unsigned char *)&ip->daddr;
 
 	printf("\tS: %03i.%03i.%03i.%03i D: %03i.%03i.%03i.%03i P:%i\n",src[0], src[1], src[2], src[3], dest[0], dest[1], dest[2], dest[3], ip->protocol);
-};
+}
 
 /*
  * Handle the packet for now we looking at the following
@@ -45,10 +45,15 @@ void frame_handler_ipv4(struct ethhdr *fr, void *packet, int *plen) {
  * 802.1x pass this on to a authenticator maybe talk to radius ??
  */
 void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket *sock, struct tl_socket *osock, int offset) {
-	struct ethhdr	*fr = buffer+offset;
-	void		*packet;
+	char	*ptr = buffer;
+	struct ethhdr	*fr;
+	char		*packet;
 	unsigned short	etype, vhdr, vid = 0, cfi = 0, pcp =0;
 	int plen;
+
+	ptr = ptr + offset;
+	fr = (struct ethhdr*)ptr;
+
 
 	/* i cannot be smaller than a ether header*/
 	if (len < sizeof(*fr)) {
@@ -65,7 +70,7 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
 	 */
 	if (etype == ETH_P_8021Q) {
 		plen = len - (sizeof(*fr));
-		packet = buffer + offset + (len - plen);
+		packet = (char *)buffer + offset + (len - plen);
 		/* 2 byte VLAN Header*/
 		vhdr = ntohs(*(unsigned short *)packet);
 		/* 2 byte Real Protocol type*/
@@ -81,7 +86,7 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
 		printf("\tVID %i PCP %i CFI %i type 0x%x\n", vid, pcp, cfi, etype);
 	} else {
 		plen = len - (sizeof(*fr));
-		packet = buffer + offset + (len - plen);
+		packet = (char *)buffer + offset + (len - plen);
 	}
 
 	/* frame handlers can mangle the packet and header

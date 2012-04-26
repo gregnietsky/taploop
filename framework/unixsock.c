@@ -34,8 +34,8 @@ struct framework_sockthread {
 	int mask;
 	int family;
 	int protocol;
-	void *(*client)(void **data);
-	void *(*cleanup)(void **data);
+	threadfunc	client;
+	threadcleanup	cleanup;
 };
 
 /*
@@ -123,7 +123,7 @@ void *clientsock_serv(void **data) {
 	return NULL;
 }
 
-void framework_unixsocket(char *sock, int protocol, int mask, void *connectfunc, void *cleanup) {
+void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connectfunc, threadcleanup cleanup) {
 	struct framework_sockthread *unsock;
 
 	unsock = objalloc(sizeof(*unsock), NULL);

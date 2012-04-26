@@ -185,7 +185,7 @@ void framework_free(struct framework_core *ci) {
 /*
  * daemonise and start socket
  */
-int framework_init(int argc, char *argv[], void *callback, struct framework_core *core_info) {
+int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info) {
 	int (*startup)(int, char **);
 	int ret = 0;
 

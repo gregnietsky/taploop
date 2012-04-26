@@ -24,7 +24,7 @@ enum sockopt {
 	/*this is the physical socket */
 	TL_SOCKET_PHY	= 1 << 1,
 	/*when writing to this socket do so as 802.1q if vid set*/
-	TL_SOCKET_8021Q	= 1 << 2,
+	TL_SOCKET_8021Q	= 1 << 2
 };
 
 /* socket entry*/
@@ -39,7 +39,7 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy);
 struct tl_socket *phyopen(struct taploop *tap);
 void *stoptap(void *data);
 void *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_set *rd_set);
-//void rbuffread(struct taploop *tap);
+/*void rbuffread(struct taploop *tap);*/
 void *mainloop(void **data);
 int add_taploop(char *dev, char *name);
 int del_taploop(char *dev, char *name);

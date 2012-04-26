@@ -89,7 +89,7 @@ out:
 /*
  * cleanup routine for client sock
  */
-void delclientsock_client(void *data) {
+void *delclientsock_client(void *data) {
 	int fd = *(int *)data;
 
 	if (fd >= 0) {
@@ -97,5 +97,5 @@ void delclientsock_client(void *data) {
 	}
 	objunref(data);
 
-	return;
+	return NULL;
 }

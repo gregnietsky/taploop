@@ -24,9 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <client.h>
 
-//#include <framework.h>
-
-
 int connect_socket(char *sock) {
 	struct sockaddr_un	adr;
 	int fd, salen;
