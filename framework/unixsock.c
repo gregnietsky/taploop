@@ -17,11 +17,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <linux/un.h>
 #include <linux/limits.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "framework.h"

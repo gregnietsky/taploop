@@ -110,7 +110,7 @@ struct thread_pvt *framework_mkthread(void *func, void *cleanup, void *sig_handl
 	/* am i up and running move ref to list*/
 	if (!pthread_kill(thread->thr, 0)) {
 		objlock(threads);
-		BLIST_ADD(threads->list, thread);
+		addtobucket(threads->list, thread);
 		objunlock(threads);
 		return (thread);
 	} else {
@@ -141,19 +141,22 @@ int manager_sig(int sig, struct thread_pvt *thread) {
 void *managethread(void **data) {
 	struct thread_pvt *mythread = threads->manager;
 	struct thread_pvt *thread;
+	struct bucket_loop *bloop;;
 	pthread_t me;
 	int stop = 0;
 
 	me = pthread_self();
 	while(bucket_list_cnt(threads->list)) {
-		BLIST_FOREACH_START(threads->list , thread) {
+		bloop = init_bucket_loop(threads->list);
+		while (bloop && (thread = next_bucket_loop(bloop))) {
 			/*this is my call im done*/
 			if (pthread_equal(thread->thr, me)) {
 				/* im going to leave the list and try close down all others*/
 				if (!(testflag(mythread, TL_THREAD_RUN))) {
-					BLIST_REMOVE_CURRENT;
+					remove_bucket_loop(bloop);
 					stop = 1;
 				}
+				objunref(thread);
 				continue;
 			}
 
@@ -163,7 +166,7 @@ void *managethread(void **data) {
 				objunlock(thread);
 			} else if ((thread->flags & TL_THREAD_DONE) || pthread_kill(thread->thr, 0)){
 				objunlock(thread);
-				BLIST_REMOVE_CURRENT;
+				remove_bucket_loop(bloop);
 				if (thread->cleanup) {
 					thread->cleanup(thread->data);
 				}
@@ -172,8 +175,9 @@ void *managethread(void **data) {
 			} else {
 				objunlock(thread);
 			}
+			objunref(thread);
 		}
-		BLIST_FOREACH_END;
+		stop_bucket_loop(bloop);
 		sleep(1);
 	}
 
@@ -215,11 +219,13 @@ void jointhreads(void) {
  */
 int thread_signal(int sig) {
 	struct thread_pvt *thread;
+	struct bucket_loop *bloop;
 	pthread_t me;
 	int ret = 0;
 
 	me = pthread_self();
-	BLIST_FOREACH_START(threads->list , thread) {
+	bloop = init_bucket_loop(threads->list);
+	while (bloop && (thread = next_bucket_loop(bloop))) {
 		if (pthread_equal(thread->thr, me)) {
 			if (thread->sighandler) {
 				thread->sighandler(sig, thread);
@@ -227,9 +233,11 @@ int thread_signal(int sig) {
 			} else {
 				ret = -1;
 			}
+			objunref(thread);
 			break;
 		}
+		objunref(thread);
 	}
-	BLIST_FOREACH_END;
+	stop_bucket_loop(bloop);
 	return (ret);
 }

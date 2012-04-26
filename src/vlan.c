@@ -87,6 +87,7 @@ void add_kernvlan(char *iface, int vid) {
 	struct ifreq ifr;
 	struct sockaddr_ll sll;
 	struct tl_socket *tlsock;
+	struct bucket_loop *bloop;
 	int proto = htons(ETH_P_ALL);
 	int fd;
 
@@ -97,14 +98,15 @@ void add_kernvlan(char *iface, int vid) {
 	}
 
 	/* check for existing loop*/
-	BLIST_FOREACH_START(taplist, tap) {
+	bloop = init_bucket_loop(taplist);
+	while (bloop && (tap = next_bucket_loop(bloop))) {
 		if (tap && !strncmp(tap->pdev, iface, IFNAMSIZ)) {
-			objref(tap);
 			break;
 		}
+		objunref(tap);
 		tap = NULL;
 	}
-	BLIST_FOREACH_END;
+	stop_bucket_loop(bloop);
 
 	if (!tap) {
 		return;
@@ -156,7 +158,7 @@ void add_kernvlan(char *iface, int vid) {
 		tlsock->vid = vid;
 		tlsock->flags = TL_SOCKET_8021Q;
 		objlock(tap);
-		BLIST_ADD(tap->socks, tlsock);
+		addtobucket(tap->socks, tlsock);
 		objunlock(tap);
 	} else {
 		printf("Memmory error\n");

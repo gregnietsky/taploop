@@ -90,7 +90,7 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
 		tlsock->vid = 0;
 		tlsock->flags = TL_SOCKET_VIRT;
 		objlock(tap);
-		BLIST_ADD(tap->socks, tlsock);
+		addtobucket(tap->socks, tlsock);
 		objunlock(tap);
 	}
 	return (tlsock);
@@ -232,7 +232,7 @@ struct tl_socket *phyopen(struct taploop *tap) {
 		tap->mmap_size = reqr.tp_block_size;
 		tap->mmap = rxmmbuf;
 		tap->ring = ring;
-		BLIST_ADD(tap->socks, tlsock);
+		addtobucket(tap->socks, tlsock);
 		objunlock(tap);
 	} else {
 		if (rxmmbuf) {
@@ -254,6 +254,7 @@ void *stoptap(void *data) {
 	struct taploop	 *tap = data;
 	struct ifreq ifr;
 	struct tl_socket *phy = NULL, *virt = NULL, *socket;
+	struct bucket_loop *bloop;
 
 	if (!tap) {
 		return NULL;
@@ -263,8 +264,9 @@ void *stoptap(void *data) {
 	strncpy(ifr.ifr_name, tap->pname, sizeof(ifr.ifr_name) - 1);
 
 	/* get physical socket to reconfigure it and drop it*/
-	BLIST_FOREACH_START(tap->socks, socket) {
-		BLIST_REMOVE_CURRENT;
+	bloop = init_bucket_loop(tap->socks);
+	while (bloop && (socket = next_bucket_loop(bloop))) {
+		remove_bucket_loop(bloop);
 		if (socket->flags & TL_SOCKET_PHY) {
 			phy = socket;
 		} else if (socket->flags & TL_SOCKET_VIRT) {
@@ -277,8 +279,9 @@ void *stoptap(void *data) {
 			}
 			objunref(socket);
 		}
+		objunref(socket);
 	}
-	BLIST_FOREACH_END;
+	stop_bucket_loop(bloop);
 
 	/*close the tap*/
 	if (virt) {
@@ -358,6 +361,7 @@ void *mainloop(void **data) {
 	int	maxfd, selfd, rlen;
 	struct	timeval	tv;
 	struct  tl_socket *tlsock, *osock, *phy, *virt;
+	struct	bucket_loop *bloop;
 
 	if (!tap) {
 		return NULL;
@@ -398,11 +402,11 @@ void *mainloop(void **data) {
 			break;
 		}
 
-		BLIST_FOREACH_START(tap->socks, tlsock) {
+		bloop = init_bucket_loop(tap->socks);
+		while (bloop && (tlsock = next_bucket_loop(bloop))) {
 			if (FD_ISSET(tlsock->sock, &act_set)) {
 				/*set the default output socket can be changed in handler*/
 				/*make sure the socks dont disapear grab a ref as i my use them in a thread elsewhere*/
-				objref(tlsock);
 
 /*XXXXX optomise i have the ref handle it in packet*/
 
@@ -420,11 +424,11 @@ void *mainloop(void **data) {
 					process_packet(buffer, rlen, tap, tlsock, osock, 0);
 
 				}
-				objunref(tlsock);
 				break;
 			}
+			objunref(tlsock);
 		}
-		BLIST_FOREACH_END;
+		stop_bucket_loop(bloop);
 	}
 
 	/*remove ref's*/
@@ -438,6 +442,7 @@ void *mainloop(void **data) {
  */
 int add_taploop(char *dev, char *name) {
 	struct taploop		*tap = NULL;
+	struct bucket_loop *bloop;
 
 	/* do not continue on zero  length options*/
 	if (!dev || !name || (dev[1] == '\0') || (name[1] == '\0')) {
@@ -449,7 +454,8 @@ int add_taploop(char *dev, char *name) {
 	}
 
 	/* check for existing loop*/
-	BLIST_FOREACH_START(taplist, tap) {
+	bloop = init_bucket_loop(taplist);
+	while (bloop && (tap = next_bucket_loop(bloop))) {
 		objlock(tap);
 		if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
 			break;
@@ -457,8 +463,9 @@ int add_taploop(char *dev, char *name) {
 			tap = NULL;
 		}
 		objunlock(tap);
+		objunref(tap);
 	};
-	BLIST_FOREACH_END;
+	stop_bucket_loop(bloop);
 
 	if (tap || !(tap = objalloc(sizeof(*tap), NULL))) {
 		return (-1);
@@ -470,7 +477,7 @@ int add_taploop(char *dev, char *name) {
 	tap->ring = NULL;
 	tap->mmap = NULL;
 	tap->mmap_size = 0;
-	BLIST_ADD(taplist, tap);
+	addtobucket(taplist, tap);
 
 	/* Start thread*/
 	return ((framework_mkthread(mainloop, stoptap, NULL, tap)) ? 0 : -1);

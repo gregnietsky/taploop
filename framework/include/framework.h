@@ -86,21 +86,6 @@ uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
 
 #define testflag(obj, flag) (objlock(obj) | (obj->flags & flag) | objunlock(obj))
 
-
-#define BLIST_FOREACH_START(blist, entry) { \
-	{ \
-		struct bucket_loop *_fea_bloop; \
-        	_fea_bloop = init_bucket_loop(blist); \
-        	while (_fea_bloop && (entry = next_bucket_loop(_fea_bloop)))
-
-#define BLIST_FOREACH_END stop_bucket_loop(_fea_bloop); \
-		} \
-	}
-
-#define BLIST_REMOVE_CURRENT remove_bucket_loop(_fea_bloop);
-
-#define BLIST_ADD(blist, entry) addtobucket(blist, entry);
-
 #define FRAMEWORK_MAIN(progname, name, email, www, year, runfile) \
 	int  framework_main(int argc, char *argv[]); \
 	struct framework_core *core_info; \

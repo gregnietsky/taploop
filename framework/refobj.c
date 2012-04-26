@@ -184,7 +184,7 @@ void *create_bucketlist(int bitmask, void *hash_function) {
 	new->bucketbits = bitmask;
 	new->list = (void *)new + sizeof(*new);
 	for (cnt = 0; cnt < buckets; cnt++) {
-		if (new->list[cnt] = malloc(sizeof(*new->list[cnt]))) {
+		if ((new->list[cnt] = malloc(sizeof(*new->list[cnt])))) {
 			memset(new->list[cnt], 0, sizeof(*new->list[cnt]));
 		}
 	}
@@ -225,7 +225,6 @@ int addtobucket(void *bucket_list, void *data) {
 	struct ref_obj *ref = data - refobj_offset;
 	struct blist_obj *lhead, *tmp;
 	unsigned int hash, bucket;
-	int direct;
 
 	if (blist && (ref->magic == REFOBJ_MAGIC)) {
 		if (!blist->hash_func) {
