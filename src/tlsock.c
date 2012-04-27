@@ -40,6 +40,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "vlan.h"
 #include "packet.h"
 
+int hash_tapdata(void *data, int key) {
+        struct taploop *tap = data;
+        char* hashkey = (key) ? data : tap->pdev;
+
+        return jenhash(hashkey, strlen(hashkey), 0);
+}
+
+void *inittaplist(void) {
+	return create_bucketlist(2, hash_tapdata);
+}
+
 /* tap the taploop struct
  * hwaddr used to set the tap device MAC adddress
  */
@@ -442,33 +453,18 @@ void *mainloop(void **data) {
  */
 int add_taploop(char *dev, char *name) {
 	struct taploop		*tap = NULL;
-	struct bucket_loop *bloop;
+
+	if (!taplist && !(taplist = inittaplist())) {
+		return (-1);
+	}
 
 	/* do not continue on zero  length options*/
 	if (!dev || !name || (dev[1] == '\0') || (name[1] == '\0')) {
 		return (-1);
 	}
 
-	if (!taplist) {
-		taplist = create_bucketlist(5, NULL);
-	}
-
-	/* check for existing loop*/
-	bloop = init_bucket_loop(taplist);
-	while (bloop && (tap = next_bucket_loop(bloop))) {
-		objlock(tap);
-		if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
-			objunlock(tap);
-			objunref(tap);
-			break;
-		}
-		objunlock(tap);
+	if ((tap = bucket_list_find_key(taplist, dev)) || !(tap = objalloc(sizeof(*tap), NULL))) {
 		objunref(tap);
-		tap = NULL;
-	};
-	stop_bucket_loop(bloop);
-
-	if (tap || !(tap = objalloc(sizeof(*tap), NULL))) {
 		return (-1);
 	}
 
@@ -489,34 +485,19 @@ int add_taploop(char *dev, char *name) {
  */
 int del_taploop(char *dev, char *name) {
 	struct taploop		*tap = NULL;
-	struct bucket_loop *bloop;
 
 	/* do not continue on zero  length options*/
 	if (!dev || !name || (dev[1] == '\0') || (name[1] == '\0')) {
 		return (-1);
 	}
 
-	if (!taplist) {
-		taplist = create_bucketlist(5, NULL);
-	}
-
-	/* check for existing loop*/
-	bloop = init_bucket_loop(taplist);
-	while (bloop && (tap = next_bucket_loop(bloop))) {
-		if (tap && !strncmp(tap->pdev, dev, IFNAMSIZ)) {
-			remove_bucket_loop(bloop);
-			break;
-		}
-		objunlock(tap);
-		objunref(tap);
-		tap = NULL;
-	};
-	stop_bucket_loop(bloop);
-
-	if (!tap) {
+	if (!taplist && !(taplist = inittaplist())) {
 		return (-1);
 	}
 
+	if (!(tap = bucket_list_find_key(taplist, dev))) {
+		return (-1);
+	}
 
 	/* Stop tap*/
 	objlock(tap);

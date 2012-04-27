@@ -35,6 +35,7 @@ typedef void    *(*threadcleanup)(void*);
 typedef void    *(*threadfunc)(void**);
 typedef int     (*threadsighandler)(int, void*);
 typedef	int	(*frameworkfunc)(int, char**);
+typedef int	(*blisthash)(void*, int);
 
 /*Initialise the framework */
 int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info);
@@ -63,9 +64,14 @@ void *objalloc(int size, void *destructor);
 /*
  * hashed bucket lists
  */
-void *create_bucketlist(int bitmask, void *hash_function);
+void *create_bucketlist(int bitmask, blisthash hash_function);
 int addtobucket(void *blist, void *data);
 int bucket_list_cnt(void *blist);
+void *bucket_list_find_key(void *list, void *key);
+
+/*
+ * iteration through buckets
+ */
 struct bucket_loop *init_bucket_loop(void *blist);
 void stop_bucket_loop(void *bloop);
 void *next_bucket_loop(void *bloop);

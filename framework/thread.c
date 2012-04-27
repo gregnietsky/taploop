@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #include "framework.h"
 
@@ -55,6 +56,13 @@ struct threadcontainer {
  * Global threads list
  */
 struct threadcontainer *threads;
+
+int hash_thread(void *data, int key) {
+        struct thread_pvt *thread = data;
+        pthread_t *hashkey = (key) ? data : &thread->thr;
+
+	return jenhash(hashkey, sizeof(pthread_t), 0);
+}
 
 /*
  * let threads check there status by passing in a pointer to
@@ -192,7 +200,7 @@ void *managethread(void **data) {
  */
 int startthreads(void) {
 	threads = objalloc(sizeof(*threads), NULL);
-	threads->list = create_bucketlist(5, NULL);
+	threads->list = create_bucketlist(4, hash_thread);
 	threads->manager = framework_mkthread(managethread, NULL, manager_sig, NULL);
 	return (threads && threads->list && threads->manager);
 }
@@ -211,6 +219,7 @@ void framework_shutdown(void) {
 void jointhreads(void) {
 	pthread_join(threads->manager->thr, NULL);
 }
+
 /*
  * find the thread the signal was delivered to
  * if the signal was handled returns 1
@@ -221,25 +230,18 @@ void jointhreads(void) {
  */
 int thread_signal(int sig) {
 	struct thread_pvt *thread;
-	struct bucket_loop *bloop;
 	pthread_t me;
 	int ret = 0;
 
 	me = pthread_self();
-	bloop = init_bucket_loop(threads->list);
-	while (bloop && (thread = next_bucket_loop(bloop))) {
-		if (pthread_equal(thread->thr, me)) {
-			if (thread->sighandler) {
-				thread->sighandler(sig, thread);
-				ret = 1;
-			} else {
-				ret = -1;
-			}
-			objunref(thread);
-			break;
+	if ((thread = bucket_list_find_key(threads->list, &me))) {
+		if (thread->sighandler) {
+			thread->sighandler(sig, thread);
+			ret = 1;
+		} else {
+			ret = -1;
 		}
 		objunref(thread);
 	}
-	stop_bucket_loop(bloop);
 	return (ret);
 }

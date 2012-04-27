@@ -46,7 +46,7 @@ struct blist_obj {
 struct bucket_list {
 	unsigned short	bucketbits;		/* number of buckets to create 2 ^ n masks hash*/
 	unsigned int	count;
-	int		(*hash_func)(void *data);
+	blisthash	hash_func;
 	struct		blist_obj **list;		/* array of blist_obj[buckets]*/
 	pthread_mutex_t *locks;		/* locks for each bucket [buckets]*/
 	int		*version;	/* version of the bucket to detect changes*/
@@ -131,7 +131,6 @@ int objunref(void *data) {
 		if (!ret) {
 			pthread_mutex_destroy(&ref->lock);
 			free(ref);
-			data = NULL;
 		}
 	}
 	return (ret);
@@ -197,7 +196,7 @@ int objunlock(void *data) {
  * array of "bucket" entries each has a hash
  * the default is to hash the memory when there is no call back
  */
-void *create_bucketlist(int bitmask, void *hash_function) {
+void *create_bucketlist(int bitmask, blisthash hash_function) {
 	struct bucket_list *new;
 	short int buckets, cnt;
 
@@ -226,6 +225,8 @@ void *create_bucketlist(int bitmask, void *hash_function) {
 	/*Next up version array*/
 	new->version = (void *)&new->locks[buckets];
 
+	new->hash_func = hash_function;
+
 	return (new);
 }
 
@@ -245,6 +246,22 @@ struct blist_obj *blist_gotohash(struct blist_obj *cur, unsigned int hash, int b
 	return lhead;
 }
 
+int gethash(struct bucket_list *blist, void *data, int key) {
+	char *ptr = data;
+	struct ref_obj *ref;
+	int hash = 0;
+
+	ptr = ptr - refobj_offset;
+	ref = (struct ref_obj*)ptr;
+
+	if (blist->hash_func) {
+		hash = blist->hash_func(data, key);
+	} else if (ref && (ref->magic == REFOBJ_MAGIC)) {
+		hash = jenhash(data, ref->size, 0);
+	}
+	return hash;
+}
+
 /*
  * add a ref to the object for the bucket list
  */
@@ -259,11 +276,7 @@ int addtobucket(void *bucket_list, void *data) {
 	ref = (struct ref_obj*)ptr;
 
 	if (blist && (ref->magic == REFOBJ_MAGIC)) {
-		if (!blist->hash_func) {
-			hash = jenhash(data, ref->size, 0);
-		} else {
-			hash = 0;
-		}
+		hash = gethash(blist, data, 0);
 		bucket = ((hash >> (32 - blist->bucketbits)) & ((1 << blist->bucketbits) - 1));
 
 
@@ -450,4 +463,28 @@ int bucket_list_cnt(void *bucket_list) {
 		objunlock(blist);
 	}
 	return (ret);
+}
+
+void *bucket_list_find_key(void *list, void *key) {
+	struct bucket_list *blist = list;
+	struct blist_obj *entry;
+	int hash, bucket;
+
+	hash = gethash(blist, key, 1);
+	bucket = ((hash >> (32 - blist->bucketbits)) & ((1 << blist->bucketbits) - 1));
+
+	pthread_mutex_lock(&blist->locks[bucket]);
+	entry = blist_gotohash(blist->list[bucket], hash + 1, blist->bucketbits);
+	if (entry->data) {
+		objref(entry->data->data);
+	}
+	pthread_mutex_unlock(&blist->locks[bucket]);
+
+	if (entry->data && (entry->hash == hash)) {
+		return entry->data->data;
+	} else if (entry->data) {
+		objunref(entry->data->data);
+	}
+
+	return NULL;
 }
