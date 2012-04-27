@@ -65,16 +65,19 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
 		fr->h_source[1], fr->h_source[2],fr->h_source[3], fr->h_source[4], fr->h_source[5],
 		fr->h_dest[0], fr->h_dest[1], fr->h_dest[2], fr->h_dest[3], fr->h_dest[4], fr->h_dest[5], etype);
 
+	plen = len - (sizeof(*fr));
+	packet = (char *)buffer + offset + (len - plen);
+
 	/*get the packet length and payload
 	 * 8021Q is handled here so the protocol handlers get the packet
 	 */
 	if (etype == ETH_P_8021Q) {
-		plen = len - (sizeof(*fr));
-		packet = (char *)buffer + offset + (len - plen);
+
 		/* 2 byte VLAN Header*/
 		vhdr = ntohs(*(unsigned short *)packet);
 		/* 2 byte Real Protocol type*/
 		etype = ntohs(*(unsigned short*)(packet+2));
+
 		packet = packet + 4;
 		plen = plen - 4;
 
@@ -84,9 +87,6 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
 		pcp = (vhdr >> 13);
 
 		printf("\tVID %i PCP %i CFI %i type 0x%x\n", vid, pcp, cfi, etype);
-	} else {
-		plen = len - (sizeof(*fr));
-		packet = (char *)buffer + offset + (len - plen);
 	}
 
 	/* frame handlers can mangle the packet and header
@@ -95,9 +95,6 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
 	switch (fr->h_proto) {
 		/* ARP*/
 		case ETH_P_ARP:
-			break;
-		/* RARP*/
-		case ETH_P_RARP:
 			break;
 		/* IPv4*/
 		case ETH_P_IP : frame_handler_ipv4(fr, packet, &plen);
