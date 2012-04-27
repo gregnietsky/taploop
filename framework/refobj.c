@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <stdlib.h>
 #include "framework.h"
-#include "list.h"
 
 /* add one for ref obj's*/
 #define REFOBJ_MAGIC		0xdeadc0de
@@ -432,25 +431,40 @@ void remove_bucket_loop(void *bucket_loop) {
 
 	pthread_mutex_lock(&blist->locks[bloop->bucket]);
 	/*if the bucket has altered need to verify i can remove*/
-	if (bloop->cur_hash && (blist->version[bloop->bucket] != bloop->version)) {
+	if (bloop->cur_hash && (!bloop->cur || (blist->version[bloop->bucket] != bloop->version))) {
 		bloop->cur = blist_gotohash(blist->list[bloop->bucket], bloop->cur_hash + 1, blist->bucketbits);
-		if (bloop->cur->hash != bloop->cur_hash) {
+		if (!bloop->cur || (bloop->cur->hash != bloop->cur_hash)) {
 			pthread_mutex_unlock(&blist->locks[bucket]);
 			return;
 		}
 	}
 
-	if (bloop->cur) {
-		LIST_REMOVE_ENTRY(blist->list[bucket], bloop->cur);
-		objunref(bloop->cur->data->data);
-		blist->version[bucket]++;
-		bloop->version++;
+	if (!bloop->cur) {
 		pthread_mutex_unlock(&blist->locks[bucket]);
-
-		objlock(blist);
-		blist->count--;
-		objunlock(blist);
+		return;
 	}
+
+	if (bloop->cur->next && (bloop->cur == blist->list[bucket])) {
+		bloop->cur->next->prev = bloop->cur->prev;
+		blist->list[bucket] = bloop->cur->next;
+	} else if (bloop->cur->next) {
+		bloop->cur->next->prev = bloop->cur->prev;
+		bloop->cur->prev->next = bloop->cur->next;
+	} else {
+		bloop->cur->prev->next = NULL;
+		blist->list[bucket]->prev = bloop->cur->prev;
+	}
+	objunref(bloop->cur->data->data);
+	free(bloop->cur);
+	bloop->cur_hash = 0;
+	bloop->cur = NULL;
+	blist->version[bucket]++;
+	bloop->version++;
+	pthread_mutex_unlock(&blist->locks[bucket]);
+
+	objlock(blist);
+	blist->count--;
+	objunlock(blist);
 }
 
 int bucket_list_cnt(void *bucket_list) {
