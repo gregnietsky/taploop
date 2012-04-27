@@ -39,18 +39,21 @@ struct framework_core *framework_core_info;
 static void framework_sig_handler(int sig, siginfo_t *si, void *unused) {
 	/* flag and clean all threads*/
 	switch (sig) {
-		case SIGTERM:
-		case SIGINT:
-			framework_shutdown();
-			break;
 		case SIGUSR1:
 		case SIGUSR2:
 		case SIGHUP:
 		case SIGALRM:
-			if (!thread_signal(sig)) {
+			if (!thread_signal(sig) && framework_core_info->sig_handler) {
 				framework_core_info->sig_handler(sig, si, unused);
 			}
 			break;
+		case SIGTERM:
+		case SIGINT:
+			framework_shutdown();
+		default:
+			if (framework_core_info->sig_handler) {
+				framework_core_info->sig_handler(sig, si, unused);
+			}
 	}
 }
 

@@ -28,7 +28,6 @@ void *clientsock_client(void **data);
 void *delclientsock_client(void *data);
 
 static void sig_handler(int sig, siginfo_t *si, void *unused) {
-	printf("Got Signal %i\n", sig);
 }
 
 FRAMEWORK_MAIN("Taploop Network Stack",
