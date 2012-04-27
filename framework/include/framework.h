@@ -17,6 +17,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdint.h>
+#include <signal.h>
+
+
+typedef void    *(*threadcleanup)(void*);
+typedef void    *(*threadfunc)(void**);
+typedef void	(*syssighandler)(int, siginfo_t*, void*);
+typedef int     (*threadsighandler)(int, void*);
+typedef	int	(*frameworkfunc)(int, char**);
+typedef int	(*blisthash)(void*, int);
 
 /*these can be set int the application */
 struct framework_core {
@@ -29,18 +38,13 @@ struct framework_core {
 	int  flock;
 	long	my_pid;
 	struct sigaction *sa;
+	syssighandler	sig_handler;
 };
-
-typedef void    *(*threadcleanup)(void*);
-typedef void    *(*threadfunc)(void**);
-typedef int     (*threadsighandler)(int, void*);
-typedef	int	(*frameworkfunc)(int, char**);
-typedef int	(*blisthash)(void*, int);
 
 /*Initialise the framework */
 int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info);
 /* Setup the run enviroment*/
-struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile);
+struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile, syssighandler sigfunc);
 /* Run a thread under the framework */
 struct thread_pvt *framework_mkthread(threadfunc, threadcleanup, threadsighandler, void *data);
 /* Shutdown framework*/
@@ -97,11 +101,11 @@ uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
 
 #define testflag(obj, flag) (objlock(obj) | (obj->flags & flag) | objunlock(obj))
 
-#define FRAMEWORK_MAIN(progname, name, email, www, year, runfile) \
+#define FRAMEWORK_MAIN(progname, name, email, www, year, runfile, sighfunc) \
 	int  framework_main(int argc, char *argv[]); \
 	struct framework_core *core_info; \
 	int  main(int argc, char *argv[]) { \
-		core_info = framework_mkcore(progname, name, email, www, year, runfile); \
+		core_info = framework_mkcore(progname, name, email, www, year, runfile, sighfunc); \
 		return (framework_init(argc, argv, framework_main, core_info)); \
 	} \
 	int  framework_main(int argc, char *argv[]) \

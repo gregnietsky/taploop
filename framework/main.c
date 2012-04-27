@@ -31,10 +31,12 @@ int startthreads(void);
 void jointhreads(void);
 int thread_signal(int sig);
 
+struct framework_core *framework_core_info;
+
 /*
  * handle signals to cleanup gracefully on exit
  */
-static void sig_handler(int sig, siginfo_t *si, void *unused) {
+static void framework_sig_handler(int sig, siginfo_t *si, void *unused) {
 	/* flag and clean all threads*/
 	switch (sig) {
 		case SIGTERM:
@@ -45,7 +47,9 @@ static void sig_handler(int sig, siginfo_t *si, void *unused) {
 		case SIGUSR2:
 		case SIGHUP:
 		case SIGALRM:
-			thread_signal(sig);
+			if (!thread_signal(sig)) {
+				framework_core_info->sig_handler(sig, si, unused);
+			}
 			break;
 	}
 }
@@ -115,7 +119,7 @@ int lockpidfile(struct framework_core *ci) {
 void configure_sigact(struct sigaction *sa) {
 	sa->sa_flags = SA_SIGINFO | SA_RESTART;
 	sigemptyset(&sa->sa_mask);
-	sa->sa_sigaction = sig_handler;
+	sa->sa_sigaction = framework_sig_handler;
 	sigaction(SIGINT, sa, NULL);
 	sigaction(SIGTERM, sa, NULL);
 
@@ -129,7 +133,7 @@ void configure_sigact(struct sigaction *sa) {
 /*
  * initialise core
  */
-struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile) {
+struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile, syssighandler sigfunc) {
 	struct framework_core *core_info = NULL;
 
 	if (!(core_info = malloc(sizeof(*core_info)))) {
@@ -147,6 +151,7 @@ struct framework_core *framework_mkcore(char *progname, char *name, char *email,
 	ALLOC_CONST(core_info->runfile, runfile);
 	ALLOC_CONST(core_info->progname, progname);
 	core_info->year = year;
+	core_info->sig_handler = sigfunc;
 
 	return (core_info);
 }
@@ -186,8 +191,9 @@ void framework_free(struct framework_core *ci) {
  * daemonise and start socket
  */
 int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info) {
-	int (*startup)(int, char **);
 	int ret = 0;
+
+	framework_core_info = core_info;
 
 	/*prinit out a GNU licence summary*/
 	printgnu(core_info);
@@ -213,8 +219,7 @@ int framework_init(int argc, char *argv[], frameworkfunc callback, struct framew
 
 	/*run the code from the application*/
 	if (callback) {
-		startup = callback;
-		ret = startup(argc, argv);
+		ret = callback(argc, argv);
 	}
 
 	/*join the manager thread its the last to go*/

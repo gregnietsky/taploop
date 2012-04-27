@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <framework.h>
 
 #include "taploop.h"
@@ -26,12 +27,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 void *clientsock_client(void **data);
 void *delclientsock_client(void *data);
 
+static void sig_handler(int sig, siginfo_t *si, void *unused) {
+	printf("Got Signal %i\n", sig);
+}
+
 FRAMEWORK_MAIN("Taploop Network Stack",
 		"Gregory Hinton Nietsky",
 		PACKAGE_BUGREPORT,
 		"http://www.distrotech.co.za",
 		2012,
-		"/var/run/taploopd") {
+		"/var/run/taploopd",
+		sig_handler) {
 
         int mask;
 
