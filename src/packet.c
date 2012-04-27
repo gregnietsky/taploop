@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <linux/ip.h>
 #include <netinet/in.h>
+#include <linux/if_arp.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -26,13 +27,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "taploop.h"
 #include "tlsock.h"
 
+struct paehdr {
+	short	etype;
+	char	ver;
+	char	ptype;
+	short	len;
+	char	*msg;
+};
+
+void frame_handler_pae(struct ethhdr *fr, void *packet, int *plen) {
+	struct paehdr *pae;
+
+	pae = (struct paehdr*)packet;
+	printf("\tEth Type: %i Pae V: %i Packet: %i Len %i\n", pae->etype, pae->ver, pae->ptype, pae->len);
+}
+
+void frame_handler_arp(struct ethhdr *fr, void *packet, int *plen) {
+	struct arphdr *arp;
+
+	arp = (struct arphdr*)packet;
+	printf("\tHw: %i Proto: %i HW Len %i P Len %i OP %i\n", arp->ar_hrd, arp->ar_pro, arp->ar_hln, arp->ar_pln, arp->ar_op);
+}
+
 void frame_handler_ipv4(struct ethhdr *fr, void *packet, int *plen) {
 	struct iphdr *ip;
 	unsigned char	*src,*dest;
 
-	ip=(struct iphdr*)packet;
-	src=(unsigned char *)&ip->saddr;
-	dest=(unsigned char *)&ip->daddr;
+	ip = (struct iphdr*)packet;
+	src = (unsigned char *)&ip->saddr;
+	dest = (unsigned char *)&ip->daddr;
 
 	printf("\tS: %03i.%03i.%03i.%03i D: %03i.%03i.%03i.%03i P:%i\n",src[0], src[1], src[2], src[3], dest[0], dest[1], dest[2], dest[3], ip->protocol);
 }
@@ -94,10 +117,13 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
 	 */
 	switch (fr->h_proto) {
 		/* ARP*/
-		case ETH_P_ARP:
+		case ETH_P_ARP: frame_handler_arp(fr, packet, &plen);
 			break;
 		/* IPv4*/
 		case ETH_P_IP : frame_handler_ipv4(fr, packet, &plen);
+			break;
+		/*802.1x*/
+		case ETH_P_PAE: frame_handler_pae(fr, packet, &plen);
 			break;
 		/* IPv6*/
 		case ETH_P_IPV6:
@@ -105,9 +131,6 @@ void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket
 		/* PPPoE [DSL]*/
 		case ETH_P_PPP_DISC:
 		case ETH_P_PPP_SES:
-			break;
-		/*802.1x*/
-		case ETH_P_PAE:
 			break;
 		/* all other traffic ill pass on*/
 		default:
