@@ -16,9 +16,24 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Acknowledgments [MD5 HMAC http://www.ietf.org/rfc/rfc2104.txt]
+ *	Pau-Chen Cheng, Jeff Kraemer, and Michael Oehler, have provided
+ *	useful comments on early drafts, and ran the first interoperability
+ *	tests of this specification. Jeff and Pau-Chen kindly provided the
+ *	sample code and test vectors that appear in the appendix.  Burt
+ *	Kaliski, Bart Preneel, Matt Robshaw, Adi Shamir, and Paul van
+ *	Oorschot have provided useful comments and suggestions during the
+ *	investigation of the HMAC construction.
+ */
+
+/*
+ * User password crypt function from the freeradius project (addattrpasswd)
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 The FreeRADIUS Server Project
+ */
+
 #include <stdint.h>
 #include <signal.h>
-
 
 typedef void    *(*threadcleanup)(void*);
 typedef void    *(*threadfunc)(void**);
@@ -85,7 +100,9 @@ void remove_bucket_loop(void *bloop);
 uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
 
 
-/*Utilities RNG/MD5*/
+/*
+ * Utilities RNG/MD5 used from the openssl library
+ */
 void seedrand(void);
 void genrand(void *buf, int len);
 void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
@@ -93,10 +110,49 @@ void md5sum(unsigned char *buff, const void *data, unsigned long len);
 int md5cmp(unsigned char *md51, unsigned char *md52, int len);
 void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
 
+/*Radius utilities*/
+#define RAD_AUTH_HDR_LEN	20
+#define RAD_AUTH_PACKET_LEN	4096
+#define RAD_AUTH_TOKEN_LEN	16
+#define RAD_MAX_PASS_LEN	128
+
+#define RAD_ATTR_USER_NAME	1	/*string*/
+#define RAD_ATTR_USER_PASSWORD	2	/*passwd*/
+#define RAD_ATTR_NAS_IP_ADDR	4	/*ip*/
+#define RAD_ATTR_NAS_PORT	5	/*int*/
+#define RAD_ATTR_SERVICE_TYPE	6	/*int*/
+#define RAD_ATTR_ACCTID		44
+#define RAD_ATTR_PORT_TYPE	61	/*int*/
+#define RAD_ATTR_EAP		79	/*oct*/
+#define RAD_ATTR_MESSAGE	80	/*oct*/
+
+enum RADIUS_CODE {
+	RAD_CODE_AUTHREQUEST	=	1,
+	RAD_CODE_AUTHACCEPT	=	2,
+	RAD_CODE_AUTHREJECT	=	3,
+	RAD_CODE_ACCTREQUEST	=	4,
+	RAD_CODE_ACCTRESPONSE	=	5,
+	RAD_CODE_AUTHCHALLENGE	=	11
+};
+
+struct radius_packet {
+	char	code;
+	char	id;
+	short	len;
+	unsigned char	token[RAD_AUTH_TOKEN_LEN];
+	unsigned char	attrs[RAD_AUTH_PACKET_LEN - RAD_AUTH_HDR_LEN];
+};
+
+unsigned char *addattr(struct radius_packet *packet, char type, unsigned char *val, char len);
+void addattrint(struct radius_packet *packet, char type, unsigned int val);
+void addattrip(struct radius_packet *packet, char type, char *ipaddr);
+void addattrstr(struct radius_packet *packet, char type, char *str);
+void addattrpasswd(struct radius_packet *packet, char *pw, char *secret);
+struct radius_packet *new_radpacket(unsigned char code, unsigned char id);
+
 /*easter egg copied from <linux/jhash.h>*/
 #define JHASH_INITVAL           0xdeadbeef
 #define jenhash(key, length, initval)   hashlittle(key, length, (initval) ? initval : JHASH_INITVAL);
-
 
 /*
  * atomic flag routines for (obj)->flags
@@ -118,7 +174,7 @@ void md5hmac(unsigned char *buff, const void *data, unsigned long len, const voi
 		core_info = framework_mkcore(progname, name, email, www, year, runfile, sighfunc); \
 		return (framework_init(argc, argv, framework_main, core_info)); \
 	} \
-	int  framework_main(int argc, char *argv[]) \
+	int  framework_main(int argc, char *argv[])
 
 #define ALLOC_CONST(const_var, val) { \
 		char *tmp_char; \

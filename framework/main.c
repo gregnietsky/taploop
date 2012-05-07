@@ -196,6 +196,8 @@ void framework_free(struct framework_core *ci) {
 int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info) {
 	int ret = 0;
 
+	seedrand();
+
 	framework_core_info = core_info;
 
 	/*prinit out a GNU licence summary*/
