@@ -1,3 +1,26 @@
+/*
+Copyright (C) 2012  Gregory Nietsky <gregory@distrotetch.co.za>
+        http://www.distrotech.co.za
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+/*
+ * User password crypt function from the freeradius project (addattrpasswd)
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 The FreeRADIUS Server Project
+ */
+
 #include <string.h>
 #include <uuid/uuid.h>
 #include <stdlib.h>
@@ -224,7 +247,7 @@ int radmain (int argc, char **argv) {
 
 	lrp = new_radpacket(RAD_CODE_AUTHREQUEST, 1);
 	addattrstr(lrp, RAD_ATTR_USER_NAME, user);
-	addattrpasswd(lrp, "Gl0r14",  secret);
+	addattrpasswd(lrp, "testpw",  secret);
 	addattrip(lrp, RAD_ATTR_NAS_IP_ADDR, "127.0.0.1");
 	addattrint(lrp, RAD_ATTR_NAS_PORT, 0);
 	addattrint(lrp, RAD_ATTR_SERVICE_TYPE, 1);
