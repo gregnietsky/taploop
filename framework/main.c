@@ -50,10 +50,12 @@ static void framework_sig_handler(int sig, siginfo_t *si, void *unused) {
 		case SIGTERM:
 		case SIGINT:
 			framework_shutdown();
+			/* no break */
 		default:
 			if (framework_core_info->sig_handler) {
 				framework_core_info->sig_handler(sig, si, unused);
 			}
+			/* no break */
 	}
 }
 

@@ -51,7 +51,7 @@ int hash_tapdata(void *data, int key) {
 }
 
 void *inittaplist(void) {
-	return create_bucketlist(2, hash_tapdata);
+	return (create_bucketlist(2, hash_tapdata));
 }
 
 /* tap the taploop struct
@@ -509,5 +509,5 @@ int del_taploop(char *dev, char *name) {
 	objunlock(tap);
 	objunref(tap);
 
-	return 0;
+	return (0);
 }
