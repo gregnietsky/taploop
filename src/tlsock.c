@@ -393,6 +393,7 @@ void *mainloop(void **data) {
 		return NULL;
 	}
 
+	maxfd = 0;
 	addsocket(tap, phy, &maxfd, &rd_set);
 	addsocket(tap, virt, &maxfd, &rd_set);
 
