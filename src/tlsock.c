@@ -41,10 +41,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "packet.h"
 
 int hash_tapdata(void *data, int key) {
-        struct taploop *tap = data;
-        char* hashkey = (key) ? data : tap->pdev;
+	int ret;
+	struct taploop *tap = data;
+	char* hashkey = (key) ? data : tap->pdev;
 
-        return jenhash(hashkey, strlen(hashkey), 0);
+	ret = jenhash(hashkey, strlen(hashkey), 0);
+
+	return(ret);
 }
 
 void *inittaplist(void) {
@@ -89,9 +92,9 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
 	/*set the network dev up*/
 	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
 	if (ioctl(phy->sock, SIOCSIFFLAGS, &ifr ) < 0 ) {
-       		perror("ioctl(SIOCSIFFLAGS) failed");
+		perror("ioctl(SIOCSIFFLAGS) failed");
 		close(fd);
-	        return NULL;
+		return NULL;
 	}
 
 	if ((tlsock = objalloc(sizeof(*tlsock), NULL))) {
@@ -131,9 +134,9 @@ struct tl_socket *phyopen(struct taploop *tap) {
 	/*down the device before renameing*/
 	ifr.ifr_flags &= ~IFF_UP & ~IFF_RUNNING;
 	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-       		perror("ioctl(SIOCSIFFLAGS) failed");
+		perror("ioctl(SIOCSIFFLAGS) failed");
 		close(fd);
-	        return NULL;
+		return NULL;
 	}
 
 	/* rename the device*/
@@ -160,9 +163,9 @@ struct tl_socket *phyopen(struct taploop *tap) {
 	/*set the device up*/
 	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST | IFF_PROMISC | IFF_NOARP | IFF_ALLMULTI;
 	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-       		perror("ioctl(SIOCSIFFLAGS) failed");
+		perror("ioctl(SIOCSIFFLAGS) failed");
 		close(fd);
-	        return NULL;
+		return NULL;
 	}
 
 
@@ -330,7 +333,7 @@ void *stoptap(void *data) {
 /*
  * return a socklist entry and add sock to fd_set
  */
-void *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_set *rd_set) {
+void *addsocket(struct taploop *tap, struct tl_socket *tsock, int *maxfd, fd_set *rd_set) {
 	if (tsock->sock > *maxfd) {
 		*maxfd = tsock->sock;
 	}
@@ -370,7 +373,7 @@ void *mainloop(void **data) {
 	char	buffer[ETH_FRAME_LEN+4];
 	int	maxfd, selfd, rlen;
 	struct	timeval	tv;
-	struct  tl_socket *tlsock, *osock, *phy, *virt;
+	struct	tl_socket *tlsock, *osock, *phy, *virt;
 	struct	bucket_loop *bloop;
 
 	if (!tap) {
@@ -408,7 +411,7 @@ void *mainloop(void **data) {
 
 		/*returned due to interupt continue or timed out*/
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
-     			continue;
+			continue;
 		} else if (selfd < 0) {
 			break;
 		}
@@ -459,7 +462,7 @@ int add_taploop(char *dev, char *name) {
 		return (-1);
 	}
 
-	/* do not continue on zero  length options*/
+	/* do not continue on zero length options*/
 	if (!dev || !name || (dev[1] == '\0') || (name[1] == '\0')) {
 		return (-1);
 	}
@@ -487,7 +490,7 @@ int add_taploop(char *dev, char *name) {
 int del_taploop(char *dev, char *name) {
 	struct taploop		*tap = NULL;
 
-	/* do not continue on zero  length options*/
+	/* do not continue on zero length options*/
 	if (!dev || !name || (dev[1] == '\0') || (name[1] == '\0')) {
 		return (-1);
 	}

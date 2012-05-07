@@ -242,7 +242,7 @@ struct blist_obj *blist_gotohash(struct blist_obj *cur, unsigned int hash, int b
 		}
 	}
 
-	return lhead;
+	return (lhead);
 }
 
 int gethash(struct bucket_list *blist, void *data, int key) {
@@ -258,7 +258,7 @@ int gethash(struct bucket_list *blist, void *data, int key) {
 	} else if (ref && (ref->magic == REFOBJ_MAGIC)) {
 		hash = jenhash(data, ref->size, 0);
 	}
-	return hash;
+	return (hash);
 }
 
 /*
@@ -495,7 +495,7 @@ void *bucket_list_find_key(void *list, void *key) {
 	pthread_mutex_unlock(&blist->locks[bucket]);
 
 	if (entry->data && (entry->hash == hash)) {
-		return entry->data->data;
+		return (entry->data->data);
 	} else if (entry->data) {
 		objunref(entry->data->data);
 	}

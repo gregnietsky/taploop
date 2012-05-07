@@ -60,8 +60,10 @@ struct threadcontainer *threads;
 int hash_thread(void *data, int key) {
         struct thread_pvt *thread = data;
         pthread_t *hashkey = (key) ? data : &thread->thr;
+	int ret;
 
-	return jenhash(hashkey, sizeof(pthread_t), 0);
+	ret = jenhash(hashkey, sizeof(pthread_t), 0);
+	return (ret);
 }
 
 /*

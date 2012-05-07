@@ -69,7 +69,7 @@ int md5cmp(unsigned char *md51, unsigned char *md52, int len) {
 		chk += md51[cnt] & ~md52[cnt];
 	}
 
-	return chk;
+	return (chk);
 }
 
 

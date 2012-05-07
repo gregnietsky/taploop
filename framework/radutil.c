@@ -41,7 +41,7 @@ unsigned char *addattr(struct radius_packet *packet, char type, unsigned char *v
 	}
 
 	packet->len += data[1];
-	return data;
+	return (data);
 }
 
 void addattrint(struct radius_packet *packet, char type, unsigned int val) {

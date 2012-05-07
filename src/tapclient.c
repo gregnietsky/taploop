@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <sys/socket.h>
 
-#include <client.h>
+#include "client.h"
 
 int connect_socket(char *sock) {
 	struct sockaddr_un	adr;
@@ -42,7 +42,7 @@ int connect_socket(char *sock) {
 		perror("Unable to connect (connect)");
 		return (-1);
 	}
-	return fd;
+	return (fd);
 }
 
 int main(int argc, char *argv[]) {
@@ -53,11 +53,11 @@ int main(int argc, char *argv[]) {
 
 	if (argc < 4) {
 		printf("Invalid command\n");
-		return -1;
+		return (-1);
 	}
 
 	if ((sock = connect_socket("/tmp/tlsock")) < 0) {
-		return -1;
+		return (-1);
 	}
 
 	/* set action*/

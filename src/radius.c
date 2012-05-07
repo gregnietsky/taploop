@@ -51,7 +51,7 @@ int udpconnect(char *ipaddr, int port) {
 	}
 	connect(sockfd, (const struct sockaddr *)&addr, sizeof(addr));
 
-	return sockfd;
+	return (sockfd);
 }
 
 int send_radpacket(struct radius_packet *packet, int sockfd, char *userpass, char *secret) {
@@ -69,9 +69,11 @@ int send_radpacket(struct radius_packet *packet, int sockfd, char *userpass, cha
 	md5hmac(vector + 2, packet, len, secret, strlen(secret));
 
 	scnt = send(sockfd, packet, len, 0);
+
 	if (len != scnt) {
 		return (-1);
 	}
+
 	return (0);
 }
 
@@ -89,7 +91,7 @@ int rad_recv(struct radius_packet *request, int sockfd, char *secret) {
 
 	if ((chk < plen) || (chk <= RAD_AUTH_HDR_LEN)) {
 		printf("OOps Did not get proper packet\n");
-		return -1;
+		return (-1);
 	}
 
 	memcpy(rtok, packet->token, RAD_AUTH_TOKEN_LEN);
@@ -100,7 +102,7 @@ int rad_recv(struct radius_packet *request, int sockfd, char *secret) {
 		printf("Invalid Signature");
 	}
 
-	return 0;
+	return (0);
 }
 
 int radmain (void) {
@@ -135,7 +137,7 @@ int radmain (void) {
 
 	if (send_radpacket(lrp, sockfd, "testpass", secret)) {
 		printf("Sending Failed\n");
-		return -1;
+		return (-1);
 	}
 
 	cnt = ntohs(lrp->len) - RAD_AUTH_HDR_LEN;
@@ -152,5 +154,5 @@ int radmain (void) {
 
 
 	rad_recv(lrp, sockfd, secret);
-	return 0;
+	return (0);
 }
