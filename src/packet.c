@@ -27,18 +27,155 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "taploop.h"
 #include "tlsock.h"
 
-struct paehdr {
+/*
+ * EAP Protocol Specification
+ *
+ * http://www.javvin.com/protocol8021X.html
+ * ftp://ftp.iplcommunication.com.au/Alcatel%20Downloads/Documentation/OXE%20Release%208.0%20Expert%20manual/09011b02809a8934-1191670860784/cdrom/content/1_1_9_6_3.html
+ * http://www.ietf.org/rfc/rfc3748.txt
+ *	Extensible Authentication Protocol (EAP)
+ *
+ * http://www.ietf.org/rfc/rfc3580.txt
+ *	IEEE 802.1X Remote Authentication Dial In User Service (RADIUS)
+ *	Usage Guidelines
+ *
+ * http://www.ietf.org/rfc/rfc3579.txt
+ *	RADIUS (Remote Authentication Dial In User Service)
+ *	Support For Extensible Authentication Protocol (EAP)
+ *
+ * EAP does not support PMTU and requires setting Framed-MTU
+ * MIN MTU 1020
+ * Unknown eap code types mmust be ignored / logged
+ * if multiple requests were sent multiple responses are possible and can be ignored
+ * modify ID field for NEW packets
+ * Request packets should be reliably relayed to radius
+ *
+ *	The Type field of a Response MUST either match that of the
+ *	Request, or correspond to a legacy or Expanded Nak (see Section
+ *	5.3) indicating that a Request Type is unacceptable to the peer.
+ *	A peer MUST NOT send a Nak (legacy or expanded) in response to a
+ *	Request, after an initial non-Nak Response has been sent.  An EAP
+ *	server receiving a Response not meeting these requirements MUST
+ *	silently discard it.
+ *
+ * Sucess / failure packets are not acked/nacked/retransmited
+ *
+ * Unauthenticated traffic arrives that should be authenticated
+ * 1) Send PAE_TYPE_PACKET EAP_CODE_REQUEST EAP_TYPE_IDENTITY no data to new connections reliably
+ * 2) Handshake Bellow
+ *
+ * Authentification Request Arrives PAE_TYPE_START
+ * 1) Send identity to peer reliably
+ *	PAE_TYPE_PACKET EAP_CODE_REQUEST EAP_TYPE_IDENTITY no data to new connections
+ * 2) Handshake Bellow
+ *
+ * Handshake
+ * 1) Wait for response and pass onto radius [What about NAK 3/254]
+ *	PAE_TYPE_PACKET EAP_CODE_RESPONSE EAP_TYPE_IDENTITY
+ * 2) Pass auth challenge from radius to peer [NB NAK]
+ *	PAE_TYPE_PACKET EAP_CODE_REQUEST EAP_TYPE_* [>2 NB NAK 3/254]
+ * 3) Auth response passed from peer to radius
+ *	PAE_TYPE_PACKET EAP_CODE_RESPONSE EAP_TYPE_* [see 3 above]
+ * 4) Radius will pass Success/Fail
+ *	PAE_TYPE_PACKET EAP_CODE_[SUCCESS|FAILURE] NULL
+ *
+ * RADIUS
+ * Copy eap_data response to identity into User-Name attr and do so for all access requests to radius
+ * if this is not possible use Calling-Station-Id as User-Name [MAC ADDR] ie we did not send identify
+ * Radius message 202 (decimal), "Invalid EAP Packet (Ignored)" is not fatal
+ *	NAS identification attributes include NAS-Identifier,
+ *	NAS-IPv6-Address and NAS-IPv4-Address.  Session identification
+ *	attributes include User-Name, NAS-Port, NAS-Port-Type, NAS-Port-Id,
+ *	Called-Station-Id, Calling-Station-Id and Originating-Line-Info.
+ * CHECK RADIUS ACCEPT/FAIL MATCHES EAP_CODE 3/4
+ * ACCESS Challenge MUST NOT BE code 3/4
+ * Reply-Message can be sent in notification packet EAP_TYPE 2 but should rather ignore it
+ *
+ * The NAS-Port or NAS-Port-Id attributes SHOULD be included by the NAS
+ * in Access-Request packets, and either NAS-Identifier, NAS-IP-Address
+ * or NAS-IPv6-Address attributes MUST be included.
+ *
+ * EAP-Message must be accompanied by Message-Authenticator
+ *
+ *	Implementation Note: Because the authentication process will
+ *	often involve user input, some care must be taken when deciding
+ *	upon retransmission strategies and authentication timeouts.  It
+ *	is suggested a retransmission timer of 6 seconds with a maximum
+ *	of 10 retransmissions be used as default.  One may wish to make
+ *	these timeouts longer in certain cases (e.g. where Token Cards
+ *	are involved).  Additionally, the peer must be prepared to
+ *	silently discard received retransmissions while waiting for
+ *	user input.
+ *
+ *	Because the authentication process will often involve user input,
+ *	some care must be taken when deciding upon retransmission strategies
+ *	and authentication timeouts.  By default, where EAP is run over an
+ *	unreliable lower layer, the EAP retransmission timer SHOULD be
+ *	dynamically estimated.  A maximum of 3-5 retransmissions is
+ *	suggested.
+ *
+ * http://www.ietf.org/rfc/rfc1321.txt The MD5 Message-Digest Algorithm
+ * http://www.ietf.org/rfc/rfc2104.txt HMAC: Keyed-Hashing for Message Authentication
+ */
+
+enum EAP_CODE {
+	EAP_CODE_REQUEST	= 1,
+	EAP_CODE_RESPONSE	= 2,
+	EAP_CODE_SUCCESS	= 3,
+	EAP_CODE_ERROR		= 4
+};
+
+enum EAP_TYPE {
+	EAP_TYPE_IDENTITY	= 1,
+	EAP_TYPE_NOTIFICATION	= 2,
+	EAP_TYPE_NAK		= 3,
+	EAP_TYPE_MD5		= 4,
+	EAP_TYPE_OTP		= 5,
+	EAP_TYPE_GTC		= 6,
+	EAP_TYPE_EXPANDED	= 254,
+	EAP_TYPE_EXPERIMENTAL	= 255
+};
+
+enum PAE_TYPE {
+	PAE_TYPE_PACKET		= 0,
+	PAE_TYPE_START		= 1,	/*authentification requested explicitly*/
+	PAE_TYPE_LOGOFF		= 2,
+	PAE_TYPE_KEY		= 3,
+	PAE_TYPE_ASFALERT	= 4
+};
+
+struct eap_data {
+	char	type;
+	char	*data;
+};
+
+struct eap_info {
+	char	code;
+	char	id;		/*session id*/
+	short	len;		/*this will be same as pae len whole eap len >= 5 <= 253*/
+	char	*eap_data;	/*depends on code NULL for success/failure*/
+};
+
+struct pae_hdr {
 	short	etype;
 	char	ver;
 	char	ptype;
-	short	len;
-	char	*msg;
+	short	len;		/* len of eap_info*/
+	char	*eap_info;
 };
 
-void frame_handler_pae(struct ethhdr *fr, void *packet, int *plen) {
-	struct paehdr *pae;
 
-	pae = (struct paehdr*)packet;
+void frame_handler_pae(struct ethhdr *fr, void *packet, int *plen) {
+	struct pae_hdr *pae;
+
+	pae = (struct pae_hdr*)packet;
+
+	/*check dst against MAC/BCAST/PAE*/
+	/*check pae len and eap len*/
+
+	/*on phy only PAE_START PAE_PACK PAE_LOGOFF EAP_RESPONSE are valid*/
+	/*on virt PAE_PACK and not EAP_RESOPNSE*/
+
 	printf("\tEth Type: %i Pae V: %i Packet: %i Len %i\n", pae->etype, pae->ver, pae->ptype, pae->len);
 }
 

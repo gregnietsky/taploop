@@ -53,6 +53,10 @@ AM_CONDITIONAL([FRAMEWORK_SYSTEM], [test "$ac_cv_lib_framework_0_1_framework_mkt
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h unistd.h])
 
+AC_CHECK_LIB([ssl], [SSL_new])
+AC_CHECK_LIB([crypto], [SHA512_Init])
+AC_CHECK_LIB([uuid], [uuid_generate])
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T

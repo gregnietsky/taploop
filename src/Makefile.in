@@ -55,7 +55,8 @@ am_taploop_OBJECTS = tapclient.$(OBJEXT)
 taploop_OBJECTS = $(am_taploop_OBJECTS)
 taploop_LDADD = $(LDADD)
 am_taploopd_OBJECTS = taploop.$(OBJEXT) util.$(OBJEXT) vlan.$(OBJEXT) \
-	tlsock.$(OBJEXT) clientserv.$(OBJEXT) packet.$(OBJEXT)
+	tlsock.$(OBJEXT) clientserv.$(OBJEXT) packet.$(OBJEXT) \
+	radius.$(OBJEXT)
 taploopd_OBJECTS = $(am_taploopd_OBJECTS)
 am__DEPENDENCIES_1 =
 taploopd_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -203,7 +204,7 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -I./include $(FRAMEWORK_INCL) $(DEVELOPER_CFLAGS)
 EXTRA_DIST = include
 taploop_SOURCES = tapclient.c
-taploopd_SOURCES = taploop.c util.c vlan.c tlsock.c clientserv.c packet.c
+taploopd_SOURCES = taploop.c util.c vlan.c tlsock.c clientserv.c packet.c radius.c
 taploopd_LDADD = $(FRAMEWORK_LIBS)
 all: all-am
 
@@ -340,6 +341,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/clientserv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/packet.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/radius.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tapclient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/taploop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tlsock.Po@am__quote@

@@ -80,7 +80,7 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
 libframework_0_1_la_LIBADD =
 am_libframework_0_1_la_OBJECTS = refobj.lo lookup3.lo thread.lo \
-	main.lo unixsock.lo
+	main.lo unixsock.lo util.lo
 libframework_0_1_la_OBJECTS = $(am_libframework_0_1_la_OBJECTS)
 @FRAMEWORK_INSTALL_FALSE@am_libframework_0_1_la_rpath =
 @FRAMEWORK_INSTALL_TRUE@am_libframework_0_1_la_rpath = -rpath \
@@ -233,7 +233,7 @@ EXTRA_DIST = include
 @FRAMEWORK_INSTALL_TRUE@lib_LTLIBRARIES = libframework-0.1.la
 @FRAMEWORK_INSTALL_TRUE@include_HEADERS = include/framework.h
 @FRAMEWORK_INSTALL_FALSE@noinst_LTLIBRARIES = libframework-0.1.la
-libframework_0_1_la_SOURCES = refobj.c lookup3.c thread.c main.c unixsock.c
+libframework_0_1_la_SOURCES = refobj.c lookup3.c thread.c main.c unixsock.c util.c
 all: all-am
 
 .SUFFIXES:
@@ -322,6 +322,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/refobj.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unixsock.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

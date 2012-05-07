@@ -84,9 +84,19 @@ void remove_bucket_loop(void *bloop);
 /*include jenkins hash burttlebob*/
 uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
 
+
+/*Utilities RNG/MD5*/
+void seedrand(void);
+void genrand(void *buf, int len);
+void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
+void md5sum(unsigned char *buff, const void *data, unsigned long len);
+int md5cmp(unsigned char *md51, unsigned char *md52, int len);
+void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
+
 /*easter egg copied from <linux/jhash.h>*/
 #define JHASH_INITVAL           0xdeadbeef
 #define jenhash(key, length, initval)   hashlittle(key, length, (initval) ? initval : JHASH_INITVAL);
+
 
 /*
  * atomic flag routines for (obj)->flags
