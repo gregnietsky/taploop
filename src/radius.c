@@ -155,6 +155,7 @@ int send_radpacket(struct radius_packet *packet, const char *userpass) {
 
 			scnt = send(connex->socket, packet, len, 0);
 			objunref(connex);
+			objunref(session);
 			if (len == scnt) {
 				remove_bucket_item(connex->sessions, session);
 				objunref(server);
@@ -231,7 +232,7 @@ void del_radserver(void *data) {
 	}
 }
 
-struct radius_server *add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret) {
+void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret) {
 	struct radius_server *server;
 
 	if ((server = objalloc(sizeof(*server), del_radserver))) {
@@ -245,7 +246,7 @@ struct radius_server *add_radserver(const char *ipaddr, const char *auth, const 
 		addtobucket(servers, server);
 	}
 
-	return server;
+	objunref(server);
 }
 
 void removeservers(void) {
