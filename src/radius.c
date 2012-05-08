@@ -79,7 +79,7 @@ int send_radpacket(struct radius_packet *packet, const char *userpass) {
 
 	sloop = init_bucket_loop(servers);
 	while (sloop && (server = next_bucket_loop(sloop))) {
-		cloop = init_bucket_loop(servers);
+		cloop = init_bucket_loop(server->connex);
 		while (cloop && (connex = next_bucket_loop(cloop))) {
 			objlock(connex);
 			connex->id++;
@@ -183,12 +183,11 @@ void del_radserver(void *data) {
 	}
 }
 
-int radconnect(struct radius_server *server) {
+void radconnect(struct radius_server *server) {
 	struct radius_connection *connex;
-	int sockfd = -1;
 
 	if ((connex = objalloc(sizeof(*connex), NULL))) {
-		if ((sockfd = udpconnect(server->name, server->authport)) >= 0) {
+		if ((connex->socket = udpconnect(server->name, server->authport)) >= 0) {
 			if (!server->connex) {
 				server->connex = create_bucketlist(2, hash_connex);
 			}
@@ -198,8 +197,6 @@ int radconnect(struct radius_server *server) {
 			objunref(connex);
 		}
 	}
-
-	return (sockfd);
 }
 
 struct radius_server *add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret) {
