@@ -36,14 +36,16 @@ struct eap_info {
 
 
 /*
- * a radius session is based on a ID packets for
- * session are kept ?? the request token is also stored
+ * a radius session is based on a ID packet for
+ * session stored till a response the request token is also stored
  */
 struct radius_session {
 	unsigned short id;
 	unsigned char request[RAD_AUTH_TOKEN_LEN];
 	struct radius_connection *connex;
-	struct radius_packet **packet;
+	void	*cb_data;
+	radius_cb read_cb;
+	struct radius_packet *packet;
 };
 
 /*
@@ -81,7 +83,7 @@ int hash_connex(void *data, int key) {
 	return (ret);
 }
 
-void radconnect(struct radius_server *server) {
+struct radius_connection *radconnect(struct radius_server *server) {
 	struct radius_connection *connex;
 
 	if ((connex = objalloc(sizeof(*connex), NULL))) {
@@ -94,10 +96,10 @@ void radconnect(struct radius_server *server) {
 			addtobucket(server->connex, connex);
 		}
 	}
-	objunref(connex);
+	return (connex);
 }
 
-struct radius_session *radius_session(struct radius_packet *packet, struct radius_connection *connex) {
+struct radius_session *rad_session(struct radius_packet *packet, struct radius_connection *connex, radius_cb read_cb, void *cb_data) {
 	struct radius_session *session = NULL;
 
 	if ((session = objalloc(sizeof(*session), NULL))) {
@@ -107,12 +109,15 @@ struct radius_session *radius_session(struct radius_packet *packet, struct radiu
 		memcpy(session->request, packet->token, RAD_AUTH_TOKEN_LEN);
 		session->id = packet->id;
 		session->connex = connex;
+		session->packet = packet;
+		session->read_cb = read_cb;
+		session->cb_data = cb_data;
 		addtobucket(connex->sessions, session);
 	}
 	return (session);
 }
 
-int send_radpacket(struct radius_packet *packet, const char *userpass) {
+int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data) {
 	int scnt;
 	unsigned char* vector;
 	short len, olen;
@@ -123,24 +128,28 @@ int send_radpacket(struct radius_packet *packet, const char *userpass) {
 
 	sloop = init_bucket_loop(servers);
 	while (sloop && (server = next_bucket_loop(sloop))) {
+		objlock(server);
 		if (!server->connex) {
-			radconnect(server);
+			connex = radconnect(server);
+			objunref(connex);
 		}
+		objunlock(server);
 		cloop = init_bucket_loop(server->connex);
 		while (cloop && (connex = next_bucket_loop(cloop))) {
 			objlock(connex);
-			if (connex->sessions) {
-				if (bucket_list_cnt(connex->sessions) > 254) {
-					objunlock(connex);
-					objunref(connex);
-					continue;
+			if (connex->sessions && (bucket_list_cnt(connex->sessions) > 254)) {
+				objunlock(connex);
+				objunref(connex);
+				/* if im overflowing get next or add new*/
+				if (!(connex = next_bucket_loop(cloop)) || !(connex = radconnect(server))) {
+					break;
 				}
-			} else {
-				create_bucketlist(5, NULL);
+				objlock(connex);
 			}
+
 			connex->id++;
 			packet->id = connex->id;
-			session = radius_session(packet, connex);
+			session = rad_session(packet, connex, read_cb, cb_data);
 			objunlock(connex);
 
 			olen = packet->len;
@@ -157,12 +166,12 @@ int send_radpacket(struct radius_packet *packet, const char *userpass) {
 			objunref(connex);
 			objunref(session);
 			if (len == scnt) {
-				remove_bucket_item(connex->sessions, session);
 				objunref(server);
 				stop_bucket_loop(cloop);
 				stop_bucket_loop(sloop);
 				return (0);
 			} else {
+				remove_bucket_item(connex->sessions, session);
 				packet->len = olen;
 				memset(packet->attrs + olen - RAD_AUTH_HDR_LEN, 0, len - olen);
 			}
@@ -261,6 +270,9 @@ void removeservers(void) {
 	stop_bucket_loop(bloop);
 }
 
+void radius_read(struct radius_packet *packet, void *data) {
+}
+
 int radmain (void) {
 	unsigned char *data, *ebuff, uuid[16];
 	struct eap_info eap;
@@ -288,7 +300,7 @@ int radmain (void) {
 	uuid_generate(uuid);
 	addattr(lrp, RAD_ATTR_ACCTID, uuid, 16);
 
-	if (send_radpacket(lrp, "testpass")) {
+	if (send_radpacket(lrp, "testpass", radius_read, NULL)) {
 		printf("Sending Failed\n");
 		return (-1);
 	}
