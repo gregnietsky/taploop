@@ -187,7 +187,6 @@ struct radius_session *rad_session(struct radius_packet *packet, struct radius_c
 		memcpy(session->request, packet->token, RAD_AUTH_TOKEN_LEN);
 		session->id = packet->id;
 		session->connex = connex;
-		objref(connex);
 		session->packet = packet;
 		session->read_cb = read_cb;
 		session->cb_data = cb_data;
@@ -233,6 +232,9 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 			packet->id = connex->id;
 			session = rad_session(packet, connex, read_cb, cb_data);
 			objunlock(connex);
+			if (session) {
+				objref(connex);
+			}
 
 			olen = packet->len;
 			if (userpass) {
