@@ -98,11 +98,27 @@ void radconnect(struct radius_server *server) {
 	}
 }
 
+struct radius_session *radius_session(struct radius_packet *packet, struct radius_connection *connex) {
+	struct radius_session *session = NULL;
+
+	if ((session = objalloc(sizeof(*session), NULL))) {
+		if (!connex->sessions) {
+			connex->sessions = create_bucketlist(5, NULL);
+		}
+		memcpy(session->request, packet->token, RAD_AUTH_TOKEN_LEN);
+		session->id = packet->id;
+		session->connex = connex;
+		addtobucket(connex->sessions, session);
+	}
+	return (session);
+}
+
 int send_radpacket(struct radius_packet *packet, const char *userpass) {
 	int scnt;
 	unsigned char* vector;
 	short len, olen;
 	struct radius_server *server;
+	struct radius_session *session;
 	struct radius_connection *connex;
 	struct bucket_loop *sloop, *cloop;
 
@@ -125,6 +141,7 @@ int send_radpacket(struct radius_packet *packet, const char *userpass) {
 			}
 			connex->id++;
 			packet->id = connex->id;
+			session = radius_session(packet, connex);
 			objunlock(connex);
 
 			olen = packet->len;
@@ -140,6 +157,7 @@ int send_radpacket(struct radius_packet *packet, const char *userpass) {
 			scnt = send(connex->socket, packet, len, 0);
 			objunref(connex);
 			if (len == scnt) {
+				remove_bucket_item(connex->sessions, session);
 				objunref(server);
 				stop_bucket_loop(cloop);
 				stop_bucket_loop(sloop);

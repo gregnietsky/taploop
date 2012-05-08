@@ -426,6 +426,33 @@ void *next_bucket_loop(void *bucket_loop) {
 	return (data);
 }
 
+void remove_bucket_item(void *bucketlist, void *data) {
+	struct bucket_list *blist = bucketlist;
+	struct blist_obj *entry;
+	int hash, bucket;
+
+	hash = gethash(blist, data, 0);
+	bucket = ((hash >> (32 - blist->bucketbits)) & ((1 << blist->bucketbits) - 1));
+
+	pthread_mutex_lock(&blist->locks[bucket]);
+	entry = blist_gotohash(blist->list[bucket], hash + 1, blist->bucketbits);
+	if (entry->hash == hash) {
+		if (entry->next && (entry == blist->list[bucket])) {
+			entry->next->prev = entry->prev;
+			blist->list[bucket] = entry->next;
+		} else if (entry->next) {
+			entry->next->prev = entry->prev;
+			entry->prev->next = entry->next;
+		} else {
+			entry->prev->next = NULL;
+			blist->list[bucket]->prev = entry->prev;
+		}
+		objunref(entry->data);
+		free(entry);
+	}
+	pthread_mutex_unlock(&blist->locks[bucket]);
+}
+
 /*
  * remove and unref the current data
  */

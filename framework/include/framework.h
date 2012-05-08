@@ -96,6 +96,7 @@ struct bucket_loop *init_bucket_loop(void *blist);
 void stop_bucket_loop(void *bloop);
 void *next_bucket_loop(void *bloop);
 void remove_bucket_loop(void *bloop);
+void remove_bucket_item(void *bucketlist, void *data);
 
 /*include jenkins hash burttlebob*/
 uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
