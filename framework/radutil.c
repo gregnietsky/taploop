@@ -108,7 +108,6 @@ struct radius_packet *new_radpacket(unsigned char code, unsigned char id) {
 	if ((packet = malloc(sizeof(*packet)))) {
 		memset(packet, 0, sizeof(*packet));
 		packet->len = RAD_AUTH_HDR_LEN;
-		packet->id = id;
 		packet->code = code;
 		genrand(&packet->token, RAD_AUTH_TOKEN_LEN);
 	}

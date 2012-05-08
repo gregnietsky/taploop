@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 The FreeRADIUS Server Project
  */
 
-int udpconnect(char *ipaddr, int port);
+int udpconnect(char *ipaddr, char *port);
 int send_radpacket(struct radius_packet *packet, int sockfd, char *userpass, char *secret);
 int rad_recv(struct radius_packet *request, int sockfd, char *secret);
 int radmain (void);

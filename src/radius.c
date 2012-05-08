@@ -21,14 +21,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 The FreeRADIUS Server Project
  */
 
+#include <netdb.h>
 #include <string.h>
-#include <uuid/uuid.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <arpa/inet.h>
 
-#include <framework.h>
+#include <uuid/uuid.h>
 #include <openssl/md5.h>
+#include <framework.h>
 
 #include "radius.h"
 
@@ -39,18 +41,66 @@ struct eap_info {
 	char	type;
 };
 
-int udpconnect(char *ipaddr, int port) {
+
+/*
+ * a radius session is based on a ID packets for
+ * session are kept ?? the request token is also stored
+ */
+struct radius_session {
+	unsigned short id;
+	unsigned char request[RAD_AUTH_TOKEN_LEN];
+	struct radius_packet **packet;
+};
+
+/*
+ * connect to the server one connex holds 256 sessions
+ */
+struct radius_connection {
+	int socket;
+	unsigned short lastid;
+	struct bucket_list *sessions;
+};
+
+/*
+ * define a server as a getaddrinfo hint
+ * create "connextions" on demand each with upto 256 sessions
+ */
+struct radius_servers {
+	struct addrinfo addr_info;
+	struct bucket_lists *connex;
+};
+
+struct bucket_list *servers = NULL;
+
+int udpconnect(char *ipaddr, char *port) {
 	struct sockaddr_in addr;
-	int sockfd;
+	struct	addrinfo hint, *result, *rp;
+	int sockfd = -1;
 
-	addr.sin_family = PF_INET;
-	addr.sin_port = htons(port);
-	inet_aton(ipaddr, &addr.sin_addr);
-	if ((sockfd = socket(addr.sin_family, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-		return (-1);
+	memset(&hint, 0, sizeof(struct addrinfo));
+	hint.ai_family = AF_UNSPEC;
+	hint.ai_socktype = SOCK_DGRAM;
+	hint.ai_protocol = IPPROTO_UDP;
+	hint.ai_canonname = NULL;
+	hint.ai_addr = NULL;
+	hint.ai_next = NULL;
+
+	if (getaddrinfo(ipaddr, port, &hint, &result)) {
+		printf("Getaddrinfo Error\n");
+		return (sockfd);
 	}
-	connect(sockfd, (const struct sockaddr *)&addr, sizeof(addr));
 
+	for(rp = result;rp;rp = result->ai_next) {
+		if ((sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) < 0) {
+			continue;
+		}
+		if (connect(sockfd, (const struct sockaddr *)&addr, sizeof(addr)) != -1) {
+			break;
+		}
+		close(sockfd);
+	}
+
+	freeaddrinfo(result);
 	return (sockfd);
 }
 
@@ -62,6 +112,9 @@ int send_radpacket(struct radius_packet *packet, int sockfd, char *userpass, cha
 	if (userpass) {
 		addattrpasswd(packet, userpass,  secret);
 	}
+
+	/* allocate a ID for this packet*/
+	packet->id = 1;
 
 	vector = addattr(packet, RAD_ATTR_MESSAGE, NULL, RAD_AUTH_TOKEN_LEN);
 	len = packet->len;
@@ -115,7 +168,7 @@ int radmain (void) {
 	struct radius_packet *lrp;
 	unsigned char *ebuff;
 
-	sockfd = udpconnect("127.0.0.1", 1812);
+	sockfd = udpconnect("127.0.0.1", "1812");
 
 	lrp = new_radpacket(RAD_CODE_AUTHREQUEST, 1);
 	addattrstr(lrp, RAD_ATTR_USER_NAME, user);
