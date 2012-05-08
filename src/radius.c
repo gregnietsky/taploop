@@ -92,10 +92,9 @@ void radconnect(struct radius_server *server) {
 			genrand(&connex->id, sizeof(connex->id));
 			connex->server = server;
 			addtobucket(server->connex, connex);
-		} else {
-			objunref(connex);
 		}
 	}
+	objunref(connex);
 }
 
 struct radius_session *radius_session(struct radius_packet *packet, struct radius_connection *connex) {
