@@ -447,7 +447,7 @@ void remove_bucket_item(void *bucketlist, void *data) {
 			entry->prev->next = NULL;
 			blist->list[bucket]->prev = entry->prev;
 		}
-		objunref(data);
+		objunref(entry->data->data);
 		free(entry);
 	}
 	pthread_mutex_unlock(&blist->locks[bucket]);
