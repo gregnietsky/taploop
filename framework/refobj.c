@@ -367,7 +367,7 @@ struct bucket_loop *init_bucket_loop(void *bucket_list) {
 	struct bucket_list *blist = bucket_list;
 	struct bucket_loop *bloop = NULL;
 
-	if (bucket_list && (bloop = objalloc(sizeof(*bloop),NULL))) {
+	if (bucket_list && (bloop = objalloc(sizeof(*bloop), NULL))) {
 		objref(blist);
 		bloop->blist = blist;
 		bloop->bucket = 0;
@@ -403,6 +403,10 @@ void *next_bucket_loop(void *bucket_loop) {
 	struct bucket_list *blist = bloop->blist;
 	struct ref_obj *entry = NULL;
 	void *data = NULL;
+
+	if (!blist) {
+		return NULL;
+	}
 
 	pthread_mutex_lock(&blist->locks[bloop->bucket]);
 	if (bloop->head_hash && (blist->version[bloop->bucket] != bloop->version)) {
