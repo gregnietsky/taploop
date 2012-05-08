@@ -110,6 +110,11 @@ void md5sum(unsigned char *buff, const void *data, unsigned long len);
 int md5cmp(unsigned char *md51, unsigned char *md52, int len);
 void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
 
+/*IP Utilities*/
+int sockconnect(int family, int stype, int proto, char *ipaddr, char *port);
+int udpconnect(char *ipaddr, char *port);
+int tcpconnect(char *ipaddr, char *port);
+
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20
 #define RAD_AUTH_PACKET_LEN	4096
