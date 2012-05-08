@@ -143,10 +143,10 @@ enum RADIUS_CODE {
 
 struct radius_packet {
 	char	code;
-	char	id;
-	short	len;
-	unsigned char	token[RAD_AUTH_TOKEN_LEN];
-	unsigned char	attrs[RAD_AUTH_PACKET_LEN - RAD_AUTH_HDR_LEN];
+	unsigned char id;
+	unsigned short len;
+	unsigned char token[RAD_AUTH_TOKEN_LEN];
+	unsigned char attrs[RAD_AUTH_PACKET_LEN - RAD_AUTH_HDR_LEN];
 };
 
 unsigned char *addattr(struct radius_packet *packet, char type, unsigned char *val, char len);

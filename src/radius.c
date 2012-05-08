@@ -50,7 +50,8 @@ struct radius_session {
  */
 struct radius_connection {
 	int socket;
-	unsigned short lastid;
+	unsigned char id;
+	int flags;
 	struct bucket_list *sessions;
 };
 
@@ -68,38 +69,61 @@ struct radius_server {
 
 struct bucket_list *servers = NULL;
 
-int send_radpacket(struct radius_packet *packet, int sockfd, const char *userpass, const char *secret) {
-	unsigned char* vector;
-	short len;
+int send_radpacket(struct radius_packet *packet, const char *userpass) {
 	int scnt;
+	unsigned char* vector;
+	short len, olen;
+	struct radius_server *server;
+	struct radius_connection *connex;
+	struct bucket_loop *sloop, *cloop;
 
-	if (userpass) {
-		addattrpasswd(packet, userpass,  secret);
+	sloop = init_bucket_loop(servers);
+	while (sloop && (server = next_bucket_loop(sloop))) {
+		cloop = init_bucket_loop(servers);
+		while (cloop && (connex = next_bucket_loop(cloop))) {
+			objlock(connex);
+			connex->id++;
+			packet->id = connex->id;
+			objunlock(connex);
+
+			olen = packet->len;
+			if (userpass) {
+				addattrpasswd(packet, userpass,  server->secret);
+			}
+
+			vector = addattr(packet, RAD_ATTR_MESSAGE, NULL, RAD_AUTH_TOKEN_LEN);
+			len = packet->len;
+			packet->len = htons(len);
+			md5hmac(vector + 2, packet, len, server->secret, strlen(server->secret));
+
+			scnt = send(connex->socket, packet, len, 0);
+			objunref(connex);
+			if (len == scnt) {
+				objunref(server);
+				stop_bucket_loop(cloop);
+				stop_bucket_loop(sloop);
+				return (0);
+			} else {
+				packet->len = olen;
+				memset(packet->attrs + olen - RAD_AUTH_HDR_LEN, 0, len - olen);
+			}
+		}
+		objunref(server);
+		stop_bucket_loop(cloop);
 	}
+	stop_bucket_loop(sloop);
 
-	/* allocate a ID for this packet*/
-	packet->id = 1;
-
-	vector = addattr(packet, RAD_ATTR_MESSAGE, NULL, RAD_AUTH_TOKEN_LEN);
-	len = packet->len;
-	packet->len = htons(len);
-	md5hmac(vector + 2, packet, len, secret, strlen(secret));
-
-	scnt = send(sockfd, packet, len, 0);
-
-	if (len != scnt) {
-		return (-1);
-	}
-
-	return (0);
+	return (-1);
 }
 
-int rad_recv(struct radius_packet *request, int sockfd, const char *secret) {
+int rad_recv(struct radius_packet *request) {
 	struct radius_packet *packet;
 	unsigned char buff[4096];
 	unsigned char rtok[RAD_AUTH_TOKEN_LEN];
 	unsigned char rtok2[RAD_AUTH_TOKEN_LEN];
 	int chk, plen;
+	char *secret = "RadSecret";
+	int sockfd = -1;
 
 	chk = recv(sockfd, buff, 4096, 0);
 
@@ -122,6 +146,26 @@ int rad_recv(struct radius_packet *request, int sockfd, const char *secret) {
 	return (0);
 }
 
+int hash_connex(void *data, int key) {
+	int ret;
+	struct radius_connection *connex = data;
+	int *hashkey = (key) ? data : &connex->socket;
+
+	ret = *hashkey;
+
+	return (ret);
+}
+
+int hash_server(void *data, int key) {
+	int ret;
+	struct radius_server *server = data;
+	const char* hashkey = (key) ? data : server->name;
+
+	ret = jenhash(hashkey, strlen(hashkey), 0);
+
+	return(ret);
+}
+
 void del_radserver(void *data) {
 	struct radius_server *server = data;
 
@@ -139,6 +183,25 @@ void del_radserver(void *data) {
 	}
 }
 
+int radconnect(struct radius_server *server) {
+	struct radius_connection *connex;
+	int sockfd = -1;
+
+	if ((connex = objalloc(sizeof(*connex), NULL))) {
+		if ((sockfd = udpconnect(server->name, server->authport)) >= 0) {
+			if (!server->connex) {
+				server->connex = create_bucketlist(2, hash_connex);
+			}
+			genrand(&connex->id, sizeof(connex->id));
+			addtobucket(server->connex, connex);
+		} else {
+			objunref(connex);
+		}
+	}
+
+	return (sockfd);
+}
+
 struct radius_server *add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret) {
 	struct radius_server *server;
 
@@ -147,26 +210,37 @@ struct radius_server *add_radserver(const char *ipaddr, const char *auth, const 
 		 ALLOC_CONST(server->authport, auth);
 		 ALLOC_CONST(server->acctport, acct);
 		 ALLOC_CONST(server->secret, secret);
+		if (!servers) {
+			servers = create_bucketlist(2, hash_server);
+		}
+		radconnect(server);
+		addtobucket(servers, server);
 	}
+
 	return server;
 }
 
-int radconnect(struct radius_server *server) {
-	return (udpconnect(server->name, server->authport));
+
+void removeservers(void) {
+	struct radius_server *server;
+	struct bucket_loop *bloop;
+
+	bloop = init_bucket_loop(servers);
+	while (bloop && (server = next_bucket_loop(bloop))) {
+		remove_bucket_loop(bloop);
+		objunref(server);
+	}
+	stop_bucket_loop(bloop);
 }
 
 int radmain (void) {
-	unsigned char uuid[16];
+	unsigned char *data, *ebuff, uuid[16];
 	struct eap_info eap;
-	int cnt, cnt2, sockfd;
+	int cnt, cnt2;
 	char *user = "gregory";
-	unsigned char *data;
 	struct radius_packet *lrp;
-	unsigned char *ebuff;
-	struct radius_server *server;
 
-	server = add_radserver("127.0.0.1", "1812", NULL, "RadSecret");
-	sockfd = radconnect(server);
+	add_radserver("127.0.0.1", "1812", NULL, "RadSecret");
 
 	lrp = new_radpacket(RAD_CODE_AUTHREQUEST, 1);
 	addattrstr(lrp, RAD_ATTR_USER_NAME, user);
@@ -186,7 +260,7 @@ int radmain (void) {
 	uuid_generate(uuid);
 	addattr(lrp, RAD_ATTR_ACCTID, uuid, 16);
 
-	if (send_radpacket(lrp, sockfd, "testpass", server->secret)) {
+	if (send_radpacket(lrp, "testpass")) {
 		printf("Sending Failed\n");
 		return (-1);
 	}
@@ -204,7 +278,9 @@ int radmain (void) {
 	}
 
 
-	rad_recv(lrp, sockfd, server->secret);
-	objunref(server);
+/*
+	rad_recv(lrp);
+*/
+
 	return (0);
 }
