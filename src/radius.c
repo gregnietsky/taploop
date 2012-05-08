@@ -72,24 +72,21 @@ struct radius_servers {
 
 struct bucket_list *servers = NULL;
 
-int udpconnect(char *ipaddr, char *port) {
+
+int sockconnect(int family, int stype, int proto, char *ipaddr, char *port) {
 	struct	addrinfo hint, *result, *rp;
 	int sockfd = -1;
 
-	memset(&hint, 0, sizeof(struct addrinfo));
-	hint.ai_family = AF_UNSPEC;
-	hint.ai_socktype = SOCK_DGRAM;
-	hint.ai_protocol = IPPROTO_UDP;
-	hint.ai_canonname = NULL;
-	hint.ai_addr = NULL;
-	hint.ai_next = NULL;
+	memset(&hint, 0, sizeof(hint));
+	hint.ai_family = family;
+	hint.ai_socktype = stype;
+	hint.ai_protocol = proto;
 
 	if (getaddrinfo(ipaddr, port, &hint, &result)) {
-		printf("Getaddrinfo Error\n");
 		return (sockfd);
 	}
 
-	for(rp = result;rp;rp = result->ai_next) {
+	for(rp = result; rp; rp = result->ai_next) {
 		if ((sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) < 0) {
 			continue;
 		}
@@ -101,6 +98,10 @@ int udpconnect(char *ipaddr, char *port) {
 
 	freeaddrinfo(result);
 	return (sockfd);
+}
+
+int udpconnect(char *ipaddr, char *port) {
+	return (sockconnect(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port));
 }
 
 int send_radpacket(struct radius_packet *packet, int sockfd, char *userpass, char *secret) {
