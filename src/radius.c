@@ -73,7 +73,6 @@ struct radius_servers {
 struct bucket_list *servers = NULL;
 
 int udpconnect(char *ipaddr, char *port) {
-	struct sockaddr_in addr;
 	struct	addrinfo hint, *result, *rp;
 	int sockfd = -1;
 
@@ -94,7 +93,7 @@ int udpconnect(char *ipaddr, char *port) {
 		if ((sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) < 0) {
 			continue;
 		}
-		if (connect(sockfd, (const struct sockaddr *)&addr, sizeof(addr)) != -1) {
+		if (!connect(sockfd, rp->ai_addr, rp->ai_addrlen)) {
 			break;
 		}
 		close(sockfd);
