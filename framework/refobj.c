@@ -354,7 +354,7 @@ struct bucket_loop *init_bucket_loop(void *bucket_list) {
 	struct bucket_list *blist = bucket_list;
 	struct bucket_loop *bloop = NULL;
 
-	if ((bloop = objalloc(sizeof(*bloop),NULL))) {
+	if (bucket_list && (bloop = objalloc(sizeof(*bloop),NULL))) {
 		objref(blist);
 		bloop->blist = blist;
 		bloop->bucket = 0;
