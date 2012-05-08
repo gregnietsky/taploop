@@ -203,12 +203,9 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 		objlock(server);
 		if (!server->connex) {
 			connex = radconnect(server);
-			objunlock(server);
-			objref(server);
 			objunref(connex);
-		} else {
-			objunlock(server);
 		}
+		objunlock(server);
 		cloop = init_bucket_loop(server->connex);
 		while (cloop && (connex = next_bucket_loop(cloop))) {
 			objlock(connex);
@@ -226,9 +223,6 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 			packet->id = connex->id;
 			session = rad_session(packet, connex, read_cb, cb_data);
 			objunlock(connex);
-			if (session) {
-				objref(connex);
-			}
 
 			olen = packet->len;
 			if (userpass) {
