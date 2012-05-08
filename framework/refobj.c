@@ -195,6 +195,19 @@ int objunlock(void *data) {
 	return (0);
 }
 
+void empty_buckets(void *data) {
+	struct bucket_list *blist = data;
+	struct bucket_loop *bloop;
+	void *entry;
+
+	bloop = init_bucket_loop(blist);
+	while (bloop && (entry = next_bucket_loop(blist))) {
+		remove_bucket_loop(bloop);
+		objunref(entry);
+	}
+	stop_bucket_loop(bloop);
+}
+
 /*
  * a bucket list is a ref obj the "list" element is a
  * array of "bucket" entries each has a hash
@@ -207,7 +220,7 @@ void *create_bucketlist(int bitmask, blisthash hash_function) {
 	buckets = (1 << bitmask);
 
 	/* allocate session bucket list memory*/
-	if (!(new = objalloc(sizeof(*new) + (sizeof(void*) + sizeof(pthread_mutex_t) + sizeof(int)) * buckets,NULL))) {
+	if (!(new = objalloc(sizeof(*new) + (sizeof(void*) + sizeof(pthread_mutex_t) + sizeof(int)) * buckets, empty_buckets))) {
 		return NULL;
 	}
 
