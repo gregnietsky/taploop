@@ -43,7 +43,6 @@ struct eap_info {
 struct radius_session {
 	unsigned short id;
 	unsigned char request[RAD_AUTH_TOKEN_LEN];
-	struct radius_connection *connex;
 	void	*cb_data;
 	radius_cb read_cb;
 	struct radius_packet *packet;
@@ -56,7 +55,6 @@ struct radius_connection {
 	int socket;
 	unsigned char id;
 	int flags;
-	struct radius_server *server;
 	struct bucket_list *sessions;
 };
 
@@ -147,7 +145,6 @@ void add_radserver(const char *ipaddr, const char *auth, const char *acct, const
 void del_radconnect(void *data) {
 	struct radius_connection *connex = data;
 
-	objunref(connex->server);
 	objunref(connex->sessions);
 	close(connex->socket);
 }
@@ -161,7 +158,6 @@ struct radius_connection *radconnect(struct radius_server *server) {
 				server->connex = create_bucketlist(0, hash_connex);
 			}
 			genrand(&connex->id, sizeof(connex->id));
-			connex->server = server;
 			addtobucket(server->connex, connex);
 		}
 	}
@@ -171,7 +167,6 @@ struct radius_connection *radconnect(struct radius_server *server) {
 void del_radsession(void *data) {
 	struct radius_session *session = data;
 
-	objunref(session->connex);
 	if (session->packet) {
 		free(session->packet);
 	}
@@ -186,7 +181,6 @@ struct radius_session *rad_session(struct radius_packet *packet, struct radius_c
 		}
 		memcpy(session->request, packet->token, RAD_AUTH_TOKEN_LEN);
 		session->id = packet->id;
-		session->connex = connex;
 		session->packet = packet;
 		session->read_cb = read_cb;
 		session->cb_data = cb_data;
