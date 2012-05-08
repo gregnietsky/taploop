@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 
 #include <uuid/uuid.h>
@@ -62,16 +63,28 @@ struct radius_connection {
 /*
  * define a server with host auth/acct port and secret
  * create "connextions" on demand each with upto 256 sessions
+ * servers should not be removed without removing all and reloading
  */
 struct radius_server {
 	const char	*name;
 	const char	*authport;
 	const char	*acctport;
 	const char	*secret;
+	unsigned char	id;
 	struct bucket_lists *connex;
 };
 
 struct bucket_list *servers = NULL;
+
+int hash_session(void *data, int key) {
+	int ret;
+	struct radius_session *session = data;
+	unsigned char *hashkey = (key) ? data : &session->id;
+
+	ret = *hashkey;
+
+	return (ret);
+}
 
 int hash_connex(void *data, int key) {
 	int ret;
@@ -83,32 +96,99 @@ int hash_connex(void *data, int key) {
 	return (ret);
 }
 
+int hash_server(void *data, int key) {
+	int ret;
+	struct radius_server *server = data;
+	unsigned char *hashkey = (key) ? data : &server->id;
+
+	ret = *hashkey;
+
+	return(ret);
+}
+
+void del_radserver(void *data) {
+	struct radius_server *server = data;
+
+	if (server->name) {
+		free((char *)server->name);
+	}
+	if (server->authport) {
+		free((char *)server->authport);
+	}
+	if (server->acctport) {
+		free((char *)server->acctport);
+	}
+	if (server->secret) {
+		free((char *)server->secret);
+	}
+	if (server->connex) {
+		objunref(server->connex);
+	}
+}
+
+void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret) {
+	struct radius_server *server;
+
+	if ((server = objalloc(sizeof(*server), del_radserver))) {
+		 ALLOC_CONST(server->name, ipaddr);
+		 ALLOC_CONST(server->authport, auth);
+		 ALLOC_CONST(server->acctport, acct);
+		 ALLOC_CONST(server->secret, secret);
+		if (!servers) {
+			servers = create_bucketlist(0, hash_server);
+		}
+		server->id = bucket_list_cnt(servers);
+		addtobucket(servers, server);
+	}
+
+	objunref(server);
+}
+
+void del_radconnect(void *data) {
+	struct radius_connection *connex = data;
+
+	objunref(connex->server);
+	objunref(connex->sessions);
+	close(connex->socket);
+}
+
 struct radius_connection *radconnect(struct radius_server *server) {
 	struct radius_connection *connex;
 
-	if ((connex = objalloc(sizeof(*connex), NULL))) {
+	if ((connex = objalloc(sizeof(*connex), del_radconnect))) {
 		if ((connex->socket = udpconnect(server->name, server->authport)) >= 0) {
 			if (!server->connex) {
-				server->connex = create_bucketlist(2, hash_connex);
+				server->connex = create_bucketlist(0, hash_connex);
 			}
 			genrand(&connex->id, sizeof(connex->id));
 			connex->server = server;
+			objref(server);
 			addtobucket(server->connex, connex);
 		}
 	}
 	return (connex);
 }
 
+void del_radsession(void *data) {
+	struct radius_session *session = data;
+
+	objunref(session->connex);
+	if (session->packet) {
+		free(session->packet);
+	}
+}
+
 struct radius_session *rad_session(struct radius_packet *packet, struct radius_connection *connex, radius_cb read_cb, void *cb_data) {
 	struct radius_session *session = NULL;
 
-	if ((session = objalloc(sizeof(*session), NULL))) {
+	if ((session = objalloc(sizeof(*session), del_radsession))) {
 		if (!connex->sessions) {
-			connex->sessions = create_bucketlist(5, NULL);
+			connex->sessions = create_bucketlist(0, hash_session);
 		}
 		memcpy(session->request, packet->token, RAD_AUTH_TOKEN_LEN);
 		session->id = packet->id;
 		session->connex = connex;
+		objref(connex);
 		session->packet = packet;
 		session->read_cb = read_cb;
 		session->cb_data = cb_data;
@@ -214,62 +294,6 @@ int rad_recv(struct radius_packet *request) {
 	return (0);
 }
 
-int hash_server(void *data, int key) {
-	int ret;
-	struct radius_server *server = data;
-	const char* hashkey = (key) ? data : server->name;
-
-	ret = jenhash(hashkey, strlen(hashkey), 0);
-
-	return(ret);
-}
-
-void del_radserver(void *data) {
-	struct radius_server *server = data;
-
-	if (server->name) {
-		free((char *)server->name);
-	}
-	if (server->authport) {
-		free((char *)server->authport);
-	}
-	if (server->acctport) {
-		free((char *)server->acctport);
-	}
-	if (server->secret) {
-		free((char *)server->secret);
-	}
-}
-
-void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret) {
-	struct radius_server *server;
-
-	if ((server = objalloc(sizeof(*server), del_radserver))) {
-		 ALLOC_CONST(server->name, ipaddr);
-		 ALLOC_CONST(server->authport, auth);
-		 ALLOC_CONST(server->acctport, acct);
-		 ALLOC_CONST(server->secret, secret);
-		if (!servers) {
-			servers = create_bucketlist(2, hash_server);
-		}
-		addtobucket(servers, server);
-	}
-
-	objunref(server);
-}
-
-void removeservers(void) {
-	struct radius_server *server;
-	struct bucket_loop *bloop;
-
-	bloop = init_bucket_loop(servers);
-	while (bloop && (server = next_bucket_loop(bloop))) {
-		remove_bucket_loop(bloop);
-		objunref(server);
-	}
-	stop_bucket_loop(bloop);
-}
-
 void radius_read(struct radius_packet *packet, void *data) {
 }
 
@@ -318,6 +342,7 @@ int radmain (void) {
 	}
 
 
+	objunref(servers);
 /*
 	rad_recv(lrp);
 */
