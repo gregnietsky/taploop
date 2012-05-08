@@ -162,7 +162,6 @@ struct radius_connection *radconnect(struct radius_server *server) {
 			}
 			genrand(&connex->id, sizeof(connex->id));
 			connex->server = server;
-			objref(server);
 			addtobucket(server->connex, connex);
 		}
 	}
@@ -211,9 +210,12 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 		objlock(server);
 		if (!server->connex) {
 			connex = radconnect(server);
+			objunlock(server);
+			objref(server);
 			objunref(connex);
+		} else {
+			objunlock(server);
 		}
-		objunlock(server);
 		cloop = init_bucket_loop(server->connex);
 		while (cloop && (connex = next_bucket_loop(cloop))) {
 			objlock(connex);
