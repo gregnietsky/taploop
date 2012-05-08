@@ -201,7 +201,7 @@ void empty_buckets(void *data) {
 	void *entry;
 
 	bloop = init_bucket_loop(blist);
-	while (bloop && (entry = next_bucket_loop(blist))) {
+	while (bloop && (entry = next_bucket_loop(bloop))) {
 		remove_bucket_loop(bloop);
 		objunref(entry);
 	}
@@ -403,10 +403,6 @@ void *next_bucket_loop(void *bucket_loop) {
 	struct bucket_list *blist = bloop->blist;
 	struct ref_obj *entry = NULL;
 	void *data = NULL;
-
-	if (!blist) {
-		return NULL;
-	}
 
 	pthread_mutex_lock(&blist->locks[bloop->bucket]);
 	if (bloop->head_hash && (blist->version[bloop->bucket] != bloop->version)) {
