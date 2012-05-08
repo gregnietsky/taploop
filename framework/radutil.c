@@ -62,7 +62,7 @@ void addattrstr(struct radius_packet *packet, char type, char *str) {
 	addattr(packet, type, (unsigned char*)str, strlen(str));
 }
 
-void addattrpasswd(struct radius_packet *packet, char *pw, char *secret) {
+void addattrpasswd(struct radius_packet *packet, const char *pw, const char *secret) {
 	unsigned char pwbuff[RAD_MAX_PASS_LEN];
 	unsigned char digest[RAD_AUTH_TOKEN_LEN];
 	MD5_CTX c, old;

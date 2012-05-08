@@ -16,11 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <netdb.h>
 #include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <arpa/inet.h>
 
 #include <uuid/uuid.h>
@@ -57,17 +55,20 @@ struct radius_connection {
 };
 
 /*
- * define a server as a getaddrinfo hint
+ * define a server with host auth/acct port and secret
  * create "connextions" on demand each with upto 256 sessions
  */
-struct radius_servers {
-	struct addrinfo addr_info;
+struct radius_server {
+	const char	*name;
+	const char	*authport;
+	const char	*acctport;
+	const char	*secret;
 	struct bucket_lists *connex;
 };
 
 struct bucket_list *servers = NULL;
 
-int send_radpacket(struct radius_packet *packet, int sockfd, char *userpass, char *secret) {
+int send_radpacket(struct radius_packet *packet, int sockfd, const char *userpass, const char *secret) {
 	unsigned char* vector;
 	short len;
 	int scnt;
@@ -93,7 +94,7 @@ int send_radpacket(struct radius_packet *packet, int sockfd, char *userpass, cha
 	return (0);
 }
 
-int rad_recv(struct radius_packet *request, int sockfd, char *secret) {
+int rad_recv(struct radius_packet *request, int sockfd, const char *secret) {
 	struct radius_packet *packet;
 	unsigned char buff[4096];
 	unsigned char rtok[RAD_AUTH_TOKEN_LEN];
@@ -121,17 +122,51 @@ int rad_recv(struct radius_packet *request, int sockfd, char *secret) {
 	return (0);
 }
 
+void del_radserver(void *data) {
+	struct radius_server *server = data;
+
+	if (server->name) {
+		free((char *)server->name);
+	}
+	if (server->authport) {
+		free((char *)server->authport);
+	}
+	if (server->acctport) {
+		free((char *)server->acctport);
+	}
+	if (server->secret) {
+		free((char *)server->secret);
+	}
+}
+
+struct radius_server *add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret) {
+	struct radius_server *server;
+
+	if ((server = objalloc(sizeof(*server), del_radserver))) {
+		 ALLOC_CONST(server->name, ipaddr);
+		 ALLOC_CONST(server->authport, auth);
+		 ALLOC_CONST(server->acctport, acct);
+		 ALLOC_CONST(server->secret, secret);
+	}
+	return server;
+}
+
+int radconnect(struct radius_server *server) {
+	return (udpconnect(server->name, server->authport));
+}
+
 int radmain (void) {
 	unsigned char uuid[16];
 	struct eap_info eap;
 	int cnt, cnt2, sockfd;
 	char *user = "gregory";
-	char *secret = "RadSecret";
 	unsigned char *data;
 	struct radius_packet *lrp;
 	unsigned char *ebuff;
+	struct radius_server *server;
 
-	sockfd = udpconnect("127.0.0.1", "1812");
+	server = add_radserver("127.0.0.1", "1812", NULL, "RadSecret");
+	sockfd = radconnect(server);
 
 	lrp = new_radpacket(RAD_CODE_AUTHREQUEST, 1);
 	addattrstr(lrp, RAD_ATTR_USER_NAME, user);
@@ -151,7 +186,7 @@ int radmain (void) {
 	uuid_generate(uuid);
 	addattr(lrp, RAD_ATTR_ACCTID, uuid, 16);
 
-	if (send_radpacket(lrp, sockfd, "testpass", secret)) {
+	if (send_radpacket(lrp, sockfd, "testpass", server->secret)) {
 		printf("Sending Failed\n");
 		return (-1);
 	}
@@ -169,6 +204,6 @@ int radmain (void) {
 	}
 
 
-	rad_recv(lrp, sockfd, secret);
+	rad_recv(lrp, sockfd, server->secret);
 	return (0);
 }

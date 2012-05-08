@@ -30,6 +30,7 @@ struct ref_obj {
 	int	cnt;
 	int	size;
 	pthread_mutex_t	lock;
+	objdestroy destroy;
 	void *data;
 };
 
@@ -69,7 +70,7 @@ struct bucket_loop {
 
 #define refobj_offset	sizeof(struct ref_obj);
 
-void *objalloc(int size,void *destructor) {
+void *objalloc(int size,objdestroy destructor) {
 	struct ref_obj *ref;
 	int asize;
 	char *robj;
@@ -84,6 +85,7 @@ void *objalloc(int size,void *destructor) {
 		ref->cnt++;
 		ref->data = robj + refobj_offset;
 		ref->size = size;
+		ref->destroy = destructor;
 		return (ref->data);
 	}
 	return NULL;
@@ -129,6 +131,9 @@ int objunref(void *data) {
 		pthread_mutex_unlock(&ref->lock);
 		if (!ret) {
 			pthread_mutex_destroy(&ref->lock);
+			if (ref->destroy) {
+				ref->destroy(data);
+			}
 			free(ref);
 		}
 	}

@@ -41,6 +41,7 @@ typedef void	(*syssighandler)(int, siginfo_t*, void*);
 typedef int     (*threadsighandler)(int, void*);
 typedef	int	(*frameworkfunc)(int, char**);
 typedef int	(*blisthash)(void*, int);
+typedef void	(*objdestroy)(void*);
 
 /*these can be set int the application */
 struct framework_core {
@@ -78,7 +79,7 @@ int objunlock(void *data);
 int objcnt(void *data);
 int objunref(void *data);
 int objref(void *data);
-void *objalloc(int size, void *destructor);
+void *objalloc(int size, objdestroy);
 
 /*
  * hashed bucket lists
@@ -111,9 +112,9 @@ int md5cmp(unsigned char *md51, unsigned char *md52, int len);
 void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
 
 /*IP Utilities*/
-int sockconnect(int family, int stype, int proto, char *ipaddr, char *port);
-int udpconnect(char *ipaddr, char *port);
-int tcpconnect(char *ipaddr, char *port);
+int sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port);
+int udpconnect(const char *ipaddr, const char *port);
+int tcpconnect(const char *ipaddr, const char *port);
 
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20
@@ -152,7 +153,7 @@ unsigned char *addattr(struct radius_packet *packet, char type, unsigned char *v
 void addattrint(struct radius_packet *packet, char type, unsigned int val);
 void addattrip(struct radius_packet *packet, char type, char *ipaddr);
 void addattrstr(struct radius_packet *packet, char type, char *str);
-void addattrpasswd(struct radius_packet *packet, char *pw, char *secret);
+void addattrpasswd(struct radius_packet *packet, const char *pw, const char *secret);
 struct radius_packet *new_radpacket(unsigned char code, unsigned char id);
 
 /*easter egg copied from <linux/jhash.h>*/
@@ -183,7 +184,11 @@ struct radius_packet *new_radpacket(unsigned char code, unsigned char id);
 
 #define ALLOC_CONST(const_var, val) { \
 		char *tmp_char; \
-		tmp_char = malloc(strlen(val) + 1); \
-		strcpy(tmp_char, val); \
-		const_var = tmp_char; \
+		if (val) { \
+			tmp_char = malloc(strlen(val) + 1); \
+			strcpy(tmp_char, val); \
+			const_var = tmp_char; \
+		} else { \
+			const_var = NULL; \
+		} \
 	}

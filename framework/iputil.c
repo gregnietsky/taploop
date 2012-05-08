@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <string.h>
 
-int sockconnect(int family, int stype, int proto, char *ipaddr, char *port) {
+int sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port) {
 	struct	addrinfo hint, *result, *rp;
 	int sockfd = -1;
 
@@ -47,10 +47,10 @@ int sockconnect(int family, int stype, int proto, char *ipaddr, char *port) {
 	return (sockfd);
 }
 
-int udpconnect(char *ipaddr, char *port) {
+int udpconnect(const char *ipaddr, const char *port) {
 	return (sockconnect(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port));
 }
 
-int tcpconnect(char *ipaddr, char *port) {
+int tcpconnect(const char *ipaddr, const char *port) {
 	return (sockconnect(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port));
 }
