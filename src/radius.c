@@ -205,5 +205,6 @@ int radmain (void) {
 
 
 	rad_recv(lrp, sockfd, server->secret);
+	objunref(server);
 	return (0);
 }
