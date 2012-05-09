@@ -117,7 +117,7 @@ void *rad_return(void **data) {
 	unsigned char rtok2[RAD_AUTH_TOKEN_LEN];
 	fd_set  rd_set, act_set;
 	struct  timeval tv;
-	int chk, plen, selfd;
+	int chk, plen, selfd, mlen;
 	struct msghdr msg;
 
 	FD_ZERO(&rd_set);
@@ -137,7 +137,8 @@ void *rad_return(void **data) {
 		}
 
                 if (FD_ISSET(connex->socket, &act_set)) {
-			recvmsg(connex->socket, &msg, MSG_DONTWAIT | MSG_ERRQUEUE);
+			mlen = recvmsg(connex->socket, &msg, MSG_DONTWAIT | MSG_ERRQUEUE);
+			printf("MSG %i LEn\n", mlen);
 			chk = recv(connex->socket, buff, 4096, 0);
 
 			packet = (struct radius_packet*)&buff;
