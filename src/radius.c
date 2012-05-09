@@ -154,12 +154,17 @@ void *rad_return(void **data) {
 			memcpy(rtok, packet->token, RAD_AUTH_TOKEN_LEN);
 			memcpy(packet->token, session->request, RAD_AUTH_TOKEN_LEN);
 			md5sum2(rtok2, packet, plen, connex->server->secret, strlen(connex->server->secret));
-			objunref(session);
 
 			if (md5cmp(rtok, rtok2, RAD_AUTH_TOKEN_LEN)) {
 				printf("Invalid Signature");
 				continue;
 			}
+
+			if (session->read_cb) {
+				session->read_cb(packet, session->cb_data);
+			}
+
+			objunref(session);
 		}
 	}
 
@@ -324,7 +329,21 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 	return (-1);
 }
 
-void radius_read(struct radius_packet *packet, void *data) {
+void radius_read(struct radius_packet *packet, void *pvt_data) {
+	int cnt, cnt2;
+	unsigned char *data;
+
+	cnt = ntohs(packet->len) - RAD_AUTH_HDR_LEN;
+	data = packet->attrs;
+	while(cnt > 0) {
+		printf("Type %i Len %i / %i 0x", data[0], data[1], cnt);
+		for (cnt2 = 2;cnt2 < data[1]; cnt2++) {
+			printf("%02x", data[cnt2]);
+		}
+		printf("\n");
+		cnt -= data[1];
+		data += data[1];
+	}
 }
 
 int radmain (void) {
