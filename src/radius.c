@@ -137,8 +137,10 @@ void *rad_return(void **data) {
 		}
 
                 if (FD_ISSET(connex->socket, &act_set)) {
-			mlen = recvmsg(connex->socket, &msg, MSG_DONTWAIT | MSG_ERRQUEUE);
-			printf("MSG %i LEn\n", mlen);
+			if ((mlen = recvmsg(connex->socket, &msg, MSG_DONTWAIT | MSG_ERRQUEUE)) >= 0) {
+				printf("MSG %i LEn\n", mlen);
+			}
+			/*shutdown if 0 is returned ??*/
 			chk = recv(connex->socket, buff, 4096, 0);
 
 			packet = (struct radius_packet*)&buff;
