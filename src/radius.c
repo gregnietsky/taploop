@@ -145,6 +145,9 @@ void rad_resend(struct radius_connection *connex) {
 			session->packet->len = session->olen;
 			session->sent = tv;
 			session->retries--;
+			if (scnt != len) {
+				/*need to redo packet*/
+			}
 		}
 		objunref(session);
 	}
@@ -326,7 +329,8 @@ struct radius_session *rad_session(struct radius_packet *packet, struct radius_c
 	return (session);
 }
 
-int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data) {
+int _send_radpacket(struct radius_packet *packet, const char *userpass, struct radius_session *hint,
+			radius_cb read_cb, void *cb_data) {
 	int scnt;
 	unsigned char* vector;
 	unsigned short len;
@@ -376,8 +380,17 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 			}
 
 			connex->id++;
-			packet->id = connex->id;
-			session = rad_session(packet, connex, userpass, read_cb, cb_data);
+			if (hint) {
+				packet = hint->packet;
+				session = hint;
+				packet->id = connex->id;
+				session->id = packet->id;
+				session->retries = 3;
+				addtobucket(connex->sessions, session);
+			} else {
+				packet->id = connex->id;
+				session = rad_session(packet, connex, userpass, read_cb, cb_data);
+			}
 			objunlock(connex);
 
 			if (session->passwd) {
@@ -414,6 +427,10 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 	return (-1);
 }
 
+int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data) {
+	return (_send_radpacket(packet, userpass, NULL, read_cb, cb_data));
+}
+
 void radius_read(struct radius_packet *packet, void *pvt_data) {
 	int cnt, cnt2;
 	unsigned char *data;
@@ -436,7 +453,7 @@ int rad_dispatch(struct radius_packet *lrp, const char *userpass, radius_cb read
 	unsigned char *data;
 	int cnt, cnt2;
 
-	if (send_radpacket(lrp, userpass, read_cb, NULL)) {
+	if (_send_radpacket(lrp, userpass, NULL, read_cb, NULL)) {
 		printf("Sending Failed\n");
 		return (-1);
 	}
