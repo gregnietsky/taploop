@@ -73,6 +73,7 @@ struct radius_server {
 	const char	*secret;
 	unsigned char	id;
 	int		timeout;
+	struct timeval	service;
 	struct bucket_lists *connex;
 };
 
@@ -142,6 +143,12 @@ void *rad_return(void **data) {
 				if (errno == ECONNREFUSED) {
 					printf("Connection Bad\n");
 				}
+			} else if (chk == 0) {
+				objlock(connex->server);
+				printf("Taking server off line for %is\n", connex->server->timeout);
+				gettimeofday(&connex->server->service, NULL);
+				connex->server->service.tv_sec += connex->server->timeout;
+				objunlock(connex->server);
 			}
 
 			packet = (struct radius_packet*)&buff;
@@ -212,6 +219,7 @@ void add_radserver(const char *ipaddr, const char *auth, const char *acct, const
 		}
 		server->id = bucket_list_cnt(servers);
 		server->timeout = timeout;
+		gettimeofday(&server->service, NULL);
 		addtobucket(servers, server);
 	}
 
@@ -228,16 +236,12 @@ void del_radconnect(void *data) {
 
 struct radius_connection *radconnect(struct radius_server *server) {
 	struct radius_connection *connex;
-	int val;
 
 	if ((connex = objalloc(sizeof(*connex), del_radconnect))) {
 		if ((connex->socket = udpconnect(server->name, server->authport)) >= 0) {
 			if (!server->connex) {
 				server->connex = create_bucketlist(0, hash_connex);
 			}
-			val = 1;
-			setsockopt(connex->socket, SOL_IP, IP_RECVERR,(char*)&val, sizeof(val));
-
 			connex->server = server;
 			genrand(&connex->id, sizeof(connex->id));
 			addtobucket(server->connex, connex);
@@ -281,10 +285,18 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 	struct radius_session *session;
 	struct radius_connection *connex;
 	struct bucket_loop *sloop, *cloop;
+	struct timeval	curtime;
 
+
+	gettimeofday(&curtime, NULL);
 	sloop = init_bucket_loop(servers);
 	while (sloop && (server = next_bucket_loop(sloop))) {
 		objlock(server);
+		if (server->service.tv_sec > curtime.tv_sec) {
+			objunlock(server);
+			objunref(server);
+			continue;
+		}
 		if (!server->connex) {
 			connex = radconnect(server);
 			objunref(connex);
