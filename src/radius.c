@@ -222,12 +222,18 @@ void del_radconnect(void *data) {
 
 struct radius_connection *radconnect(struct radius_server *server) {
 	struct radius_connection *connex;
+	int val;
 
 	if ((connex = objalloc(sizeof(*connex), del_radconnect))) {
 		if ((connex->socket = udpconnect(server->name, server->authport)) >= 0) {
 			if (!server->connex) {
 				server->connex = create_bucketlist(0, hash_connex);
 			}
+			val = 1;
+			if (!(setsockopt(connex->socket, SOL_IP, IP_RECVERR,(char*)&val, sizeof(val)))) {
+				perror("Sockopt fail");
+			}
+
 			connex->server = server;
 			genrand(&connex->id, sizeof(connex->id));
 			addtobucket(server->connex, connex);
