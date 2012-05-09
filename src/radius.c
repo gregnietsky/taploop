@@ -108,9 +108,14 @@ int hash_server(void *data, int key) {
 
 void *rad_return(void **data) {
 	struct radius_connection *connex = *data;
+	struct radius_packet *packet;
+	unsigned char buff[4096];
+	unsigned char rtok[RAD_AUTH_TOKEN_LEN];
+	unsigned char rtok2[RAD_AUTH_TOKEN_LEN];
 	fd_set  rd_set, act_set;
 	struct  timeval tv;
-	int selfd;
+	int chk, plen, selfd;
+	char *secret = "RadSecret";
 
 	FD_ZERO(&rd_set);
 	FD_SET(connex->socket, &rd_set);
@@ -118,11 +123,10 @@ void *rad_return(void **data) {
 	while (framework_threadok(data)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
-		tv.tv_usec = 200000;
+		tv.tv_usec = 2000000;
 
 		selfd = select(connex->socket + 1, &act_set, NULL, NULL, &tv);
 
-		/*returned due to interupt continue or timed out*/
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
 			continue;
 		} else if (selfd < 0) {
@@ -130,6 +134,25 @@ void *rad_return(void **data) {
 		}
 
                 if (FD_ISSET(connex->socket, &act_set)) {
+			chk = recv(connex->socket, buff, 4096, 0);
+
+			packet = (struct radius_packet*)&buff;
+			plen = ntohs(packet->len);
+
+			if ((chk < plen) || (chk <= RAD_AUTH_HDR_LEN)) {
+				printf("OOps Did not get proper packet\n");
+				continue;
+			}
+
+			memcpy(rtok, packet->token, RAD_AUTH_TOKEN_LEN);
+/*
+			memcpy(packet->token, request->token, RAD_AUTH_TOKEN_LEN);
+*/
+			md5sum2(rtok2, packet, plen, secret, strlen(secret));
+
+			if (md5cmp(rtok, rtok2, RAD_AUTH_TOKEN_LEN)) {
+				printf("Invalid Signature");
+			}
 		}
 	}
 
@@ -290,36 +313,6 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 	return (-1);
 }
 
-int rad_recv(struct radius_packet *request) {
-	struct radius_packet *packet;
-	unsigned char buff[4096];
-	unsigned char rtok[RAD_AUTH_TOKEN_LEN];
-	unsigned char rtok2[RAD_AUTH_TOKEN_LEN];
-	int chk, plen;
-	char *secret = "RadSecret";
-	int sockfd = -1;
-
-	chk = recv(sockfd, buff, 4096, 0);
-
-	packet = (struct radius_packet*)&buff;
-	plen = ntohs(packet->len);
-
-	if ((chk < plen) || (chk <= RAD_AUTH_HDR_LEN)) {
-		printf("OOps Did not get proper packet\n");
-		return (-1);
-	}
-
-	memcpy(rtok, packet->token, RAD_AUTH_TOKEN_LEN);
-	memcpy(packet->token, request->token, RAD_AUTH_TOKEN_LEN);
-	md5sum2(rtok2, packet, plen, secret, strlen(secret));
-
-	if (md5cmp(rtok, rtok2, RAD_AUTH_TOKEN_LEN)) {
-		printf("Invalid Signature");
-	}
-
-	return (0);
-}
-
 void radius_read(struct radius_packet *packet, void *data) {
 }
 
@@ -368,9 +361,6 @@ int radmain (void) {
 	}
 
 	objunref(servers);
-/*
-	rad_recv(lrp);
-*/
 
 	return (0);
 }

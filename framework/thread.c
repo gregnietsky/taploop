@@ -119,9 +119,11 @@ struct thread_pvt *framework_mkthread(threadfunc func, threadcleanup cleanup, th
 
 	/* am i up and running move ref to list*/
 	if (!pthread_kill(thread->thr, 0)) {
-		objlock(threads);
-		addtobucket(threads->list, thread);
-		objunlock(threads);
+		if (threads) {
+			objlock(threads);
+			addtobucket(threads->list, thread);
+			objunlock(threads);
+		}
 		return (thread);
 	} else {
 		objunref(thread->data);
