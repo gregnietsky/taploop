@@ -402,7 +402,7 @@ int radmain (void) {
 	}
 
 	printf("\nSENT PACKET\n");
-	cnt = ntohs(lrp->len) - RAD_AUTH_HDR_LEN;
+	cnt = lrp->len - RAD_AUTH_HDR_LEN;
 	data = lrp->attrs;
 	while(cnt > 0) {
 		printf("Type %i Len %i / %i 0x", data[0], data[1], cnt);
