@@ -34,7 +34,7 @@ unsigned char *radius_attr_first(struct radius_packet *packet) {
 }
 
 unsigned char *radius_attr_next(struct radius_packet *packet, unsigned char *attr) {
-	printf("diff %i", attr - packet->attrs);
+	printf("diff %i\n", attr - packet->attrs);
 
 	return NULL;
 }
