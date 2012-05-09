@@ -489,6 +489,7 @@ void *rad_return(void **data) {
 			}
 
 			if (session->read_cb) {
+				packet->len = plen;
 				session->read_cb(packet, session->cb_data);
 			}
 
