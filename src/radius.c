@@ -108,8 +108,9 @@ int hash_server(void *data, int key) {
 
 void *rad_return(void **data) {
 	struct radius_connection *connex = *data;
+	struct radius_session *session;
 	struct radius_packet *packet;
-	unsigned char buff[4096];
+	unsigned char buff[RAD_AUTH_PACKET_LEN];
 	unsigned char rtok[RAD_AUTH_TOKEN_LEN];
 	unsigned char rtok2[RAD_AUTH_TOKEN_LEN];
 	fd_set  rd_set, act_set;
@@ -144,11 +145,14 @@ void *rad_return(void **data) {
 				continue;
 			}
 
+			if (!(session = bucket_list_find_key(connex->sessions, &packet->id))) {
+				printf("Could not find session\n");
+				continue;
+			}
 			memcpy(rtok, packet->token, RAD_AUTH_TOKEN_LEN);
-/*
-			memcpy(packet->token, request->token, RAD_AUTH_TOKEN_LEN);
-*/
+			memcpy(packet->token, session->request, RAD_AUTH_TOKEN_LEN);
 			md5sum2(rtok2, packet, plen, secret, strlen(secret));
+			objunref(session);
 
 			if (md5cmp(rtok, rtok2, RAD_AUTH_TOKEN_LEN)) {
 				printf("Invalid Signature");
