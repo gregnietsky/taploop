@@ -118,6 +118,7 @@ void *rad_return(void **data) {
 	fd_set  rd_set, act_set;
 	struct  timeval tv;
 	int chk, plen, selfd;
+	struct msghdr msg;
 
 	FD_ZERO(&rd_set);
 	FD_SET(connex->socket, &rd_set);
@@ -136,6 +137,7 @@ void *rad_return(void **data) {
 		}
 
                 if (FD_ISSET(connex->socket, &act_set)) {
+			recvmsg(connex->socket, &msg, MSG_DONTWAIT | MSG_ERRQUEUE);
 			chk = recv(connex->socket, buff, 4096, 0);
 
 			packet = (struct radius_packet*)&buff;
@@ -230,9 +232,7 @@ struct radius_connection *radconnect(struct radius_server *server) {
 				server->connex = create_bucketlist(0, hash_connex);
 			}
 			val = 1;
-			if (!(setsockopt(connex->socket, SOL_IP, IP_RECVERR,(char*)&val, sizeof(val)))) {
-				perror("Sockopt fail");
-			}
+			setsockopt(connex->socket, SOL_IP, IP_RECVERR,(char*)&val, sizeof(val));
 
 			connex->server = server;
 			genrand(&connex->id, sizeof(connex->id));
