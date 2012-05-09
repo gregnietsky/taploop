@@ -46,7 +46,7 @@ struct radius_session {
 	unsigned char request[RAD_AUTH_TOKEN_LEN];
 	void	*cb_data;
 	radius_cb read_cb;
-	int olen;
+	unsigned int olen;
 	struct radius_packet *packet;
 };
 
@@ -117,8 +117,7 @@ void *rad_return(void **data) {
 	unsigned char rtok2[RAD_AUTH_TOKEN_LEN];
 	fd_set  rd_set, act_set;
 	struct  timeval tv;
-	int chk, plen, selfd, mlen;
-	struct msghdr msg;
+	int chk, plen, selfd;
 
 	FD_ZERO(&rd_set);
 	FD_SET(connex->socket, &rd_set);
@@ -137,11 +136,13 @@ void *rad_return(void **data) {
 		}
 
                 if (FD_ISSET(connex->socket, &act_set)) {
-			if ((mlen = recvmsg(connex->socket, &msg, MSG_DONTWAIT | MSG_ERRQUEUE)) >= 0) {
-				printf("MSG %i LEn\n", mlen);
-			}
 			/*shutdown if 0 is returned ??*/
 			chk = recv(connex->socket, buff, 4096, 0);
+			if (chk < 0) {
+				if (errno == ECONNREFUSED) {
+					printf("Connection Bad\n");
+				}
+			}
 
 			packet = (struct radius_packet*)&buff;
 			plen = ntohs(packet->len);
@@ -247,11 +248,11 @@ struct radius_connection *radconnect(struct radius_server *server) {
 }
 
 void del_radsession(void *data) {
-	struct radius_session *session = data;
+/*	struct radius_session *session = data;
 
 	if (session->packet) {
 		free(session->packet);
-	}
+	}*/
 }
 
 struct radius_session *rad_session(struct radius_packet *packet, struct radius_connection *connex, radius_cb read_cb, void *cb_data) {
@@ -266,6 +267,7 @@ struct radius_session *rad_session(struct radius_packet *packet, struct radius_c
 		session->packet = packet;
 		session->read_cb = read_cb;
 		session->cb_data = cb_data;
+		session->olen = packet->len;
 		addtobucket(connex->sessions, session);
 	}
 	return (session);
@@ -274,7 +276,7 @@ struct radius_session *rad_session(struct radius_packet *packet, struct radius_c
 int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data) {
 	int scnt;
 	unsigned char* vector;
-	short len;
+	unsigned short len;
 	struct radius_server *server;
 	struct radius_session *session;
 	struct radius_connection *connex;
@@ -317,7 +319,6 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 			session = rad_session(packet, connex, read_cb, cb_data);
 			objunlock(connex);
 
-			session->olen = packet->len;
 			if (userpass) {
 				addattrpasswd(packet, userpass,  server->secret);
 			}
@@ -328,6 +329,9 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 			md5hmac(vector + 2, packet, len, server->secret, strlen(server->secret));
 
 			scnt = send(connex->socket, packet, len, 0);
+			memset(packet->attrs + session->olen - RAD_AUTH_HDR_LEN, 0, len - session->olen);
+			packet->len = session->olen;
+
 			objunref(connex);
 			objunref(session);
 			if (len == scnt) {
@@ -337,8 +341,6 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 				return (0);
 			} else {
 				remove_bucket_item(connex->sessions, session);
-				packet->len = session->olen;
-				memset(packet->attrs + session->olen - RAD_AUTH_HDR_LEN, 0, len - session->olen);
 			}
 		}
 		objunref(server);
