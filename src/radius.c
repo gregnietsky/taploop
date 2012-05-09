@@ -268,7 +268,6 @@ int _send_radpacket(struct radius_packet *packet, const char *userpass, struct r
 				objunref(server);
 				stop_bucket_loop(cloop);
 				stop_bucket_loop(sloop);
-				objunref(hint);
 				return (0);
 			} else {
 				remove_bucket_item(connex->sessions, session);
