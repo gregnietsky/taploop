@@ -32,6 +32,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <openssl/md5.h>
 #include <framework.h>
 
+struct radius_packet {
+        unsigned char code;
+        unsigned char id;
+        unsigned short len;
+        unsigned char token[RAD_AUTH_TOKEN_LEN];
+        unsigned char attrs[RAD_AUTH_PACKET_LEN - RAD_AUTH_HDR_LEN];
+};
+
 /*
  * a radius session is based on a ID packet for
  * session stored till a response the request token is also stored

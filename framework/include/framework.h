@@ -35,6 +35,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <signal.h>
 
+typedef struct radius_packet radius_packet;
+
+typedef void	(*radius_cb)(struct radius_packet*, void*);
 typedef void    *(*threadcleanup)(void*);
 typedef void    *(*threadfunc)(void**);
 typedef void	(*syssighandler)(int, siginfo_t*, void*);
@@ -141,16 +144,6 @@ enum RADIUS_CODE {
 	RAD_CODE_ACCTRESPONSE	=	5,
 	RAD_CODE_AUTHCHALLENGE	=	11
 };
-
-struct radius_packet {
-	unsigned char code;
-	unsigned char id;
-	unsigned short len;
-	unsigned char token[RAD_AUTH_TOKEN_LEN];
-	unsigned char attrs[RAD_AUTH_PACKET_LEN - RAD_AUTH_HDR_LEN];
-};
-
-typedef void	(*radius_cb)(struct radius_packet*, void*);
 
 unsigned char *addattr(struct radius_packet *packet, char type, unsigned char *val, char len);
 void addattrint(struct radius_packet *packet, char type, unsigned int val);
