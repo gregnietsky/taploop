@@ -158,6 +158,8 @@ void addattrip(struct radius_packet *packet, char type, char *ipaddr);
 void addattrstr(struct radius_packet *packet, char type, char *str);
 void addattrpasswd(struct radius_packet *packet, const char *pw, const char *secret);
 struct radius_packet *new_radpacket(unsigned char code, unsigned char id);
+int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data);
+void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret, int timeout);
 
 /*easter egg copied from <linux/jhash.h>*/
 #define JHASH_INITVAL           0xdeadbeef
