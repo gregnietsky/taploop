@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 #include <arpa/inet.h>
 
 #include <uuid/uuid.h>
@@ -54,6 +55,7 @@ struct radius_session {
 struct radius_connection {
 	int socket;
 	unsigned char id;
+	unsigned char server;
 	int flags;
 	struct bucket_list *sessions;
 };
@@ -102,6 +104,36 @@ int hash_server(void *data, int key) {
 	ret = *hashkey;
 
 	return(ret);
+}
+
+void *rad_return(void **data) {
+	struct radius_connection *connex = *data;
+	fd_set  rd_set, act_set;
+	struct  timeval tv;
+	int selfd;
+
+	FD_ZERO(&rd_set);
+	FD_SET(connex->socket, &rd_set);
+
+	while (framework_threadok(data)) {
+		act_set = rd_set;
+		tv.tv_sec = 0;
+		tv.tv_usec = 200000;
+
+		selfd = select(connex->socket + 1, &act_set, NULL, NULL, &tv);
+
+		/*returned due to interupt continue or timed out*/
+		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
+			continue;
+		} else if (selfd < 0) {
+			break;
+		}
+
+                if (FD_ISSET(connex->socket, &act_set)) {
+		}
+	}
+
+	return NULL;
 }
 
 void del_radserver(void *data) {
@@ -157,8 +189,10 @@ struct radius_connection *radconnect(struct radius_server *server) {
 			if (!server->connex) {
 				server->connex = create_bucketlist(0, hash_connex);
 			}
+			connex->server = server->id;
 			genrand(&connex->id, sizeof(connex->id));
 			addtobucket(server->connex, connex);
+			framework_mkthread(rad_return, NULL, NULL, connex);
 		}
 	}
 	return (connex);
@@ -332,7 +366,6 @@ int radmain (void) {
 		cnt -= data[1];
 		data += data[1];
 	}
-
 
 	objunref(servers);
 /*
