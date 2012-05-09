@@ -16,15 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 #include <arpa/inet.h>
-
 #include <uuid/uuid.h>
-#include <openssl/md5.h>
+#include <string.h>
 #include <framework.h>
 
 struct eap_info {
