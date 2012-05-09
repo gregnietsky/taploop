@@ -43,7 +43,6 @@ void packet_dump(struct radius_packet *packet) {
 }
 
 void radius_read(struct radius_packet *packet, void *pvt_data) {
-
 	printf("\nREAD PACKET\n");
 	packet_dump(packet);
 }
@@ -83,8 +82,6 @@ int radmain (void) {
 
 	printf("\nSENT PACKET\n");
 	packet_dump(lrp);
-
-/*	objunref(servers);*/
 
 	return (0);
 }

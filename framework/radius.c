@@ -250,6 +250,9 @@ void del_radsession(void *data) {
 	if (session->passwd) {
 		free((void*)session->passwd);
 	}
+	if (session->packet) {
+		free(session->packet);
+	}
 }
 
 struct radius_session *rad_session(struct radius_packet *packet, struct radius_connection *connex,
@@ -366,7 +369,6 @@ int _send_radpacket(struct radius_packet *packet, const char *userpass, struct r
 				return (0);
 			} else {
 				remove_bucket_item(connex->sessions, session);
-				objunref(session);
 			}
 		}
 		objunref(server);
@@ -421,7 +423,9 @@ void rad_resend(struct radius_connection *connex) {
 			session->sent = tv;
 			session->retries--;
 			if (scnt != len) {
-				/*need to redo packet*/
+				remove_bucket_loop(bloop);
+				resend_radpacket(session);
+				objunref(session);
 			}
 		}
 		objunref(session);
