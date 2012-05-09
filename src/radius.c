@@ -286,8 +286,16 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 				objunlock(connex);
 				objunref(connex);
 				/* if im overflowing get next or add new*/
-				if (!(connex = next_bucket_loop(cloop)) || !(connex = radconnect(server))) {
-					break;
+				objlock(server);
+				if (!(connex = next_bucket_loop(cloop)) {
+					if ((connex = radconnect(server))) {
+						objunlock(server);
+						objref(server);
+					} else {
+						break;
+					}
+				} else {
+					objunlock(server);
 				}
 				objlock(connex);
 			}
@@ -333,6 +341,7 @@ void radius_read(struct radius_packet *packet, void *pvt_data) {
 	int cnt, cnt2;
 	unsigned char *data;
 
+	printf("\nREAD PACKET\n");
 	cnt = ntohs(packet->len) - RAD_AUTH_HDR_LEN;
 	data = packet->attrs;
 	while(cnt > 0) {
@@ -390,7 +399,6 @@ int radmain (void) {
 		data += data[1];
 	}
 
-	sleep(3);
 	objunref(servers);
 
 	return (0);
