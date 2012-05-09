@@ -109,6 +109,7 @@ int hash_server(void *data, int key) {
 void *rad_return(void **data) {
 	struct radius_connection *connex = *data;
 	struct radius_session *session;
+	struct radius_server *server;
 	struct radius_packet *packet;
 	unsigned char buff[RAD_AUTH_PACKET_LEN];
 	unsigned char rtok[RAD_AUTH_TOKEN_LEN];
@@ -116,7 +117,6 @@ void *rad_return(void **data) {
 	fd_set  rd_set, act_set;
 	struct  timeval tv;
 	int chk, plen, selfd;
-	char *secret = "RadSecret";
 
 	FD_ZERO(&rd_set);
 	FD_SET(connex->socket, &rd_set);
@@ -139,6 +139,7 @@ void *rad_return(void **data) {
 
 			packet = (struct radius_packet*)&buff;
 			plen = ntohs(packet->len);
+			memset(&buff + plen, 0, RAD_AUTH_PACKET_LEN - plen);
 
 			if ((chk < plen) || (chk <= RAD_AUTH_HDR_LEN)) {
 				printf("OOps Did not get proper packet\n");
@@ -149,13 +150,21 @@ void *rad_return(void **data) {
 				printf("Could not find session\n");
 				continue;
 			}
+
+			if (!(server = bucket_list_find_key(servers, &connex->server))) {
+				printf("Could not find server\n");
+				continue;
+			}
+
 			memcpy(rtok, packet->token, RAD_AUTH_TOKEN_LEN);
 			memcpy(packet->token, session->request, RAD_AUTH_TOKEN_LEN);
-			md5sum2(rtok2, packet, plen, secret, strlen(secret));
+			md5sum2(rtok2, packet, plen, server->secret, strlen(server->secret));
 			objunref(session);
+			objunref(server);
 
 			if (md5cmp(rtok, rtok2, RAD_AUTH_TOKEN_LEN)) {
 				printf("Invalid Signature");
+				continue;
 			}
 		}
 	}
