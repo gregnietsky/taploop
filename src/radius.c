@@ -51,6 +51,7 @@ struct radius_session {
 	struct timeval sent;
 	const char *passwd;
 	char	retries;
+	char	minserver;
 };
 
 /*
@@ -176,7 +177,7 @@ struct radius_session *rad_session(struct radius_packet *packet, struct radius_c
 		session->read_cb = read_cb;
 		session->cb_data = cb_data;
 		session->olen = packet->len;
-		session->retries = 3;
+		session->retries = 2;
 		ALLOC_CONST(session->passwd, passwd);
 		addtobucket(connex->sessions, session);
 	}
@@ -200,7 +201,8 @@ int _send_radpacket(struct radius_packet *packet, const char *userpass, struct r
 	objref(hint);
 	while (sloop && (server = next_bucket_loop(sloop))) {
 		objlock(server);
-		if (server->service.tv_sec > curtime.tv_sec) {
+		if ((hint && (server->id <= hint->minserver)) ||
+		    (server->service.tv_sec > curtime.tv_sec)) {
 			objunlock(server);
 			objunref(server);
 			continue;
@@ -240,12 +242,16 @@ int _send_radpacket(struct radius_packet *packet, const char *userpass, struct r
 				session = hint;
 				packet->id = connex->id;
 				session->id = packet->id;
-				session->retries = 3;
+				session->retries = 2;
+				if (!connex->sessions) {
+					connex->sessions = create_bucketlist(4, hash_session);
+				}
 				addtobucket(connex->sessions, session);
 			} else {
 				packet->id = connex->id;
 				session = rad_session(packet, connex, userpass, read_cb, cb_data);
 			}
+			session->minserver = server->id;
 			objunlock(connex);
 
 			if (session->passwd) {
