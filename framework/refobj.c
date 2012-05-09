@@ -495,10 +495,13 @@ void remove_bucket_loop(void *bucket_loop) {
 	} else if (bloop->cur->next) {
 		bloop->cur->next->prev = bloop->cur->prev;
 		bloop->cur->prev->next = bloop->cur->next;
+	} else if (bloop->cur == blist->list[bucket]) {
+		blist->list[bucket] = NULL;
 	} else {
 		bloop->cur->prev->next = NULL;
 		blist->list[bucket]->prev = bloop->cur->prev;
 	}
+
 	objunref(bloop->cur->data->data);
 	free(bloop->cur);
 	bloop->cur_hash = 0;
