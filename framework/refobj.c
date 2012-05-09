@@ -456,6 +456,8 @@ void remove_bucket_item(void *bucketlist, void *data) {
 		} else if (entry->next) {
 			entry->next->prev = entry->prev;
 			entry->prev->next = entry->next;
+		} else if (entry == blist->list[bucket]) {
+			blist->list[bucket] = NULL;
 		} else {
 			entry->prev->next = NULL;
 			blist->list[bucket]->prev = entry->prev;

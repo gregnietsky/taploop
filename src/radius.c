@@ -411,6 +411,7 @@ void *rad_return(void **data) {
 				session->read_cb(packet, session->cb_data);
 			}
 
+			remove_bucket_item(connex->sessions, session);
 			objunref(session);
 		}
 		rad_resend(connex);
