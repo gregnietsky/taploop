@@ -55,7 +55,7 @@ struct radius_session {
 struct radius_connection {
 	int socket;
 	unsigned char id;
-	unsigned char server;
+	struct radius_server *server;
 	int flags;
 	struct bucket_list *sessions;
 };
@@ -109,7 +109,6 @@ int hash_server(void *data, int key) {
 void *rad_return(void **data) {
 	struct radius_connection *connex = *data;
 	struct radius_session *session;
-	struct radius_server *server;
 	struct radius_packet *packet;
 	unsigned char buff[RAD_AUTH_PACKET_LEN];
 	unsigned char rtok[RAD_AUTH_TOKEN_LEN];
@@ -152,16 +151,10 @@ void *rad_return(void **data) {
 				continue;
 			}
 
-			if (!(server = bucket_list_find_key(servers, &connex->server))) {
-				printf("Could not find server\n");
-				continue;
-			}
-
 			memcpy(rtok, packet->token, RAD_AUTH_TOKEN_LEN);
 			memcpy(packet->token, session->request, RAD_AUTH_TOKEN_LEN);
-			md5sum2(rtok2, packet, plen, server->secret, strlen(server->secret));
+			md5sum2(rtok2, packet, plen, connex->server->secret, strlen(connex->server->secret));
 			objunref(session);
-			objunref(server);
 
 			if (md5cmp(rtok, rtok2, RAD_AUTH_TOKEN_LEN)) {
 				printf("Invalid Signature");
@@ -214,6 +207,7 @@ void add_radserver(const char *ipaddr, const char *auth, const char *acct, const
 void del_radconnect(void *data) {
 	struct radius_connection *connex = data;
 
+	objunref(connex->server);
 	objunref(connex->sessions);
 	close(connex->socket);
 }
@@ -226,9 +220,10 @@ struct radius_connection *radconnect(struct radius_server *server) {
 			if (!server->connex) {
 				server->connex = create_bucketlist(0, hash_connex);
 			}
-			connex->server = server->id;
+			connex->server = server;
 			genrand(&connex->id, sizeof(connex->id));
 			addtobucket(server->connex, connex);
+			objref(server);
 			framework_mkthread(rad_return, NULL, NULL, connex);
 		}
 	}
