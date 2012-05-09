@@ -29,32 +29,17 @@ struct eap_info {
 	char	type;
 };
 
-unsigned char *radius_attr_first(struct radius_packet *packet) {
-	return (packet->attrs);
-}
-
-unsigned char *radius_attr_next(struct radius_packet *packet, unsigned char *attr) {
-	printf("diff %i\n", attr - packet->attrs);
-
-	return NULL;
-}
-
 void radius_read(struct radius_packet *packet, void *pvt_data) {
-	int cnt, cnt2;
 	unsigned char *data;
+	int cnt;
 
 	printf("\nREAD PACKET\n");
-	cnt = packet->len - RAD_AUTH_HDR_LEN;
-	data = radius_attr_first(packet);
-	while(cnt > 0) {
-		printf("Type %i Len %i / %i 0x", data[0], data[1], cnt);
-		for (cnt2 = 2;cnt2 < data[1]; cnt2++) {
-			printf("%02x", data[cnt2]);
+	for(data = radius_attr_first(packet); data; data = radius_attr_next(packet, data)) {
+		printf("Type %i Len %i 0x", data[0], data[1]);
+		for (cnt = 2;cnt < data[1]; cnt++) {
+			printf("%02x", data[cnt]);
 		}
 		printf("\n");
-		radius_attr_next(packet, data);
-		cnt -= data[1];
-		data += data[1];
 	}
 }
 

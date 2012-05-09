@@ -528,3 +528,17 @@ struct radius_connection *radconnect(struct radius_server *server) {
 	}
 	return (connex);
 }
+
+unsigned char *radius_attr_first(struct radius_packet *packet) {
+	return (packet->attrs);
+}
+
+unsigned char *radius_attr_next(struct radius_packet *packet, unsigned char *attr) {
+	int offset = (packet->len - RAD_AUTH_HDR_LEN) - (attr - packet->attrs);
+
+	if (!(offset - attr[1])) {
+		return NULL;
+	}
+
+	return (attr + attr[1]);
+}
