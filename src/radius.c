@@ -287,7 +287,7 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 				objunref(connex);
 				/* if im overflowing get next or add new*/
 				objlock(server);
-				if (!(connex = next_bucket_loop(cloop)) {
+				if (!(connex = next_bucket_loop(cloop))) {
 					if ((connex = radconnect(server))) {
 						objunlock(server);
 						objref(server);
