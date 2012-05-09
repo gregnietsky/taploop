@@ -46,6 +46,7 @@ struct radius_session {
 	unsigned char request[RAD_AUTH_TOKEN_LEN];
 	void	*cb_data;
 	radius_cb read_cb;
+	int olen;
 	struct radius_packet *packet;
 };
 
@@ -71,6 +72,7 @@ struct radius_server {
 	const char	*acctport;
 	const char	*secret;
 	unsigned char	id;
+	int		timeout;
 	struct bucket_lists *connex;
 };
 
@@ -191,7 +193,7 @@ void del_radserver(void *data) {
 	}
 }
 
-void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret) {
+void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret, int timeout) {
 	struct radius_server *server;
 
 	if ((server = objalloc(sizeof(*server), del_radserver))) {
@@ -203,6 +205,7 @@ void add_radserver(const char *ipaddr, const char *auth, const char *acct, const
 			servers = create_bucketlist(0, hash_server);
 		}
 		server->id = bucket_list_cnt(servers);
+		server->timeout = timeout;
 		addtobucket(servers, server);
 	}
 
@@ -262,7 +265,7 @@ struct radius_session *rad_session(struct radius_packet *packet, struct radius_c
 int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data) {
 	int scnt;
 	unsigned char* vector;
-	short len, olen;
+	short len;
 	struct radius_server *server;
 	struct radius_session *session;
 	struct radius_connection *connex;
@@ -305,7 +308,7 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 			session = rad_session(packet, connex, read_cb, cb_data);
 			objunlock(connex);
 
-			olen = packet->len;
+			session->olen = packet->len;
 			if (userpass) {
 				addattrpasswd(packet, userpass,  server->secret);
 			}
@@ -325,8 +328,8 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 				return (0);
 			} else {
 				remove_bucket_item(connex->sessions, session);
-				packet->len = olen;
-				memset(packet->attrs + olen - RAD_AUTH_HDR_LEN, 0, len - olen);
+				packet->len = session->olen;
+				memset(packet->attrs + session->olen - RAD_AUTH_HDR_LEN, 0, len - session->olen);
 			}
 		}
 		objunref(server);
@@ -362,7 +365,7 @@ int radmain (void) {
 	char *user = "gregory";
 	struct radius_packet *lrp;
 
-	add_radserver("127.0.0.1", "1812", NULL, "RadSecret");
+	add_radserver("127.0.0.1", "1812", NULL, "RadSecret", 10);
 
 	lrp = new_radpacket(RAD_CODE_AUTHREQUEST, 1);
 	addattrstr(lrp, RAD_ATTR_USER_NAME, user);
@@ -387,6 +390,7 @@ int radmain (void) {
 		return (-1);
 	}
 
+	printf("\nSENT PACKET\n");
 	cnt = ntohs(lrp->len) - RAD_AUTH_HDR_LEN;
 	data = lrp->attrs;
 	while(cnt > 0) {
