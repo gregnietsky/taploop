@@ -29,11 +29,10 @@ struct eap_info {
 	char	type;
 };
 
-void radius_read(struct radius_packet *packet, void *pvt_data) {
+void packet_dump(struct radius_packet *packet) {
 	unsigned char *data;
 	int cnt;
 
-	printf("\nREAD PACKET\n");
 	for(data = radius_attr_first(packet); data; data = radius_attr_next(packet, data)) {
 		printf("Type %i Len %i 0x", data[0], data[1]);
 		for (cnt = 2;cnt < data[1]; cnt++) {
@@ -43,28 +42,10 @@ void radius_read(struct radius_packet *packet, void *pvt_data) {
 	}
 }
 
-int rad_dispatch(struct radius_packet *lrp, const char *userpass, radius_cb read_cb, void *cb_data) {
-	unsigned char *data;
-	int cnt, cnt2;
+void radius_read(struct radius_packet *packet, void *pvt_data) {
 
-	if (send_radpacket(lrp, userpass, read_cb, NULL)) {
-		printf("Sending Failed\n");
-		return (-1);
-	}
-
-	printf("\nSENT PACKET\n");
-	cnt = lrp->len - RAD_AUTH_HDR_LEN;
-	data = lrp->attrs;
-	while(cnt > 0) {
-		printf("Type %i Len %i / %i 0x", data[0], data[1], cnt);
-		for (cnt2 = 2;cnt2 < data[1]; cnt2++) {
-			printf("%02x", data[cnt2]);
-		}
-		printf("\n");
-		cnt -= data[1];
-		data += data[1];
-	}
-	return (0);
+	printf("\nREAD PACKET\n");
+	packet_dump(packet);
 }
 
 int radmain (void) {
@@ -95,7 +76,13 @@ int radmain (void) {
 	uuid_generate(uuid);
 	addattr(lrp, RAD_ATTR_ACCTID, uuid, 16);
 
-	rad_dispatch(lrp, "testpass", radius_read, NULL);
+	if (send_radpacket(lrp, "testpass", radius_read, NULL)) {
+		printf("Sending Failed\n");
+		return (-1);
+	}
+
+	printf("\nSENT PACKET\n");
+	packet_dump(lrp);
 
 /*	objunref(servers);*/
 
