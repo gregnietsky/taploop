@@ -139,12 +139,13 @@ void *rad_return(void **data) {
 
 			packet = (struct radius_packet*)&buff;
 			plen = ntohs(packet->len);
-			memset(&buff + plen, 0, RAD_AUTH_PACKET_LEN - plen);
 
 			if ((chk < plen) || (chk <= RAD_AUTH_HDR_LEN)) {
 				printf("OOps Did not get proper packet\n");
 				continue;
 			}
+
+			memset(buff + plen, 0, RAD_AUTH_PACKET_LEN - plen);
 
 			if (!(session = bucket_list_find_key(connex->sessions, &packet->id))) {
 				printf("Could not find session\n");
@@ -196,10 +197,10 @@ void add_radserver(const char *ipaddr, const char *auth, const char *acct, const
 	struct radius_server *server;
 
 	if ((server = objalloc(sizeof(*server), del_radserver))) {
-		 ALLOC_CONST(server->name, ipaddr);
-		 ALLOC_CONST(server->authport, auth);
-		 ALLOC_CONST(server->acctport, acct);
-		 ALLOC_CONST(server->secret, secret);
+		ALLOC_CONST(server->name, ipaddr);
+		ALLOC_CONST(server->authport, auth);
+		ALLOC_CONST(server->acctport, acct);
+		ALLOC_CONST(server->secret, secret);
 		if (!servers) {
 			servers = create_bucketlist(0, hash_server);
 		}
@@ -373,6 +374,7 @@ int radmain (void) {
 		data += data[1];
 	}
 
+	sleep(3);
 	objunref(servers);
 
 	return (0);
