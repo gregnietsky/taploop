@@ -173,6 +173,7 @@ void sslsockconnect(struct ssldata *ssl, int sock);
 void sslsockaccept(struct ssldata *ssl, int sock);
 int sslread(struct ssldata *ssl, void *buf, int num);
 int sslwrite(struct ssldata *ssl, const void *buf, int num);
+void sslstartup(void);
 
 /*easter egg copied from <linux/jhash.h>*/
 #define JHASH_INITVAL           0xdeadbeef

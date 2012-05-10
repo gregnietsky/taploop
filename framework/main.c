@@ -199,6 +199,7 @@ int framework_init(int argc, char *argv[], frameworkfunc callback, struct framew
 	int ret = 0;
 
 	seedrand();
+	sslstartup();
 
 	framework_core_info = core_info;
 

@@ -125,3 +125,8 @@ int sslread(struct ssldata *ssl, void *buf, int num) {
 int sslwrite(struct ssldata *ssl, const void *buf, int num) {
 	return (SSL_write(ssl->ssl, buf, num));
 }
+
+void sslstartup(void) {
+	SSL_library_init();
+	SSL_load_error_strings();
+}
