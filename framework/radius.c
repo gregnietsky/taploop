@@ -433,16 +433,67 @@ void rad_resend(struct radius_connection *connex) {
 	stop_bucket_loop(bloop);
 }
 
-void *rad_return(void **data) {
+void radius_recv(void **data) {
 	struct radius_connection *connex = *data;
-	struct radius_session *session;
 	struct radius_packet *packet;
 	unsigned char buff[RAD_AUTH_PACKET_LEN];
 	unsigned char rtok[RAD_AUTH_TOKEN_LEN];
 	unsigned char rtok2[RAD_AUTH_TOKEN_LEN];
+	struct radius_session *session;
+	int chk, plen;
+
+	chk = recv(connex->socket, buff, 4096, 0);
+
+	if (chk < 0) {
+		if (errno == ECONNREFUSED) {
+			printf("Connection Bad\n");
+		}
+	} else if (chk == 0) {
+		objlock(connex->server);
+		printf("Taking server off line for %is\n", connex->server->timeout);
+		gettimeofday(&connex->server->service, NULL);
+		connex->server->service.tv_sec += connex->server->timeout;
+		objunlock(connex->server);
+	}
+
+	packet = (struct radius_packet*)&buff;
+	plen = ntohs(packet->len);
+
+	if ((chk < plen) || (chk <= RAD_AUTH_HDR_LEN)) {
+		printf("OOps Did not get proper packet\n");
+		return;
+	}
+
+	memset(buff + plen, 0, RAD_AUTH_PACKET_LEN - plen);
+
+	if (!(session = bucket_list_find_key(connex->sessions, &packet->id))) {
+		printf("Could not find session\n");
+		return;
+	}
+
+	memcpy(rtok, packet->token, RAD_AUTH_TOKEN_LEN);
+	memcpy(packet->token, session->request, RAD_AUTH_TOKEN_LEN);
+	md5sum2(rtok2, packet, plen, connex->server->secret, strlen(connex->server->secret));
+
+	if (md5cmp(rtok, rtok2, RAD_AUTH_TOKEN_LEN)) {
+		printf("Invalid Signature");
+		return;
+	}
+
+	if (session->read_cb) {
+		packet->len = plen;
+		session->read_cb(packet, session->cb_data);
+	}
+
+	remove_bucket_item(connex->sessions, session);
+	objunref(session);
+}
+
+void *rad_return(void **data) {
+	struct radius_connection *connex = *data;
 	fd_set  rd_set, act_set;
 	struct  timeval tv;
-	int chk, plen, selfd;
+	int selfd;
 
 	FD_ZERO(&rd_set);
 	FD_SET(connex->socket, &rd_set);
@@ -462,51 +513,7 @@ void *rad_return(void **data) {
 		}
 
 		if (FD_ISSET(connex->socket, &act_set)) {
-			/*shutdown if 0 is returned ??*/
-			chk = recv(connex->socket, buff, 4096, 0);
-			if (chk < 0) {
-				if (errno == ECONNREFUSED) {
-					printf("Connection Bad\n");
-				}
-			} else if (chk == 0) {
-				objlock(connex->server);
-				printf("Taking server off line for %is\n", connex->server->timeout);
-				gettimeofday(&connex->server->service, NULL);
-				connex->server->service.tv_sec += connex->server->timeout;
-				objunlock(connex->server);
-			}
-
-			packet = (struct radius_packet*)&buff;
-			plen = ntohs(packet->len);
-
-			if ((chk < plen) || (chk <= RAD_AUTH_HDR_LEN)) {
-				printf("OOps Did not get proper packet\n");
-				continue;
-			}
-
-			memset(buff + plen, 0, RAD_AUTH_PACKET_LEN - plen);
-
-			if (!(session = bucket_list_find_key(connex->sessions, &packet->id))) {
-				printf("Could not find session\n");
-				continue;
-			}
-
-			memcpy(rtok, packet->token, RAD_AUTH_TOKEN_LEN);
-			memcpy(packet->token, session->request, RAD_AUTH_TOKEN_LEN);
-			md5sum2(rtok2, packet, plen, connex->server->secret, strlen(connex->server->secret));
-
-			if (md5cmp(rtok, rtok2, RAD_AUTH_TOKEN_LEN)) {
-				printf("Invalid Signature");
-				continue;
-			}
-
-			if (session->read_cb) {
-				packet->len = plen;
-				session->read_cb(packet, session->cb_data);
-			}
-
-			remove_bucket_item(connex->sessions, session);
-			objunref(session);
+			radius_recv(data);
 		}
 		rad_resend(connex);
 	}

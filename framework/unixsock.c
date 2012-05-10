@@ -41,7 +41,7 @@ struct framework_sockthread {
 /*
  * client sock server
  */
-void *clientsock_serv(void **data) {
+void *unsock_serv(void **data) {
 	struct framework_sockthread *unsock = *data;
 	struct sockaddr_un	adr;
 	unsigned int salen;
@@ -73,12 +73,12 @@ void *clientsock_serv(void **data) {
 			/* delete old file*/
 			unlink(unsock->sock);
 			if (bind(fd, (struct sockaddr *)&adr, sizeof(struct sockaddr_un))) {
-				perror("clientsock_serv (bind)");
+				perror("unsock_serv (bind)");
 				close(fd);
 				return NULL;
 			}
 		} else {
-			perror("clientsock_serv (bind)");
+			perror("unsock_serv (bind)");
 			close(fd);
 			return NULL;
 		}
@@ -96,7 +96,7 @@ void *clientsock_serv(void **data) {
 	while (framework_threadok(data)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
-		tv.tv_usec = 2000;
+		tv.tv_usec = 20000;
 
 		selfd = select(fd + 1, &act_set, NULL, NULL, &tv);
 
@@ -111,9 +111,8 @@ void *clientsock_serv(void **data) {
 			clfd = objalloc(sizeof(int), NULL);
 			if ((*clfd = accept(fd, (struct sockaddr *)&adr, &salen))) {
 				framework_mkthread(unsock->client, unsock->cleanup, NULL, clfd);
-			} else {
-				objunref(clfd);
 			}
+			objunref(clfd);
 		}
 	}
 
@@ -132,5 +131,5 @@ void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connect
 	unsock->client = connectfunc;
 	unsock->cleanup = cleanup;
 	unsock->protocol = protocol;
-	framework_mkthread(clientsock_serv, NULL, NULL, unsock);
+	framework_mkthread(unsock_serv, NULL, NULL, unsock);
 }
