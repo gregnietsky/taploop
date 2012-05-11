@@ -534,7 +534,7 @@ struct radius_connection *radconnect(struct radius_server *server) {
 	int val = 1;
 
 	if ((connex = objalloc(sizeof(*connex), del_radconnect))) {
-		if ((connex->socket = udpconnect(server->name, server->authport)) >= 0) {
+		if ((connex->socket = udpconnect(server->name, server->authport, NULL, NULL)) >= 0) {
 			if (!server->connex) {
 				server->connex = create_bucketlist(0, hash_connex);
 			}

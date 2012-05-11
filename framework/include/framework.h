@@ -36,6 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <signal.h>
 
 typedef struct radius_packet radius_packet;
+typedef struct sockaddr sockaddr;
 
 typedef void	(*radius_cb)(struct radius_packet*, void*);
 typedef void    *(*threadcleanup)(void*);
@@ -110,22 +111,24 @@ uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
  * Utilities RNG/MD5 used from the openssl library
  */
 void seedrand(void);
-void genrand(void *buf, int len);
+int genrand(void *buf, int len);
 void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
 void md5sum(unsigned char *buff, const void *data, unsigned long len);
 int md5cmp(unsigned char *md51, unsigned char *md52, int len);
 void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
 
+
 /*IP Utilities*/
-int sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port);
-int udpconnect(const char *ipaddr, const char *port);
-int tcpconnect(const char *ipaddr, const char *port);
-int sockbind(int family, int stype, int proto, const char *ipaddr, const char *port);
-int udpbind(const char *ipaddr, const char *port);
-int tcpbind(const char *ipaddr, const char *port);
+int sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, struct sockaddr *addr, void *slen);
+int udpconnect(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen);
+int tcpconnect(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen);
+int sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, struct sockaddr *addr, void *slen);
+int udpbind(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen);
+int tcpbind(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen);
 void framework_tcpserver(int sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data, void *ssl);
 void framework_socketclient(int sock, void *data, void *ssl, socketrecv read);
 void framework_sockselect(int sock, void *data, void *ssl, socketrecv read);
+void framework_dtlsserver(int sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data, void *ssl);
 
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20
@@ -167,10 +170,14 @@ void *tlsv1_init(const char *cacert, const char *cert, const char *key, int veri
 void *sslv2_init(const char *cacert, const char *cert, const char *key, int verify);
 void *sslv3_init(const char *cacert, const char *cert, const char *key, int verify);
 void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
-void sslsockconnect(void *ssl, int sock);
-void sslsockaccept(void *ssl, int sock);
+void tlsconnect(void *ssl, int sock);
+void tlsaccept(void *ssl, int sock);
 int sslread(void *ssl, void *buf, int num);
 int sslwrite(void *ssl, const void *buf, int num);
+void *dtls_listenssl(void *data, struct sockaddr *client, int sock);
+void dtlsaccept(void *data, struct sockaddr *client, int sock);
+void dtlsconnect(void *data, int sock);
+void dtsl_serveropts(void *data);
 void sslstartup(void);
 
 /*easter egg copied from <linux/jhash.h>*/

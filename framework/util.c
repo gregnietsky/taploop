@@ -42,8 +42,8 @@ void seedrand(void) {
 	RAND_seed(buf, len);
 }
 
-void genrand(void *buf, int len) {
-	RAND_bytes(buf, len);
+int genrand(void *buf, int len) {
+	return (RAND_bytes(buf, len));
 }
 
 void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
