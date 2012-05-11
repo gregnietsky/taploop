@@ -45,7 +45,7 @@ typedef int     (*threadsighandler)(int, void*);
 typedef	int	(*frameworkfunc)(int, char**);
 typedef int	(*blisthash)(void*, int);
 typedef void	(*objdestroy)(void*);
-typedef void	(*socketrecv)(int, void*);
+typedef void	(*socketrecv)(int, void*, void*);
 
 /*these can be set int the application */
 struct framework_core {
@@ -73,8 +73,6 @@ void framework_shutdown(void);
 void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connectfunc, threadcleanup cleanup);
 /* Test if the thread is running when passed data from thread */
 int framework_threadok(void *data);
-/* Select loop on a socket calling the func with the socket and data*/
-void framework_sockselect(int sock, void *data, socketrecv read);
 
 /*
  * ref counted objects
@@ -125,8 +123,9 @@ int tcpconnect(const char *ipaddr, const char *port);
 int sockbind(int family, int stype, int proto, const char *ipaddr, const char *port);
 int udpbind(const char *ipaddr, const char *port);
 int tcpbind(const char *ipaddr, const char *port);
-/*start a sock_select thread on connect*/
-void framework_tcpsocket(int sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
+void framework_tcpserver(int sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data, void *ssl);
+void framework_socketclient(int sock, void *data, void *ssl, socketrecv read);
+void framework_sockselect(int sock, void *data, void *ssl, socketrecv read);
 
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20
@@ -164,15 +163,14 @@ unsigned char *radius_attr_first(struct radius_packet *packet);
 unsigned char *radius_attr_next(struct radius_packet *packet, unsigned char *attr);
 
 /*SSL Socket utilities*/
-typedef struct ssldata ssldata;
-struct ssldata *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
-struct ssldata *sslv2_init(const char *cacert, const char *cert, const char *key, int verify);
-struct ssldata *sslv3_init(const char *cacert, const char *cert, const char *key, int verify);
-struct ssldata *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
-void sslsockconnect(struct ssldata *ssl, int sock);
-void sslsockaccept(struct ssldata *ssl, int sock);
-int sslread(struct ssldata *ssl, void *buf, int num);
-int sslwrite(struct ssldata *ssl, const void *buf, int num);
+void *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
+void *sslv2_init(const char *cacert, const char *cert, const char *key, int verify);
+void *sslv3_init(const char *cacert, const char *cert, const char *key, int verify);
+void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
+void sslsockconnect(void *ssl, int sock);
+void sslsockaccept(void *ssl, int sock);
+int sslread(void *ssl, void *buf, int num);
+int sslwrite(void *ssl, const void *buf, int num);
 void sslstartup(void);
 
 /*easter egg copied from <linux/jhash.h>*/

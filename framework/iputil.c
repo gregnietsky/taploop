@@ -28,8 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 struct framework_sockdata {
 	int sock;
 	void *data;
+	struct ssldata *ssl;
 	socketrecv	read;
-	socketrecv	accept;
 };
 
 /* TCP socket thread*/
@@ -37,6 +37,7 @@ struct framework_tcpthread {
 	int sock;
 	int backlog;
 	void *data;
+	struct ssldata *ssl;
 	socketrecv	client;
 	socketrecv	connect;
 	threadcleanup	cleanup;
@@ -111,10 +112,6 @@ void *sock_select(void **data) {
 	struct  timeval tv;
 	int selfd;
 
-	if (fwsel->accept) {
-		fwsel->accept(fwsel->sock, fwsel->data);
-	}
-
 	FD_ZERO(&rd_set);
 	FD_SET(fwsel->sock, &rd_set);
 
@@ -132,7 +129,7 @@ void *sock_select(void **data) {
 		}
 
 		if (fwsel->read && FD_ISSET(fwsel->sock, &act_set)) {
-			fwsel->read(fwsel->sock, fwsel->data);
+			fwsel->read(fwsel->sock, fwsel->data, fwsel->ssl);
 		}
 	}
 
@@ -179,7 +176,14 @@ void *tcpsock_serv(void **data) {
 				if ((tcpcon->sock = accept(tcpsock->sock, (struct sockaddr *)&adr, &salen))) {
 					tcpcon->data = tcpsock->data;
 					tcpcon->read = tcpsock->client;
-					tcpcon->accept = tcpsock->connect;
+					tcpcon->ssl = tcpsock->ssl;
+					if (tcpsock->ssl) {
+						sslsockaccept(tcpsock->ssl, tcpcon->sock);
+					}
+					if (tcpsock->connect) {
+						tcpsock->connect(tcpcon->sock, tcpsock->data, tcpsock->ssl);
+					}
+
 					framework_mkthread(sock_select, tcpsock->cleanup, NULL, tcpcon);
 				}
 				objunref(tcpcon);
@@ -192,7 +196,7 @@ void *tcpsock_serv(void **data) {
 	return NULL;
 }
 
-void framework_tcpsocket(int sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data) {
+void framework_tcpserver(int sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data, void *ssl) {
 	struct framework_tcpthread *tcpsock;
 
 	tcpsock = objalloc(sizeof(*tcpsock), NULL);
@@ -202,20 +206,28 @@ void framework_tcpsocket(int sock, int backlog, socketrecv connectfunc, socketre
 	tcpsock->cleanup = cleanup;
 	tcpsock->connect = acceptfunc;
 	tcpsock->data = data;
+	tcpsock->ssl = ssl;
 
 	framework_mkthread(tcpsock_serv, NULL, NULL, tcpsock);
 	objunref(tcpsock);
 }
 
-void framework_sockselect(int sock, void *data, socketrecv read) {
+void framework_sockselect(int sock, void *data, void *ssl, socketrecv read) {
 	struct framework_sockdata *fwsel;
 
 	fwsel = objalloc(sizeof(*fwsel), NULL);
 	fwsel->sock = sock;
 	fwsel->data = data;
 	fwsel->read = read;
-	fwsel->accept = NULL;
+	fwsel->ssl = ssl;
 
 	framework_mkthread(sock_select, NULL, NULL, fwsel);
 	objunref(fwsel);
+}
+
+void framework_socketclient(int sock, void *data, void *ssl, socketrecv read) {
+	if (ssl) {
+		sslsockconnect(ssl, sock);
+	}
+	framework_sockselect(sock, data, ssl, read);
 }

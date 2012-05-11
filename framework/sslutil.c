@@ -78,52 +78,60 @@ struct ssldata *sslinit(const char *cacert, const char *cert, const char *key, i
 	return ssl;
 }
 
-struct ssldata *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
+void *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = TLSv1_method();
 
 	return (sslinit(cacert, cert, key, verify, meth));
 }
 
 #ifndef OPENSSL_NO_SSL2
-struct ssldata *sslv2_init(const char *cacert, const char *cert, const char *key, int verify) {
+void *sslv2_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = SSLv2_method();
 
 	return (sslinit(cacert, cert, key, verify, meth));
 }
 #endif
 
-struct ssldata *sslv3_init(const char *cacert, const char *cert, const char *key, int verify) {
+void *sslv3_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = SSLv3_method();
 
 	return (sslinit(cacert, cert, key, verify, meth));
 }
 
-struct ssldata *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
+void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = DTLSv1_server_method();
 
 	return (sslinit(cacert, cert, key, verify, meth));
 }
 
-void sslsockconnect(struct ssldata *ssl, int sock) {
-	if ((ssl->bio = BIO_new_socket(sock, BIO_NOCLOSE))) {
-		SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
-		SSL_connect(ssl->ssl);
+void sslsockconnect(void *ssl, int sock) {
+	struct ssldata *ssl_s = ssl;
+
+	if ((ssl_s->bio = BIO_new_socket(sock, BIO_NOCLOSE))) {
+		SSL_set_bio(ssl_s->ssl, ssl_s->bio, ssl_s->bio);
+		SSL_connect(ssl_s->ssl);
 	}
 }
 
-void sslsockaccept(struct ssldata *ssl, int sock) {
-	if ((ssl->bio = BIO_new_socket(sock, BIO_NOCLOSE))) {
-		SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
-		SSL_accept(ssl->ssl);
+void sslsockaccept(void *ssl, int sock) {
+	struct ssldata *ssl_s = ssl;
+
+	if ((ssl_s->bio = BIO_new_socket(sock, BIO_NOCLOSE))) {
+		SSL_set_bio(ssl_s->ssl, ssl_s->bio, ssl_s->bio);
+		SSL_accept(ssl_s->ssl);
 	}
 }
 
-int sslread(struct ssldata *ssl, void *buf, int num) {
-	return (SSL_read(ssl->ssl, buf, num));
+int sslread(void *ssl, void *buf, int num) {
+	struct ssldata *ssl_s = ssl;
+
+	return (SSL_read(ssl_s->ssl, buf, num));
 }
 
-int sslwrite(struct ssldata *ssl, const void *buf, int num) {
-	return (SSL_write(ssl->ssl, buf, num));
+int sslwrite(void *ssl, const void *buf, int num) {
+	struct ssldata *ssl_s = ssl;
+
+	return (SSL_write(ssl_s->ssl, buf, num));
 }
 
 void sslstartup(void) {
