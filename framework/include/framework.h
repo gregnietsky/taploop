@@ -126,7 +126,8 @@ int sockbind(int family, int stype, int proto, const char *ipaddr, const char *p
 int udpbind(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen);
 int tcpbind(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen);
 void framework_tcpserver(int sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data, void *ssl);
-void framework_socketclient(int sock, void *data, void *ssl, socketrecv read);
+void framework_tlsclient(int sock, void *data, void *ssl, socketrecv read);
+void framework_dtlsclient(int sock, void *data, void *ssl, socketrecv read);
 void framework_sockselect(int sock, void *data, void *ssl, socketrecv read);
 void framework_dtlsserver(int sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data, void *ssl);
 

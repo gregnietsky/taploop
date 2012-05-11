@@ -277,9 +277,16 @@ void framework_sockselect(int sock, void *data, void *ssl, socketrecv read) {
 	objunref(fwsel);
 }
 
-void framework_socketclient(int sock, void *data, void *ssl, socketrecv read) {
+void framework_tlsclient(int sock, void *data, void *ssl, socketrecv read) {
 	if (ssl) {
 		tlsconnect(ssl, sock);
+	}
+	framework_sockselect(sock, data, ssl, read);
+}
+
+void framework_dtlsclient(int sock, void *data, void *ssl, socketrecv read) {
+	if (ssl) {
+		dtlsconnect(ssl, sock);
 	}
 	framework_sockselect(sock, data, ssl, read);
 }
