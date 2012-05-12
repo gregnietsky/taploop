@@ -145,11 +145,9 @@ struct fwsocket *tcpconnect(const char *ipaddr, const char *port, void *ssl);
 struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl);
 struct fwsocket *udpbind(const char *ipaddr, const char *port, void *ssl);
 struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl);
-void framework_sockselect(struct fwsocket *sock, void *data, socketrecv read);
-void framework_tcpserver(struct fwsocket *sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
-void framework_dtlsserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
-void framework_tcpclient(struct fwsocket *sock, void *data, socketrecv read);
-void framework_dtlsclient(struct fwsocket *sock, void *data, socketrecv read);
+
+void socketclient(struct fwsocket *sock, void *data, socketrecv read);
+void socketserver(struct fwsocket *sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
 
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20
@@ -187,17 +185,18 @@ unsigned char *radius_attr_first(struct radius_packet *packet);
 unsigned char *radius_attr_next(struct radius_packet *packet, unsigned char *attr);
 
 /*SSL Socket utilities*/
+void sslstartup(void);
 void *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
 void *sslv2_init(const char *cacert, const char *cert, const char *key, int verify);
 void *sslv3_init(const char *cacert, const char *cert, const char *key, int verify);
 void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
-void tlsconnect(struct fwsocket *sock);
-void tlsaccept(struct fwsocket *sock);
+
 int sslread(struct fwsocket *sock, void *buf, int num);
 int sslwrite(struct fwsocket *sock, const void *buf, int num);
+
+void tlsaccept(struct fwsocket *sock);
 struct fwsocket *dtls_listenssl(struct fwsocket *sock);
-void dtlsconnect(struct fwsocket *sock);
-void sslstartup(void);
+void startsslclient(struct fwsocket *sock);
 
 /*easter egg copied from <linux/jhash.h>*/
 #define JHASH_INITVAL           0xdeadbeef

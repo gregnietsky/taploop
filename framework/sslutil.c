@@ -24,10 +24,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <framework.h>
 
+enum SSLTYPE {
+	SSL_TLSV1	= 1 << 0,
+	SSL_SSLV2	= 1 << 1,
+	SSL_SSLV3	= 1 << 2,
+	SSL_DTLSV1	= 1 << 3,
+	SSL_CLIENT	= 1 << 4,
+	SSL_SERVER	= 1 << 5,
+	SSL_DTLSCON	= 1 << 6
+};
+
 struct ssldata {
 	SSL_CTX *ctx;
 	SSL *ssl;
 	BIO *bio;
+	int flags;
 	const SSL_METHOD *meth;
 };
 
@@ -83,7 +94,7 @@ int verify_callback (int ok, X509_STORE_CTX *ctx) {
 	return (1);
 }
 
-struct ssldata *sslinit(const char *cacert, const char *cert, const char *key, int verify, const SSL_METHOD *meth) {
+struct ssldata *sslinit(const char *cacert, const char *cert, const char *key, int verify, const SSL_METHOD *meth, int flags) {
 	struct ssldata *ssl;
 	struct stat finfo;
 	int ret = -1;
@@ -92,6 +103,7 @@ struct ssldata *sslinit(const char *cacert, const char *cert, const char *key, i
 		return NULL;
 	}
 
+	ssl->flags = flags;
 	ssl->meth = meth;
 	if (!(ssl->ctx = SSL_CTX_new(meth))) {
 		objunref(ssl);
@@ -144,14 +156,14 @@ struct ssldata *sslinit(const char *cacert, const char *cert, const char *key, i
 void *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = TLSv1_method();
 
-	return (sslinit(cacert, cert, key, verify, meth));
+	return (sslinit(cacert, cert, key, verify, meth, SSL_TLSV1));
 }
 
 #ifndef OPENSSL_NO_SSL2
 void *sslv2_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = SSLv2_method();
 
-	return (sslinit(cacert, cert, key, verify, meth));
+	return (sslinit(cacert, cert, key, verify, meth, SSL_SSLV2));
 }
 #endif
 
@@ -159,7 +171,7 @@ void *sslv3_init(const char *cacert, const char *cert, const char *key, int veri
 	const SSL_METHOD *meth = SSLv3_method();
 	struct ssldata *ssl;
 
-	ssl = sslinit(cacert, cert, key, verify, meth);
+	ssl = sslinit(cacert, cert, key, verify, meth, SSL_SSLV3);
 
 	return (ssl);
 }
@@ -168,7 +180,7 @@ void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int ver
 	const SSL_METHOD *meth = DTLSv1_method();
 	struct ssldata *ssl;
 
-	ssl = sslinit(cacert, cert, key, verify, meth);
+	ssl = sslinit(cacert, cert, key, verify, meth, SSL_DTLSV1);
 /* XXX BIO_CTRL_DGRAM_MTU_DISCOVER*/
 	SSL_CTX_set_read_ahead(ssl->ctx, 1);
 
@@ -189,18 +201,16 @@ void sslsockstart(struct fwsocket *sock, int accept) {
 		SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
 		if (accept) {
 			SSL_accept(ssl->ssl);
+			ssl->flags |= SSL_SERVER;
 		} else {
 			SSL_connect(ssl->ssl);
+			ssl->flags |= SSL_CLIENT;
 		}
 	} else {
 		objunref(ssl);
 		sock->ssl = NULL;
 		return;
 	}
-}
-
-void tlsconnect(struct fwsocket *sock) {
-	sslsockstart(sock, 0);
 }
 
 void tlsaccept(struct fwsocket *sock) {
@@ -313,6 +323,8 @@ void dtlssetopts(struct ssldata *ssl, SSL_CTX *ctx, int sock, int flags) {
 void dtsl_serveropts(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 
+	ssl->flags |= SSL_SERVER;
+
 	SSL_CTX_set_cookie_generate_cb(ssl->ctx, generate_cookie);
 	SSL_CTX_set_cookie_verify_cb(ssl->ctx, verify_cookie);
 	SSL_CTX_set_session_cache_mode(ssl->ctx, SSL_SESS_CACHE_OFF);
@@ -326,6 +338,8 @@ void dtsl_serveropts(struct fwsocket *sock) {
 void dtlsaccept(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 	struct timeval timeout;
+
+	ssl->flags |= SSL_SERVER;
 
 	BIO_set_fd(ssl->bio, sock->sock, BIO_NOCLOSE);
 	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr.sa);
@@ -358,6 +372,8 @@ struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 		return NULL;
 	}
 
+	newssl->flags |= SSL_DTLSCON;
+
 	dtlssetopts(newssl, ssl->ctx, sock->sock, BIO_NOCLOSE);
 	memset(&client, 0, sizeof(client));
 	while (DTLSv1_listen(newssl->ssl, &client) <= 0);
@@ -384,17 +400,15 @@ struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 
 void dtlsconnect(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
-	struct sockaddr addr;
-	socklen_t salen = sizeof(addr);
 
 	if (!ssl) {
 		return;
 	}
 
-	getsockname(sock->sock, &addr, &salen);
+	ssl->flags |= SSL_CLIENT;
 
 	dtlssetopts(ssl, ssl->ctx, sock->sock, BIO_CLOSE);
-	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr);
+	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr.sa);
 	SSL_connect(ssl->ssl);
 
 	if (SSL_get_peer_certificate(ssl->ssl)) {
@@ -402,5 +416,21 @@ void dtlsconnect(struct fwsocket *sock) {
 		X509_NAME_print_ex_fp(stdout, X509_get_subject_name(SSL_get_peer_certificate(ssl->ssl)), 1, XN_FLAG_MULTILINE);
 		printf("\n\n Cipher: %s", SSL_CIPHER_get_name(SSL_get_current_cipher(ssl->ssl)));
 		printf ("\n------------------------------------------------------------\n\n");
+	}
+}
+
+
+void startsslclient(struct fwsocket *sock) {
+	if (!sock->ssl || (sock->ssl->flags & SSL_SERVER)) {
+		return;
+	}
+
+	switch(sock->type) {
+		case SOCK_DGRAM:
+			dtlsconnect(sock);
+			break;
+		case SOCK_STREAM:
+			sslsockstart(sock, 0);
+			break;
 	}
 }
