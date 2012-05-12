@@ -61,7 +61,7 @@ struct radius_session {
  * connect to the server one connex holds 256 sessions
  */
 struct radius_connection {
-	int socket;
+	struct fwsocket *socket;
 	unsigned char id;
 	struct radius_server *server;
 	int flags;
@@ -355,7 +355,7 @@ int _send_radpacket(struct radius_packet *packet, const char *userpass, struct r
 			packet->len = htons(len);
 			md5hmac(vector + 2, packet, len, server->secret, strlen(server->secret));
 
-			scnt = send(connex->socket, packet, len, 0);
+			scnt = send(connex->socket->sock, packet, len, 0);
 			memset(packet->attrs + session->olen - RAD_AUTH_HDR_LEN, 0, len - session->olen);
 			packet->len = session->olen;
 
@@ -417,7 +417,7 @@ void rad_resend(struct radius_connection *connex) {
 			session->packet->len = htons(len);
 			md5hmac(vector + 2, session->packet, len, connex->server->secret, strlen(connex->server->secret));
 
-			scnt = send(connex->socket, session->packet, len, 0);
+			scnt = send(connex->socket->sock, session->packet, len, 0);
 			memset(session->packet->attrs + session->olen - RAD_AUTH_HDR_LEN, 0, len - session->olen);
 			session->packet->len = session->olen;
 			session->sent = tv;
@@ -442,7 +442,7 @@ void radius_recv(void **data) {
 	struct radius_session *session;
 	int chk, plen;
 
-	chk = recv(connex->socket, buff, 4096, 0);
+	chk = recv(connex->socket->sock, buff, 4096, 0);
 
 	if (chk < 0) {
 		if (errno == ECONNREFUSED) {
@@ -496,14 +496,14 @@ void *rad_return(void **data) {
 	int selfd;
 
 	FD_ZERO(&rd_set);
-	FD_SET(connex->socket, &rd_set);
+	FD_SET(connex->socket->sock, &rd_set);
 
 	while (framework_threadok(data)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 200000;
 
-		selfd = select(connex->socket + 1, &act_set, NULL, NULL, &tv);
+		selfd = select(connex->socket->sock + 1, &act_set, NULL, NULL, &tv);
 
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
 			rad_resend(connex);
@@ -512,7 +512,7 @@ void *rad_return(void **data) {
 			break;
 		}
 
-		if (FD_ISSET(connex->socket, &act_set)) {
+		if (FD_ISSET(connex->socket->sock, &act_set)) {
 			radius_recv(data);
 		}
 		rad_resend(connex);
@@ -526,7 +526,7 @@ void del_radconnect(void *data) {
 
 	objunref(connex->server);
 	objunref(connex->sessions);
-	close(connex->socket);
+	objunref(connex->socket);
 }
 
 struct radius_connection *radconnect(struct radius_server *server) {
@@ -534,11 +534,11 @@ struct radius_connection *radconnect(struct radius_server *server) {
 	int val = 1;
 
 	if ((connex = objalloc(sizeof(*connex), del_radconnect))) {
-		if ((connex->socket = udpconnect(server->name, server->authport, NULL, NULL)) >= 0) {
+		if ((connex->socket = udpconnect(server->name, server->authport, NULL))) {
 			if (!server->connex) {
 				server->connex = create_bucketlist(0, hash_connex);
 			}
-			setsockopt(connex->socket, SOL_IP, IP_RECVERR,(char*)&val, sizeof(val));
+			setsockopt(connex->socket->sock, SOL_IP, IP_RECVERR,(char*)&val, sizeof(val));
 			connex->server = server;
 			genrand(&connex->id, sizeof(connex->id));
 			addtobucket(server->connex, connex);

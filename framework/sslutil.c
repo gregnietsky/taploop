@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <openssl/ssl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
@@ -174,11 +175,17 @@ void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int ver
 	return (ssl);
 }
 
-void sslsockstart(struct ssldata *ssl, int sock, int accept) {
+void sslsockstart(struct fwsocket *sock, int accept) {
+	struct ssldata *ssl = sock->ssl;
+
+	if (!ssl) {
+		return;
+	}
+
 	ssl->ssl = SSL_new(ssl->ctx);
 
 	if (ssl->ssl) {
-		ssl->bio = BIO_new_socket(sock, BIO_NOCLOSE);
+		ssl->bio = BIO_new_socket(sock->sock, BIO_NOCLOSE);
 		SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
 		if (accept) {
 			SSL_accept(ssl->ssl);
@@ -187,25 +194,25 @@ void sslsockstart(struct ssldata *ssl, int sock, int accept) {
 		}
 	} else {
 		objunref(ssl);
+		sock->ssl = NULL;
 		return;
 	}
 }
 
-void tlsconnect(void *data, int sock) {
-
-	sslsockstart(data, sock, 0);
+void tlsconnect(struct fwsocket *sock) {
+	sslsockstart(sock, 0);
 }
 
-void tlsaccept(void *data, int sock) {
-	sslsockstart(data, sock, 1);
+void tlsaccept(struct fwsocket *sock) {
+	sslsockstart(sock, 1);
 }
 
-int sslread(void *data, void *buf, int num) {
-	struct ssldata *ssl = data;
+int sslread(struct fwsocket *sock, void *buf, int num) {
+	struct ssldata *ssl = sock->ssl;
 	int ret;
 
 	if (!ssl || !ssl->ssl) {
-		return -1;
+		return (read(sock->sock, buf, num));
 	}
 
 	ret = SSL_read(ssl->ssl, buf, num);
@@ -238,12 +245,12 @@ int sslread(void *data, void *buf, int num) {
 	return (ret);
 }
 
-int sslwrite(void *data, const void *buf, int num) {
-	struct ssldata *ssl = data;
+int sslwrite(struct fwsocket *sock, const void *buf, int num) {
+	struct ssldata *ssl = sock->ssl;
 	int ret;
 
 	if (!ssl || !ssl->ssl) {
-		return -1;
+		return (write(sock->sock, buf, num));
 	}
 
 	ret = SSL_write(ssl->ssl, buf, num);
@@ -303,41 +310,25 @@ void dtlssetopts(struct ssldata *ssl, SSL_CTX *ctx, int sock, int flags) {
 	SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
 }
 
-void dtsl_serveropts(void *data) {
-	struct ssldata *ssl = data;
+void dtsl_serveropts(struct fwsocket *sock) {
+	struct ssldata *ssl = sock->ssl;
 
 	SSL_CTX_set_cookie_generate_cb(ssl->ctx, generate_cookie);
 	SSL_CTX_set_cookie_verify_cb(ssl->ctx, verify_cookie);
 	SSL_CTX_set_session_cache_mode(ssl->ctx, SSL_SESS_CACHE_OFF);
 
-}
-
-void *dtls_listenssl(void *data, struct sockaddr *client, int sock) {
-	struct ssldata *ssl = data;
-	struct ssldata *newssl;
-
-	if (!(newssl = objalloc(sizeof(*newssl), free_ssldata))) {
-		return NULL;
-	}
-
-	ssl->bio = BIO_new_dgram(sock, BIO_NOCLOSE);
+	ssl->bio = BIO_new_dgram(sock->sock, BIO_NOCLOSE);
 	ssl->ssl = SSL_new(ssl->ctx);
 	SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
 	SSL_set_options(ssl->ssl, SSL_OP_COOKIE_EXCHANGE);
-
-	dtlssetopts(newssl, ssl->ctx, sock, BIO_NOCLOSE);
-	memset(client, 0, sizeof(*client));
-	while (DTLSv1_listen(newssl->ssl, client) <= 0);
-
-	return newssl;
 }
 
-void dtlsaccept(void *data, struct sockaddr *client, int sock) {
-	struct ssldata *ssl = data;
+void dtlsaccept(struct fwsocket *sock) {
+	struct ssldata *ssl = sock->ssl;
 	struct timeval timeout;
 
-	BIO_set_fd(ssl->bio, sock, BIO_NOCLOSE);
-	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, client);
+	BIO_set_fd(ssl->bio, sock->sock, BIO_NOCLOSE);
+	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr.sa);
 
 	SSL_accept(ssl->ssl);
 
@@ -356,19 +347,60 @@ void dtlsaccept(void *data, struct sockaddr *client, int sock) {
 	}
 }
 
-void dtlsconnect(void *data, int sock) {
-	struct ssldata *ssl = data;
+struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
+	struct ssldata *ssl = sock->ssl;
+	struct ssldata *newssl;
+	struct fwsocket *newsock;
+	struct sockaddr client;
+	int on = 1;
+
+	if (!(newssl = objalloc(sizeof(*newssl), free_ssldata))) {
+		return NULL;
+	}
+
+	dtlssetopts(newssl, ssl->ctx, sock->sock, BIO_NOCLOSE);
+	memset(&client, 0, sizeof(client));
+	while (DTLSv1_listen(newssl->ssl, &client) <= 0);
+
+	if (!(newsock = make_socket(sock->addr.sa.sa_family, sock->type, sock->proto, newssl))) {
+		objunref(newssl);
+		return NULL;
+	}
+	objunref(newssl); /*move this ref to the socket*/
+	memcpy(&newsock->addr.sa, &client, sizeof(newsock->addr.sa));
+
+	setsockopt(newsock->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+#ifdef SO_REUSEPORT
+	setsockopt(newsock->sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+#endif
+
+	bind(newsock->sock, &sock->addr.sa, sizeof(sock->addr.sa));
+	connect(newsock->sock, &newsock->addr.sa, sizeof(newsock->addr.sa));
+
+	dtlsaccept(newsock);
+
+	return newsock;
+}
+
+void dtlsconnect(struct fwsocket *sock) {
+	struct ssldata *ssl = sock->ssl;
 	struct sockaddr addr;
 	socklen_t salen = sizeof(addr);
 
-	getsockname(sock, &addr, &salen);
+	if (!ssl) {
+		return;
+	}
 
-	dtlssetopts(ssl, ssl->ctx, sock, BIO_CLOSE);
+	getsockname(sock->sock, &addr, &salen);
+
+	dtlssetopts(ssl, ssl->ctx, sock->sock, BIO_CLOSE);
 	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr);
 	SSL_connect(ssl->ssl);
 
-	printf ("C------------------------------------------------------------\n");
-	X509_NAME_print_ex_fp(stdout, X509_get_subject_name(SSL_get_peer_certificate(ssl->ssl)), 1, XN_FLAG_MULTILINE);
-	printf("\n\n Cipher: %s", SSL_CIPHER_get_name(SSL_get_current_cipher(ssl->ssl)));
-	printf ("\n------------------------------------------------------------\n\n");
+	if (SSL_get_peer_certificate(ssl->ssl)) {
+		printf ("C------------------------------------------------------------\n");
+		X509_NAME_print_ex_fp(stdout, X509_get_subject_name(SSL_get_peer_certificate(ssl->ssl)), 1, XN_FLAG_MULTILINE);
+		printf("\n\n Cipher: %s", SSL_CIPHER_get_name(SSL_get_current_cipher(ssl->ssl)));
+		printf ("\n------------------------------------------------------------\n\n");
+	}
 }

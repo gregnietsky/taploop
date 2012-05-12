@@ -27,18 +27,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* socket select thread (read)*/
 struct framework_sockdata {
-	int sock;
+	struct fwsocket *sock;
 	void *data;
-	void *ssl;
 	socketrecv	read;
+	struct timeval	tv;
 };
 
 /* TCP socket thread*/
 struct framework_tcpthread {
-	int sock;
+	struct fwsocket *sock;
 	int backlog;
 	void *data;
-	void *ssl;
 	socketrecv	client;
 	socketrecv	connect;
 	threadcleanup	cleanup;
@@ -46,17 +45,73 @@ struct framework_tcpthread {
 
 /* DTLS socket thread*/
 struct framework_dtlsthread {
-	int sock;
+	struct fwsocket *sock;
 	void *data;
-	void *ssl;
 	socketrecv	client;
 	socketrecv	connect;
 	threadcleanup	cleanup;
 };
 
-int _opensocket(int family, int stype, int proto, const char *ipaddr, const char *port, int ctype, struct sockaddr *addr, socklen_t *slen) {
+void clean_fwsocket(void *data) {
+	struct fwsocket *si = data;
+
+	if (si->ssl) {
+		objunref(si->ssl);
+	}
+	if (si->sock >= 0) {
+		close(si->sock);
+	}
+}
+
+struct fwsocket *make_socket(int family, int type, int proto, void *ssl) {
+	struct fwsocket *si;
+
+	if (!(si = objalloc(sizeof(*si),clean_fwsocket))) {
+		return NULL;
+	}
+
+	if ((si->sock = socket(family, type, proto)) < 0) {
+		objunref(si);
+		return NULL;
+	};
+
+	if (ssl) {
+		si->ssl = ssl;
+		objref(ssl);
+	}
+	si->type = type;
+	si->proto = proto;
+
+	return si;
+}
+
+struct fwsocket *accept_socket(struct fwsocket *sock) {
+	struct fwsocket *si;
+	socklen_t salen = sizeof(si->addr.sa);
+
+	if (!(si = objalloc(sizeof(*si),clean_fwsocket))) {
+		return NULL;
+	}
+
+	if ((si->sock = accept(sock->sock, &si->addr.sa, &salen)) < 0) {
+		objunref(si);
+		return NULL;
+	}
+
+	if (sock->ssl) {
+		si->ssl = sock->ssl;
+		objref(sock->ssl);
+	}
+
+	si->type = sock->type;
+	si->proto = sock->proto;
+
+	return si;
+}
+
+struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int ctype) {
 	struct	addrinfo hint, *result, *rp;
-	int sockfd = -1;
+	struct fwsocket *sockfd = NULL;
 	int on = 1;
 
 	memset(&hint, 0, sizeof(hint));
@@ -65,38 +120,28 @@ int _opensocket(int family, int stype, int proto, const char *ipaddr, const char
 	hint.ai_protocol = proto;
 
 	if (getaddrinfo(ipaddr, port, &hint, &result)) {
-		return (sockfd);
+		return (NULL);
 	}
 
 	for(rp = result; rp; rp = result->ai_next) {
-		if ((sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) < 0) {
+		if (!(sockfd = make_socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol, ssl))) {
 			continue;
 		}
-		if (addr && slen) {
-			memcpy(addr, rp->ai_addr, *slen);
-		}
-		if (!ctype && !connect(sockfd, rp->ai_addr, rp->ai_addrlen)) {
-			if (slen) {
-				*slen = rp->ai_addrlen;
-			}
-			break;
-		} else if (ctype && !bind(sockfd, rp->ai_addr, rp->ai_addrlen)) {
-			if (slen) {
-				*slen = rp->ai_addrlen;
-			}
+		if ((!ctype && !connect(sockfd->sock, rp->ai_addr, rp->ai_addrlen)) ||
+		    (ctype && !bind(sockfd->sock, rp->ai_addr, rp->ai_addrlen))) {
 			break;
 		}
-		if (addr) {
-			memset(addr, 0, *slen);
-		}
-		close(sockfd);
-		sockfd = -1;
+		objunref(sockfd);
 	}
 
-	if (ctype && (sockfd >= 0)) {
-		setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	if (sockfd) {
+		memcpy(&sockfd->addr.ss, rp->ai_addr, sizeof(sockfd->addr.ss));
+	}
+
+	if (ctype && sockfd) {
+		setsockopt(sockfd->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 #ifdef SO_REUSEPORT
-		setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+		setsockopt(sockfd->sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
 #endif
 	}
 
@@ -104,35 +149,35 @@ int _opensocket(int family, int stype, int proto, const char *ipaddr, const char
 	return (sockfd);
 }
 
-int sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, struct sockaddr *addr, void *slen) {
-	return(_opensocket(family, stype, proto, ipaddr, port, 0, addr, slen));
+struct fwsocket *sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl) {
+	return(_opensocket(family, stype, proto, ipaddr, port, ssl, 0));
 }
 
-int udpconnect(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen) {
-	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, 0, addr, slen));
+struct fwsocket *udpconnect(const char *ipaddr, const char *port, void *ssl) {
+	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, ssl, 0));
 }
 
-int tcpconnect(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen) {
-	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, 0, addr, slen));
+struct fwsocket *tcpconnect(const char *ipaddr, const char *port, void *ssl) {
+	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 0));
 }
 
-int sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, struct sockaddr *addr, void *slen) {
-	return(_opensocket(family, stype, proto, ipaddr, port, 1, NULL, NULL));
+struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl) {
+	return(_opensocket(family, stype, proto, ipaddr, port, ssl, 1));
 }
 
-int udpbind(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen) {
-	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, 1, addr, slen));
+struct fwsocket *udpbind(const char *ipaddr, const char *port, void *ssl) {
+	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, ssl, 1));
 }
 
-int tcpbind(const char *ipaddr, const char *port, struct sockaddr *addr, void *slen) {
-	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, 1, addr, slen));
+struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl) {
+	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 1));
 }
 
 void *delsock_select(void *data) {
 	struct framework_sockdata *fwsel = data;
 
 	objunref(fwsel->data);
-	objunref(fwsel->ssl);
+	objunref(fwsel->sock);
 
 	return NULL;
 }
@@ -144,14 +189,14 @@ void *sock_select(void **data) {
 	int selfd;
 
 	FD_ZERO(&rd_set);
-	FD_SET(fwsel->sock, &rd_set);
+	FD_SET(fwsel->sock->sock, &rd_set);
 
 	while (framework_threadok(data)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
 
-		selfd = select(fwsel->sock + 1, &act_set, NULL, NULL, &tv);
+		selfd = select(fwsel->sock->sock + 1, &act_set, NULL, NULL, &tv);
 
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
 			continue;
@@ -159,8 +204,8 @@ void *sock_select(void **data) {
 			break;
 		}
 
-		if (fwsel->read && FD_ISSET(fwsel->sock, &act_set)) {
-			fwsel->read(fwsel->sock, fwsel->data, fwsel->ssl);
+		if (fwsel->read && FD_ISSET(fwsel->sock->sock, &act_set)) {
+			fwsel->read(fwsel->sock, fwsel->data);
 		}
 	}
 
@@ -170,13 +215,13 @@ void *sock_select(void **data) {
 void *tcpsock_serv_clean(void *data) {
 	struct framework_tcpthread *tcpsock = data;
 
-	/*call cleanup and remove refs to data/ssl*/
+	/*call cleanup and remove refs to data*/
 	if (tcpsock->cleanup) {
 		tcpsock->cleanup(tcpsock->data);
 	}
 
 	objunref(tcpsock->data);
-	objunref(tcpsock->ssl);
+	objunref(tcpsock->sock);
 
 	return NULL;
 }
@@ -186,28 +231,26 @@ void *tcpsock_serv_clean(void *data) {
  */
 void *tcpsock_serv(void **data) {
 	struct framework_tcpthread *tcpsock = *data;
-	struct framework_sockdata *tcpcon;
-	struct sockaddr *adr;
-	unsigned int salen;
 	struct	timeval	tv;
 	fd_set	rd_set, act_set;
 	int selfd;
+	struct fwsocket *newfd;
 
-	if (listen(tcpsock->sock, tcpsock->backlog)) {
+	if (listen(tcpsock->sock->sock, tcpsock->backlog)) {
 		perror("client sock_serv (listen)");
-		close(tcpsock->sock);
+		objunref(tcpsock->sock);
 		return NULL;
 	}
 
 	FD_ZERO(&rd_set);
-	FD_SET(tcpsock->sock, &rd_set);
+	FD_SET(tcpsock->sock->sock, &rd_set);
 
 	while (framework_threadok(data)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
 
-		selfd = select(tcpsock->sock + 1, &act_set, NULL, NULL, &tv);
+		selfd = select(tcpsock->sock->sock + 1, &act_set, NULL, NULL, &tv);
 
 		/*returned due to interupt continue or timed out*/
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
@@ -216,90 +259,29 @@ void *tcpsock_serv(void **data) {
 			break;
 		}
 
-		if (FD_ISSET(tcpsock->sock, &act_set)) {
-			if ((tcpcon = objalloc(sizeof(*tcpcon), NULL))) {
-				if ((tcpcon->sock = accept(tcpsock->sock, (struct sockaddr *)&adr, &salen))) {
-					tcpcon->data = tcpsock->data;
-					tcpcon->read = tcpsock->client;
-					tcpcon->ssl = tcpsock->ssl;
-					if (tcpsock->ssl) {
-						tlsaccept(tcpsock->ssl, tcpcon->sock);
-					}
-					if (tcpsock->connect) {
-						tcpsock->connect(tcpcon->sock, tcpsock->data, tcpsock->ssl);
-					}
-					objref(tcpsock->data);
-					objref(tcpsock->ssl);
-					framework_mkthread(sock_select, delsock_select, NULL, tcpcon);
-				}
-				objunref(tcpcon);
+		if ((FD_ISSET(tcpsock->sock->sock, &act_set)) &&
+		    (newfd = accept_socket(tcpsock->sock))) {
+			tlsaccept(newfd);
+			framework_sockselect(newfd, tcpsock->data, tcpsock->client);
+			if (tcpsock->connect) {
+				tcpsock->connect(newfd, tcpsock->data);
 			}
 		}
 	}
-
-	close(tcpsock->sock);
+	objunref(tcpsock->sock);
 
 	return NULL;
 }
 
-void framework_tcpserver(int sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data, void *ssl) {
-	struct framework_tcpthread *tcpsock;
-
-	tcpsock = objalloc(sizeof(*tcpsock), NULL);
-	tcpsock->sock = sock;
-	tcpsock->backlog = backlog;
-	tcpsock->client = connectfunc;
-	tcpsock->cleanup = cleanup;
-	tcpsock->connect = acceptfunc;
-	tcpsock->data = data;
-	tcpsock->ssl = ssl;
-
-	/* grab ref for ssl/data and pass tcpsock*/
-	objref(data);
-	objref(ssl);
-	framework_mkthread(tcpsock_serv, tcpsock_serv_clean, NULL, tcpsock);
-	objunref(tcpsock);
-}
-
-void framework_sockselect(int sock, void *data, void *ssl, socketrecv read) {
-	struct framework_sockdata *fwsel;
-
-	fwsel = objalloc(sizeof(*fwsel), NULL);
-	fwsel->sock = sock;
-	fwsel->data = data;
-	fwsel->read = read;
-	fwsel->ssl = ssl;
-
-	/* grab ref for ssl/data and pass fwsel*/
-	objref(data);
-	objref(ssl);
-	framework_mkthread(sock_select, delsock_select, NULL, fwsel);
-	objunref(fwsel);
-}
-
-void framework_tlsclient(int sock, void *data, void *ssl, socketrecv read) {
-	if (ssl) {
-		tlsconnect(ssl, sock);
-	}
-	framework_sockselect(sock, data, ssl, read);
-}
-
-void framework_dtlsclient(int sock, void *data, void *ssl, socketrecv read) {
-	if (ssl) {
-		dtlsconnect(ssl, sock);
-	}
-	framework_sockselect(sock, data, ssl, read);
-}
-
 void *dtls_serv_clean(void *data) {
-	struct framework_dtlsthread *tcpsock = data;
-	/*call cleanup and remove refs to data/ssl*/
-	if (tcpsock->cleanup) {
-		tcpsock->cleanup(tcpsock->data);
+	struct framework_dtlsthread *dtlssock = data;
+	/*call cleanup and remove refs to data*/
+	if (dtlssock->cleanup) {
+		dtlssock->cleanup(dtlssock->data);
 	}
 
-	objunref(tcpsock->data);
-	objunref(tcpsock->ssl);
+	objunref(dtlssock->data);
+	objunref(dtlssock->sock);
 
 	return NULL;
 }
@@ -309,60 +291,85 @@ void *dtls_serv_clean(void *data) {
  */
 void *dtls_serv(void **data) {
 	struct framework_dtlsthread *dtlssock = *data;
-	struct framework_sockdata *dtls;
-	int on = 1;
-	struct sockaddr addr, client;
-	socklen_t salen = sizeof(addr);
+	struct fwsocket *newsock;
 
-	getsockname(dtlssock->sock, &addr, &salen);
-	dtsl_serveropts(dtlssock->ssl);
+	dtsl_serveropts(dtlssock->sock);
 
 	while (framework_threadok(data)) {
-		if ((dtls = objalloc(sizeof(*dtls), NULL)) &&
-		    (dtls->ssl = dtls_listenssl(dtlssock->ssl, &client, dtlssock->sock))) {
-			dtls->sock = socket(addr.sa_family, SOCK_DGRAM, IPPROTO_UDP);
-			setsockopt(dtls->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-#ifdef SO_REUSEPORT
-			setsockopt(dtls->sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
-#endif
-			bind(dtls->sock, &addr, salen);
-			connect(dtls->sock, &client, sizeof(client));
-
-			dtls->data = dtlssock->data;
-			dtls->read = dtlssock->client;
-
-			dtlsaccept(dtls->ssl, &client, dtls->sock);
-
-			if (dtlssock->connect) {
-				dtlssock->connect(dtls->sock, dtls->data, dtls->ssl);
-			}
-			objref(dtls->data);
-			framework_mkthread(sock_select, delsock_select, NULL, dtls);
-
-			objunref(dtls);
+		if (!(newsock = dtls_listenssl(dtlssock->sock))) {
+			continue;
+		}
+		framework_sockselect(newsock, dtlssock->data, dtlssock->client);
+		if (dtlssock->connect) {
+			dtlssock->connect(newsock, dtlssock->data);
 		}
 	}
-
-	close(dtlssock->sock);
-
 	return NULL;
 }
 
-void framework_dtlsserver(int sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data, void *ssl) {
+void framework_tcpserver(struct fwsocket *sock, int backlog, socketrecv connectfunc,
+				socketrecv acceptfunc, threadcleanup cleanup, void *data) {
+	struct framework_tcpthread *tcpsock;
+
+	if (!(tcpsock = objalloc(sizeof(*tcpsock), NULL))) {
+		return;
+	}
+
+	tcpsock->sock = sock;
+	tcpsock->backlog = backlog;
+	tcpsock->client = connectfunc;
+	tcpsock->cleanup = cleanup;
+	tcpsock->connect = acceptfunc;
+	tcpsock->data = data;
+
+	/* grab ref for data and pass tcpsock*/
+	objref(data);
+	framework_mkthread(tcpsock_serv, tcpsock_serv_clean, NULL, tcpsock);
+	objunref(tcpsock);
+}
+
+void framework_sockselect(struct fwsocket *sock, void *data, socketrecv read) {
+	struct framework_sockdata *fwsel;
+
+	if (!(fwsel = objalloc(sizeof(*fwsel), NULL))) {
+		return;
+	}
+
+	fwsel->sock = sock;
+	fwsel->data = data;
+	fwsel->read = read;
+
+	/* grab ref for data and pass fwsel*/
+	objref(data);
+	framework_mkthread(sock_select, delsock_select, NULL, fwsel);
+	objunref(fwsel);
+}
+
+void framework_dtlsserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data) {
 	struct framework_dtlsthread *dtlssock;
 
-	dtlssock = objalloc(sizeof(*dtlssock), NULL);
+	if (!(dtlssock = objalloc(sizeof(*dtlssock), NULL))) {
+		return;
+	}
+
 	dtlssock->sock = sock;
 	dtlssock->client = connectfunc;
 	dtlssock->cleanup = cleanup;
 	dtlssock->connect = acceptfunc;
 	dtlssock->data = data;
-	dtlssock->ssl = ssl;
 
-	/* grab ref for ssl/data and pass dtlssock*/
+	/* grab ref for data and pass dtlssock*/
 	objref(data);
-	objref(ssl);
 	framework_mkthread(dtls_serv, dtls_serv_clean, NULL, dtlssock);
 	objunref(dtlssock);
 }
 
+void framework_tcpclient(struct fwsocket *sock, void *data, socketrecv read) {
+	tlsconnect(sock);
+	framework_sockselect(sock, data, read);
+}
+
+void framework_dtlsclient(struct fwsocket *sock, void *data, socketrecv read) {
+	dtlsconnect(sock);
+	framework_sockselect(sock, data, read);
+}
