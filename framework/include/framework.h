@@ -47,12 +47,17 @@ union sockstruct {
 
 typedef struct ssldata ssldata;
 
+enum sock_flags {
+	SOCK_FLAG_BIND	= 1 << 0
+};
+
 struct fwsocket {
-        int sock;
-        int proto;
-        int type;
-        union sockstruct addr;
-        struct ssldata *ssl;
+	int sock;
+	int proto;
+	int type;
+	enum sock_flags flags;
+	union sockstruct addr;
+	struct ssldata *ssl;
 };
 
 typedef struct radius_packet radius_packet;
@@ -191,8 +196,10 @@ void *sslv2_init(const char *cacert, const char *cert, const char *key, int veri
 void *sslv3_init(const char *cacert, const char *cert, const char *key, int verify);
 void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
 
-int sslread(struct fwsocket *sock, void *buf, int num);
-int sslwrite(struct fwsocket *sock, const void *buf, int num);
+int socketread(struct fwsocket *sock, void *buf, int num);
+int socketwrite(struct fwsocket *sock, const void *buf, int num);
+int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr);
+int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr);
 
 void tlsaccept(struct fwsocket *sock);
 struct fwsocket *dtls_listenssl(struct fwsocket *sock);

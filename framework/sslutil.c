@@ -217,12 +217,18 @@ void tlsaccept(struct fwsocket *sock) {
 	sslsockstart(sock, 1);
 }
 
-int sslread(struct fwsocket *sock, void *buf, int num) {
+int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr) {
 	struct ssldata *ssl = sock->ssl;
+	socklen_t salen = sizeof(*addr);
 	int ret;
 
 	if (!ssl || !ssl->ssl) {
-		return (read(sock->sock, buf, num));
+		if (addr && (sock->type == SOCK_DGRAM)) {
+			ret = recvfrom(sock->sock, buf, num, 0, addr, &salen);
+		} else {
+			ret = read(sock->sock, buf, num);
+		}
+		return (ret);
 	}
 
 	ret = SSL_read(ssl->ssl, buf, num);
@@ -255,12 +261,21 @@ int sslread(struct fwsocket *sock, void *buf, int num) {
 	return (ret);
 }
 
-int sslwrite(struct fwsocket *sock, const void *buf, int num) {
+int socketread(struct fwsocket *sock, void *buf, int num) {
+	return (socketread_d(sock, buf, num, NULL));
+}
+
+int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr) {
 	struct ssldata *ssl = sock->ssl;
 	int ret;
 
 	if (!ssl || !ssl->ssl) {
-		return (write(sock->sock, buf, num));
+		if (addr && (sock->type == SOCK_DGRAM)) {
+			ret = sendto(sock->sock, buf, num, 0, addr, sizeof(*addr));
+		} else {
+			ret = write(sock->sock, buf, num);
+		}
+		return (ret);
 	}
 
 	ret = SSL_write(ssl->ssl, buf, num);
@@ -291,6 +306,10 @@ int sslwrite(struct fwsocket *sock, const void *buf, int num) {
 	}
 
 	return (ret);
+}
+
+int socketwrite(struct fwsocket *sock, const void *buf, int num) {
+	return (socketwrite_d(sock, buf, num, NULL));
 }
 
 void sslstartup(void) {

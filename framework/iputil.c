@@ -131,6 +131,7 @@ struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipadd
 	}
 
 	if (ctype && sockfd) {
+		sockfd->flags |= SOCK_FLAG_BIND;
 		memcpy(&sockfd->addr.ss, rp->ai_addr, sizeof(sockfd->addr.ss));
 		setsockopt(sockfd->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 #ifdef SO_REUSEPORT
