@@ -47,12 +47,19 @@ void dtsl_serveropts(struct fwsocket *sock);
 
 void clean_fwsocket(void *data) {
 	struct fwsocket *si = data;
+	int cnt = 10;
 
-	if (si->ssl) {
-		objunref(si->ssl);
-	}
 	if (si->sock >= 0) {
+		si->flags &= ~SOCK_FLAG_RUNNING;
+		for(; (cnt && !(si->flags & SOCK_FLAG_CLOSING)) ;cnt--) {
+			usleep(1000);
+		}
+		if (si->ssl) {
+			objunref(si->ssl);
+		}
 		close(si->sock);
+	} else if (si->ssl) {
+		objunref(si->ssl);
 	}
 }
 
@@ -103,7 +110,7 @@ struct fwsocket *accept_socket(struct fwsocket *sock) {
 
 struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int ctype) {
 	struct	addrinfo hint, *result, *rp;
-	struct fwsocket *sockfd = NULL;
+	struct fwsocket *sock = NULL;
 	socklen_t salen = sizeof(struct sockaddr);
 	int on = 1;
 
@@ -117,29 +124,29 @@ struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipadd
 	}
 
 	for(rp = result; rp; rp = result->ai_next) {
-		if (!(sockfd = make_socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol, ssl))) {
+		if (!(sock = make_socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol, ssl))) {
 			continue;
 		}
-		if ((!ctype && !connect(sockfd->sock, rp->ai_addr, rp->ai_addrlen)) ||
-		    (ctype && !bind(sockfd->sock, rp->ai_addr, rp->ai_addrlen))) {
+		if ((!ctype && !connect(sock->sock, rp->ai_addr, rp->ai_addrlen)) ||
+		    (ctype && !bind(sock->sock, rp->ai_addr, rp->ai_addrlen))) {
 			break;
 		}
-		objunref(sockfd);
+		objunref(sock);
 	}
 
-	if (ctype && sockfd) {
-		sockfd->flags |= SOCK_FLAG_BIND;
-		memcpy(&sockfd->addr.ss, rp->ai_addr, sizeof(sockfd->addr.ss));
-		setsockopt(sockfd->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	if (ctype && sock) {
+		sock->flags |= SOCK_FLAG_BIND;
+		memcpy(&sock->addr.ss, rp->ai_addr, sizeof(sock->addr.ss));
+		setsockopt(sock->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 #ifdef SO_REUSEPORT
-		setsockopt(sockfd->sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+		setsockopt(sock->sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
 #endif
-	} else if (sockfd) {
-		getsockname(sockfd->sock, &sockfd->addr.sa, &salen);
+	} else if (sock) {
+		getsockname(sock->sock, &sock->addr.sa, &salen);
 	}
 
 	freeaddrinfo(result);
-	return (sockfd);
+	return (sock);
 }
 
 struct fwsocket *sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl) {
@@ -184,7 +191,8 @@ void *sock_select(void **data) {
 	FD_ZERO(&rd_set);
 	FD_SET(fwsel->sock->sock, &rd_set);
 
-	while (framework_threadok(data)) {
+	fwsel->sock->flags |= SOCK_FLAG_RUNNING;
+	while (framework_threadok(data) && (fwsel->sock->flags & SOCK_FLAG_RUNNING)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
@@ -201,6 +209,7 @@ void *sock_select(void **data) {
 			fwsel->read(fwsel->sock, fwsel->data);
 		}
 	}
+	fwsel->sock->flags |= SOCK_FLAG_CLOSING;
 
 	return NULL;
 }
@@ -238,7 +247,8 @@ void *tcpsock_serv(void **data) {
 	FD_ZERO(&rd_set);
 	FD_SET(tcpsock->sock->sock, &rd_set);
 
-	while (framework_threadok(data)) {
+	tcpsock->sock->flags |= SOCK_FLAG_RUNNING;
+	while (framework_threadok(data) && (tcpsock->sock->flags & SOCK_FLAG_RUNNING)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
@@ -260,6 +270,7 @@ void *tcpsock_serv(void **data) {
 			}
 		}
 	}
+	tcpsock->sock->flags |= SOCK_FLAG_CLOSING;
 	objunref(tcpsock->sock);
 
 	return NULL;
@@ -288,7 +299,8 @@ void *dtls_serv(void **data) {
 
 	dtsl_serveropts(dtlssock->sock);
 
-	while (framework_threadok(data)) {
+	dtlssock->sock->flags |= SOCK_FLAG_RUNNING;
+	while (framework_threadok(data) && (dtlssock->sock->flags & SOCK_FLAG_RUNNING)) {
 		if (!(newsock = dtls_listenssl(dtlssock->sock))) {
 			continue;
 		}
@@ -297,6 +309,8 @@ void *dtls_serv(void **data) {
 			dtlssock->connect(newsock, dtlssock->data);
 		}
 	}
+	dtlssock->sock->flags |= SOCK_FLAG_CLOSING;
+
 	return NULL;
 }
 

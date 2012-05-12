@@ -81,6 +81,10 @@ int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
 void free_ssldata(void *data) {
 	struct ssldata *ssl = data;
 
+	if (!SSL_shutdown(ssl->ssl)) {
+		SSL_shutdown(ssl->ssl);
+	}
+
 	if (ssl->ssl) {
 		SSL_free(ssl->ssl);
 	}

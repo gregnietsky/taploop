@@ -48,7 +48,9 @@ union sockstruct {
 typedef struct ssldata ssldata;
 
 enum sock_flags {
-	SOCK_FLAG_BIND	= 1 << 0
+	SOCK_FLAG_BIND		= 1 << 0,
+	SOCK_FLAG_RUNNING	= 1 << 1,
+	SOCK_FLAG_CLOSING	= 1 << 2
 };
 
 struct fwsocket {
