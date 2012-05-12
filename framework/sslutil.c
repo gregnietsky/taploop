@@ -401,7 +401,6 @@ struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 		objunref(newssl);
 		return NULL;
 	}
-	objunref(newssl); /*move this ref to the socket*/
 	memcpy(&newsock->addr.sa, &client, sizeof(newsock->addr.sa));
 
 	setsockopt(newsock->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));

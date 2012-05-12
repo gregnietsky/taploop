@@ -30,7 +30,6 @@ struct framework_sockdata {
 	struct fwsocket *sock;
 	void *data;
 	socketrecv	read;
-	struct timeval	tv;
 };
 
 /* socket server thread*/
@@ -71,7 +70,6 @@ struct fwsocket *make_socket(int family, int type, int proto, void *ssl) {
 
 	if (ssl) {
 		si->ssl = ssl;
-		objref(ssl);
 	}
 	si->type = type;
 	si->proto = proto;
@@ -97,7 +95,6 @@ struct fwsocket *accept_socket(struct fwsocket *sock) {
 
 	if (sock->ssl) {
 		si->ssl = sock->ssl;
-		objref(sock->ssl);
 		tlsaccept(si);
 	}
 
