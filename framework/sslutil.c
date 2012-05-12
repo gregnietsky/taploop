@@ -81,6 +81,7 @@ int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
 void free_ssldata(void *data) {
 	struct ssldata *ssl = data;
 
+	objlock(ssl);
 	if (!SSL_shutdown(ssl->ssl)) {
 		SSL_shutdown(ssl->ssl);
 	}
@@ -92,6 +93,7 @@ void free_ssldata(void *data) {
 	if (ssl->ctx) {
 		SSL_CTX_free(ssl->ctx);
 	}
+	objunlock(ssl);
 }
 
 int verify_callback (int ok, X509_STORE_CTX *ctx) {
@@ -198,6 +200,7 @@ void sslsockstart(struct fwsocket *sock, int accept) {
 		return;
 	}
 
+	objlock(ssl);
 	ssl->ssl = SSL_new(ssl->ctx);
 
 	if (ssl->ssl) {
@@ -210,7 +213,9 @@ void sslsockstart(struct fwsocket *sock, int accept) {
 			SSL_connect(ssl->ssl);
 			ssl->flags |= SSL_CLIENT;
 		}
+		objunlock(ssl);
 	} else {
+		objunlock(ssl);
 		objunref(ssl);
 		sock->ssl = NULL;
 		return;
@@ -224,7 +229,7 @@ void tlsaccept(struct fwsocket *sock) {
 int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr) {
 	struct ssldata *ssl = sock->ssl;
 	socklen_t salen = sizeof(*addr);
-	int ret;
+	int ret, err;
 
 	if (!ssl || !ssl->ssl) {
 		if (addr && (sock->type == SOCK_DGRAM)) {
@@ -235,8 +240,11 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 		return (ret);
 	}
 
+	objlock(ssl);
 	ret = SSL_read(ssl->ssl, buf, num);
-	switch (SSL_get_error(ssl->ssl, ret)) {
+	err = SSL_get_error(ssl->ssl, ret);
+	objunlock(ssl);
+	switch (err) {
 		case SSL_ERROR_NONE:
 			break;
 		case SSL_ERROR_WANT_READ:
@@ -271,7 +279,7 @@ int socketread(struct fwsocket *sock, void *buf, int num) {
 
 int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr) {
 	struct ssldata *ssl = sock->ssl;
-	int ret;
+	int ret, err;
 
 	if (!ssl || !ssl->ssl) {
 		if (addr && (sock->type == SOCK_DGRAM)) {
@@ -282,8 +290,17 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 		return (ret);
 	}
 
+	objlock(ssl);
+	if (SSL_state(ssl->ssl) != SSL_ST_OK) {
+		objunlock(ssl);
+		return SSL_ERROR_SSL;
+	}
+
 	ret = SSL_write(ssl->ssl, buf, num);
-	switch (SSL_get_error(ssl->ssl, ret)) {
+	err = SSL_get_error(ssl->ssl, ret);
+	objunlock(ssl);
+
+	switch(err) {
 		case SSL_ERROR_NONE:
 			break;
 		case SSL_ERROR_WANT_READ:
@@ -330,6 +347,7 @@ void sslstartup(void) {
 void dtlssetopts(struct ssldata *ssl, SSL_CTX *ctx, int sock, int flags) {
 	struct timeval timeout;
 
+	objlock(ssl);
 	ssl->bio = BIO_new_dgram(sock, flags);
 
 	timeout.tv_sec = 5;
@@ -341,11 +359,13 @@ void dtlssetopts(struct ssldata *ssl, SSL_CTX *ctx, int sock, int flags) {
 
 	ssl->ssl = SSL_new(ctx);
 	SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
+	objunlock(ssl);
 }
 
 void dtsl_serveropts(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 
+	objlock(ssl);
 	ssl->flags |= SSL_SERVER;
 
 	SSL_CTX_set_cookie_generate_cb(ssl->ctx, generate_cookie);
@@ -356,12 +376,14 @@ void dtsl_serveropts(struct fwsocket *sock) {
 	ssl->ssl = SSL_new(ssl->ctx);
 	SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
 	SSL_set_options(ssl->ssl, SSL_OP_COOKIE_EXCHANGE);
+	objunlock(ssl);
 }
 
 void dtlsaccept(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 	struct timeval timeout;
 
+	objlock(ssl);
 	ssl->flags |= SSL_SERVER;
 
 	BIO_set_fd(ssl->bio, sock->sock, BIO_NOCLOSE);
@@ -382,6 +404,7 @@ void dtlsaccept(struct fwsocket *sock) {
 		printf("\n\n Cipher: %s", SSL_CIPHER_get_name(SSL_get_current_cipher(ssl->ssl)));
 		printf ("\n------------------------------------------------------------\n\n");
 	}
+	objunlock(ssl);
 }
 
 struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
@@ -427,9 +450,11 @@ void dtlsconnect(struct fwsocket *sock) {
 		return;
 	}
 
-	ssl->flags |= SSL_CLIENT;
 
 	dtlssetopts(ssl, ssl->ctx, sock->sock, BIO_CLOSE);
+
+	objlock(ssl);
+	ssl->flags |= SSL_CLIENT;
 	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr.sa);
 	SSL_connect(ssl->ssl);
 
@@ -439,6 +464,7 @@ void dtlsconnect(struct fwsocket *sock) {
 		printf("\n\n Cipher: %s", SSL_CIPHER_get_name(SSL_get_current_cipher(ssl->ssl)));
 		printf ("\n------------------------------------------------------------\n\n");
 	}
+	objunlock(ssl);
 }
 
 
