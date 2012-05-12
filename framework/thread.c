@@ -166,7 +166,7 @@ void *managethread(void **data) {
 			/*this is my call im done*/
 			if (pthread_equal(thread->thr, me)) {
 				/* im going to leave the list and try close down all others*/
-				if (!(testflag(mythread, TL_THREAD_RUN))) {
+				if (mythread && !(testflag(mythread, TL_THREAD_RUN))) {
 					remove_bucket_loop(bloop);
 					stop = 1;
 				}

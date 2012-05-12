@@ -45,12 +45,14 @@ union sockstruct {
         struct sockaddr_storage ss;
 };
 
+typedef struct ssldata ssldata;
+
 struct fwsocket {
         int sock;
         int proto;
         int type;
         union sockstruct addr;
-        void *ssl;
+        struct ssldata *ssl;
 };
 
 typedef struct radius_packet radius_packet;
@@ -195,7 +197,6 @@ int sslread(struct fwsocket *sock, void *buf, int num);
 int sslwrite(struct fwsocket *sock, const void *buf, int num);
 struct fwsocket *dtls_listenssl(struct fwsocket *sock);
 void dtlsconnect(struct fwsocket *sock);
-void dtsl_serveropts(struct fwsocket *sock);
 void sslstartup(void);
 
 /*easter egg copied from <linux/jhash.h>*/

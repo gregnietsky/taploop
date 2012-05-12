@@ -33,8 +33,8 @@ struct framework_sockdata {
 	struct timeval	tv;
 };
 
-/* TCP socket thread*/
-struct framework_tcpthread {
+/* socket server thread*/
+struct socket_server {
 	struct fwsocket *sock;
 	int backlog;
 	void *data;
@@ -43,14 +43,8 @@ struct framework_tcpthread {
 	threadcleanup	cleanup;
 };
 
-/* DTLS socket thread*/
-struct framework_dtlsthread {
-	struct fwsocket *sock;
-	void *data;
-	socketrecv	client;
-	socketrecv	connect;
-	threadcleanup	cleanup;
-};
+/*from sslutils im the only consumer*/
+void dtsl_serveropts(struct fwsocket *sock);
 
 void clean_fwsocket(void *data) {
 	struct fwsocket *si = data;
@@ -213,7 +207,7 @@ void *sock_select(void **data) {
 }
 
 void *tcpsock_serv_clean(void *data) {
-	struct framework_tcpthread *tcpsock = data;
+	struct socket_server *tcpsock = data;
 
 	/*call cleanup and remove refs to data*/
 	if (tcpsock->cleanup) {
@@ -230,7 +224,7 @@ void *tcpsock_serv_clean(void *data) {
  * tcp thread spawns a thread on each connect
  */
 void *tcpsock_serv(void **data) {
-	struct framework_tcpthread *tcpsock = *data;
+	struct socket_server *tcpsock = *data;
 	struct	timeval	tv;
 	fd_set	rd_set, act_set;
 	int selfd;
@@ -274,7 +268,8 @@ void *tcpsock_serv(void **data) {
 }
 
 void *dtls_serv_clean(void *data) {
-	struct framework_dtlsthread *dtlssock = data;
+	struct socket_server *dtlssock = data;
+
 	/*call cleanup and remove refs to data*/
 	if (dtlssock->cleanup) {
 		dtlssock->cleanup(dtlssock->data);
@@ -290,7 +285,7 @@ void *dtls_serv_clean(void *data) {
  * tcp thread spawns a thread on each connect
  */
 void *dtls_serv(void **data) {
-	struct framework_dtlsthread *dtlssock = *data;
+	struct socket_server *dtlssock = *data;
 	struct fwsocket *newsock;
 
 	dtsl_serveropts(dtlssock->sock);
@@ -309,7 +304,7 @@ void *dtls_serv(void **data) {
 
 void framework_tcpserver(struct fwsocket *sock, int backlog, socketrecv connectfunc,
 				socketrecv acceptfunc, threadcleanup cleanup, void *data) {
-	struct framework_tcpthread *tcpsock;
+	struct socket_server *tcpsock;
 
 	if (!(tcpsock = objalloc(sizeof(*tcpsock), NULL))) {
 		return;
@@ -346,7 +341,7 @@ void framework_sockselect(struct fwsocket *sock, void *data, socketrecv read) {
 }
 
 void framework_dtlsserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data) {
-	struct framework_dtlsthread *dtlssock;
+	struct socket_server *dtlssock;
 
 	if (!(dtlssock = objalloc(sizeof(*dtlssock), NULL))) {
 		return;
