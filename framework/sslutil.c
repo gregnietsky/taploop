@@ -82,7 +82,7 @@ void free_ssldata(void *data) {
 	struct ssldata *ssl = data;
 
 	objlock(ssl);
-	if (!SSL_shutdown(ssl->ssl)) {
+	if (ssl->ssl && !SSL_shutdown(ssl->ssl)) {
 		SSL_shutdown(ssl->ssl);
 	}
 
@@ -200,11 +200,13 @@ void sslsockstart(struct fwsocket *sock, int accept) {
 		return;
 	}
 
+	objlock(sock);
 	objlock(ssl);
 	ssl->ssl = SSL_new(ssl->ctx);
 
 	if (ssl->ssl) {
 		ssl->bio = BIO_new_socket(sock->sock, BIO_NOCLOSE);
+		objunlock(sock);
 		SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
 		if (accept) {
 			SSL_accept(ssl->ssl);
@@ -218,6 +220,7 @@ void sslsockstart(struct fwsocket *sock, int accept) {
 		objunlock(ssl);
 		objunref(ssl);
 		sock->ssl = NULL;
+		objunlock(sock);
 		return;
 	}
 }
@@ -232,11 +235,13 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 	int ret, err;
 
 	if (!ssl || !ssl->ssl) {
+		objlock(sock);
 		if (addr && (sock->type == SOCK_DGRAM)) {
 			ret = recvfrom(sock->sock, buf, num, 0, addr, &salen);
 		} else {
 			ret = read(sock->sock, buf, num);
 		}
+		objunlock(sock);
 		return (ret);
 	}
 
@@ -282,11 +287,13 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 	int ret, err;
 
 	if (!ssl || !ssl->ssl) {
+		objlock(sock);
 		if (addr && (sock->type == SOCK_DGRAM)) {
 			ret = sendto(sock->sock, buf, num, 0, addr, sizeof(*addr));
 		} else {
 			ret = write(sock->sock, buf, num);
 		}
+		objunlock(sock);
 		return (ret);
 	}
 
@@ -343,12 +350,13 @@ void sslstartup(void) {
 	}
 }
 
-
-void dtlssetopts(struct ssldata *ssl, SSL_CTX *ctx, int sock, int flags) {
+void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsocket *sock, int flags) {
 	struct timeval timeout;
 
+	objlock(sock);
 	objlock(ssl);
-	ssl->bio = BIO_new_dgram(sock, flags);
+	ssl->bio = BIO_new_dgram(sock->sock, flags);
+	objunlock(sock);
 
 	timeout.tv_sec = 5;
 	timeout.tv_usec = 0;
@@ -357,7 +365,13 @@ void dtlssetopts(struct ssldata *ssl, SSL_CTX *ctx, int sock, int flags) {
 	timeout.tv_usec = 0;
 	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &timeout);
 
-	ssl->ssl = SSL_new(ctx);
+	if (orig) {
+		objlock(orig);
+		ssl->ssl = SSL_new(orig->ctx);
+		objunlock(orig);
+	} else {
+		ssl->ssl = SSL_new(ssl->ctx);
+	}
 	SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
 	objunlock(ssl);
 }
@@ -365,17 +379,19 @@ void dtlssetopts(struct ssldata *ssl, SSL_CTX *ctx, int sock, int flags) {
 void dtsl_serveropts(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 
+	objlock(sock);
 	objlock(ssl);
-	ssl->flags |= SSL_SERVER;
+	ssl->bio = BIO_new_dgram(sock->sock, BIO_NOCLOSE);
+	objunlock(sock);
 
 	SSL_CTX_set_cookie_generate_cb(ssl->ctx, generate_cookie);
 	SSL_CTX_set_cookie_verify_cb(ssl->ctx, verify_cookie);
 	SSL_CTX_set_session_cache_mode(ssl->ctx, SSL_SESS_CACHE_OFF);
 
-	ssl->bio = BIO_new_dgram(sock->sock, BIO_NOCLOSE);
 	ssl->ssl = SSL_new(ssl->ctx);
 	SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
 	SSL_set_options(ssl->ssl, SSL_OP_COOKIE_EXCHANGE);
+	ssl->flags |= SSL_SERVER;
 	objunlock(ssl);
 }
 
@@ -383,11 +399,13 @@ void dtlsaccept(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 	struct timeval timeout;
 
+	objlock(sock);
 	objlock(ssl);
 	ssl->flags |= SSL_SERVER;
 
 	BIO_set_fd(ssl->bio, sock->sock, BIO_NOCLOSE);
 	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr.sa);
+	objunlock(sock);
 
 	SSL_accept(ssl->ssl);
 
@@ -420,14 +438,17 @@ struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 
 	newssl->flags |= SSL_DTLSCON;
 
-	dtlssetopts(newssl, ssl->ctx, sock->sock, BIO_NOCLOSE);
+	dtlssetopts(newssl, ssl, sock, BIO_NOCLOSE);
 	memset(&client, 0, sizeof(client));
 	while (DTLSv1_listen(newssl->ssl, &client) <= 0);
 
+	objlock(sock);
 	if (!(newsock = make_socket(sock->addr.sa.sa_family, sock->type, sock->proto, newssl))) {
+		objunlock(sock);
 		objunref(newssl);
 		return NULL;
 	}
+	objunlock(sock);
 	memcpy(&newsock->addr.sa, &client, sizeof(newsock->addr.sa));
 
 	setsockopt(newsock->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -435,7 +456,9 @@ struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 	setsockopt(newsock->sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
 #endif
 
+	objlock(sock);
 	bind(newsock->sock, &sock->addr.sa, sizeof(sock->addr.sa));
+	objunlock(sock);
 	connect(newsock->sock, &newsock->addr.sa, sizeof(newsock->addr.sa));
 
 	dtlsaccept(newsock);
@@ -450,12 +473,13 @@ void dtlsconnect(struct fwsocket *sock) {
 		return;
 	}
 
+	dtlssetopts(ssl, NULL, sock, BIO_CLOSE);
 
-	dtlssetopts(ssl, ssl->ctx, sock->sock, BIO_CLOSE);
-
+	objlock(sock);
 	objlock(ssl);
 	ssl->flags |= SSL_CLIENT;
 	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr.sa);
+	objunlock(sock);
 	SSL_connect(ssl->ssl);
 
 	if (SSL_get_peer_certificate(ssl->ssl)) {

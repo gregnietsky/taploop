@@ -49,6 +49,7 @@ void clean_fwsocket(void *data) {
 	struct fwsocket *si = data;
 	int cnt = 10;
 
+	objlock(si);
 	if (si->sock >= 0) {
 		si->flags &= ~SOCK_FLAG_RUNNING;
 		for(; (cnt && !(si->flags & SOCK_FLAG_CLOSING)) ;cnt--) {
@@ -61,6 +62,7 @@ void clean_fwsocket(void *data) {
 	} else if (si->ssl) {
 		objunref(si->ssl);
 	}
+	objunlock(si);
 }
 
 struct fwsocket *make_socket(int family, int type, int proto, void *ssl) {
@@ -92,7 +94,9 @@ struct fwsocket *accept_socket(struct fwsocket *sock) {
 		return NULL;
 	}
 
+	objlock(sock);
 	if ((si->sock = accept(sock->sock, &si->addr.sa, &salen)) < 0) {
+		objunlock(sock);
 		objunref(si);
 		return NULL;
 	}
@@ -102,7 +106,10 @@ struct fwsocket *accept_socket(struct fwsocket *sock) {
 
 	if (sock->ssl) {
 		si->ssl = sock->ssl;
+		objunlock(sock);
 		tlsaccept(si);
+	} else {
+		objunlock(sock);
 	}
 
 	return si;
@@ -186,18 +193,21 @@ void *sock_select(void **data) {
 	struct framework_sockdata *fwsel = *data;
 	fd_set  rd_set, act_set;
 	struct  timeval tv;
-	int selfd;
+	int selfd, sock;
 
 	FD_ZERO(&rd_set);
-	FD_SET(fwsel->sock->sock, &rd_set);
-
+	objlock(fwsel->sock);
+	sock = fwsel->sock->sock;
+	FD_SET(sock, &rd_set);
 	fwsel->sock->flags |= SOCK_FLAG_RUNNING;
-	while (framework_threadok(data) && (fwsel->sock->flags & SOCK_FLAG_RUNNING)) {
+	objunlock(fwsel->sock);
+
+	while (framework_threadok(data) && testflag(fwsel->sock, SOCK_FLAG_RUNNING)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
 
-		selfd = select(fwsel->sock->sock + 1, &act_set, NULL, NULL, &tv);
+		selfd = select(sock + 1, &act_set, NULL, NULL, &tv);
 
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
 			continue;
@@ -205,11 +215,11 @@ void *sock_select(void **data) {
 			break;
 		}
 
-		if (fwsel->read && FD_ISSET(fwsel->sock->sock, &act_set)) {
+		if (fwsel->read && FD_ISSET(sock, &act_set)) {
 			fwsel->read(fwsel->sock, fwsel->data);
 		}
 	}
-	fwsel->sock->flags |= SOCK_FLAG_CLOSING;
+	setflag(fwsel->sock, SOCK_FLAG_CLOSING);
 
 	return NULL;
 }
@@ -235,7 +245,7 @@ void *tcpsock_serv(void **data) {
 	struct socket_server *tcpsock = *data;
 	struct	timeval	tv;
 	fd_set	rd_set, act_set;
-	int selfd;
+	int selfd, sockfd;
 	struct fwsocket *newfd;
 
 	if (listen(tcpsock->sock->sock, tcpsock->backlog)) {
@@ -245,15 +255,18 @@ void *tcpsock_serv(void **data) {
 	}
 
 	FD_ZERO(&rd_set);
-	FD_SET(tcpsock->sock->sock, &rd_set);
+	objlock(tcpsock->sock);
+	sockfd = tcpsock->sock->sock;
+	FD_SET(sockfd, &rd_set);
+	objunlock(tcpsock->sock);
 
-	tcpsock->sock->flags |= SOCK_FLAG_RUNNING;
-	while (framework_threadok(data) && (tcpsock->sock->flags & SOCK_FLAG_RUNNING)) {
+	setflag(tcpsock->sock, SOCK_FLAG_RUNNING);
+	while (framework_threadok(data) && testflag(tcpsock->sock, SOCK_FLAG_RUNNING)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
 
-		selfd = select(tcpsock->sock->sock + 1, &act_set, NULL, NULL, &tv);
+		selfd = select(sockfd + 1, &act_set, NULL, NULL, &tv);
 
 		/*returned due to interupt continue or timed out*/
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
@@ -262,7 +275,7 @@ void *tcpsock_serv(void **data) {
 			break;
 		}
 
-		if ((FD_ISSET(tcpsock->sock->sock, &act_set)) &&
+		if ((FD_ISSET(sockfd, &act_set)) &&
 		    (newfd = accept_socket(tcpsock->sock))) {
 			socketclient(newfd, tcpsock->data, tcpsock->client);
 			if (tcpsock->connect) {
@@ -335,6 +348,7 @@ void socketclient(struct fwsocket *sock, void *data, socketrecv read) {
 void socketserver(struct fwsocket *sock, int backlog, socketrecv connectfunc,
 				socketrecv acceptfunc, threadcleanup cleanup, void *data) {
 	struct socket_server *servsock;
+	int type;
 
 	if (!(servsock = objalloc(sizeof(*servsock), NULL))) {
 		return;
@@ -348,7 +362,10 @@ void socketserver(struct fwsocket *sock, int backlog, socketrecv connectfunc,
 	servsock->data = data;
 
 	/* grab ref for data and pass servsock*/
-	switch(sock->type) {
+	objlock(sock);
+	type = sock->type;
+	objunlock(sock);
+	switch(type) {
 		case SOCK_STREAM:
 			objref(data);
 			framework_mkthread(tcpsock_serv, tcpsock_serv_clean, NULL, servsock);
