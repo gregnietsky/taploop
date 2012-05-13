@@ -44,6 +44,8 @@ struct socket_server {
 
 /*from sslutils im the only consumer*/
 void dtsl_serveropts(struct fwsocket *sock);
+void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec);
+void dtlshandltimeout(struct fwsocket *sock);
 
 void clean_fwsocket(void *data) {
 	struct fwsocket *si = data;
@@ -57,10 +59,12 @@ void clean_fwsocket(void *data) {
 		}
 		if (si->ssl) {
 			objunref(si->ssl);
+			si->ssl = NULL;
 		}
 		close(si->sock);
 	} else if (si->ssl) {
 		objunref(si->ssl);
+		si->ssl = NULL;
 	}
 	objunlock(si);
 }
@@ -139,6 +143,7 @@ struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipadd
 			break;
 		}
 		objunref(sock);
+		sock = NULL;
 	}
 
 	if (ctype && sock) {
@@ -180,15 +185,6 @@ struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl) {
 	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 1));
 }
 
-void *delsock_select(void *data) {
-	struct framework_sockdata *fwsel = data;
-
-	objunref(fwsel->data);
-	objunref(fwsel->sock);
-
-	return NULL;
-}
-
 void *sock_select(void **data) {
 	struct framework_sockdata *fwsel = *data;
 	fd_set  rd_set, act_set;
@@ -221,19 +217,22 @@ void *sock_select(void **data) {
 	}
 	setflag(fwsel->sock, SOCK_FLAG_CLOSING);
 
+	objunref(fwsel->data);
+	objunref(fwsel->sock);
+
 	return NULL;
 }
 
-void *tcpsock_serv_clean(void *data) {
+void *serv_threadclean(void *data) {
 	struct socket_server *tcpsock = data;
 
 	/*call cleanup and remove refs to data*/
 	if (tcpsock->cleanup) {
 		tcpsock->cleanup(tcpsock->data);
 	}
-
-	objunref(tcpsock->data);
-	objunref(tcpsock->sock);
+	if (tcpsock->data) {
+		objunref(tcpsock->data);
+	}
 
 	return NULL;
 }
@@ -284,21 +283,8 @@ void *tcpsock_serv(void **data) {
 		}
 	}
 	tcpsock->sock->flags |= SOCK_FLAG_CLOSING;
+
 	objunref(tcpsock->sock);
-
-	return NULL;
-}
-
-void *dtls_serv_clean(void *data) {
-	struct socket_server *dtlssock = data;
-
-	/*call cleanup and remove refs to data*/
-	if (dtlssock->cleanup) {
-		dtlssock->cleanup(dtlssock->data);
-	}
-
-	objunref(dtlssock->data);
-	objunref(dtlssock->sock);
 
 	return NULL;
 }
@@ -309,20 +295,42 @@ void *dtls_serv_clean(void *data) {
 void *dtls_serv(void **data) {
 	struct socket_server *dtlssock = *data;
 	struct fwsocket *newsock;
+	struct	timeval	tv;
+	fd_set	rd_set, act_set;
+	int selfd, sockfd;
 
 	dtsl_serveropts(dtlssock->sock);
 
-	dtlssock->sock->flags |= SOCK_FLAG_RUNNING;
-	while (framework_threadok(data) && (dtlssock->sock->flags & SOCK_FLAG_RUNNING)) {
-		if (!(newsock = dtls_listenssl(dtlssock->sock))) {
-			continue;
+	FD_ZERO(&rd_set);
+	objlock(dtlssock->sock);
+	sockfd = dtlssock->sock->sock;
+	FD_SET(sockfd, &rd_set);
+	objunlock(dtlssock->sock);
+
+	setflag(dtlssock->sock, SOCK_FLAG_RUNNING);
+	while (framework_threadok(data) && testflag(dtlssock->sock, SOCK_FLAG_RUNNING)) {
+		act_set = rd_set;
+		dtlstimeout(dtlssock->sock, &tv, 20000);
+		selfd = select(sockfd + 1, &act_set, NULL, NULL, &tv);
+
+		/*returned due to interupt continue or timed out*/
+		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
+			dtlshandltimeout(dtlssock->sock);
+     			continue;
+		} else if (selfd < 0) {
+			break;
 		}
-		socketclient(newsock, dtlssock->data, dtlssock->client);
-		if (dtlssock->connect) {
-			dtlssock->connect(newsock, dtlssock->data);
+
+		if (FD_ISSET(sockfd, &act_set) && (newsock = dtls_listenssl(dtlssock->sock))) {
+			socketclient(newsock, dtlssock->data, dtlssock->client);
+			if (dtlssock->connect) {
+				dtlssock->connect(newsock, dtlssock->data);
+			}
 		}
 	}
 	dtlssock->sock->flags |= SOCK_FLAG_CLOSING;
+
+	objunref(dtlssock->sock);
 
 	return NULL;
 }
@@ -341,7 +349,7 @@ void socketclient(struct fwsocket *sock, void *data, socketrecv read) {
 	/* grab ref for data and pass fwsel*/
 	startsslclient(sock);
 	objref(data);
-	framework_mkthread(sock_select, delsock_select, NULL, fwsel);
+	framework_mkthread(sock_select, NULL, NULL, fwsel);
 	objunref(fwsel);
 }
 
@@ -368,12 +376,12 @@ void socketserver(struct fwsocket *sock, int backlog, socketrecv connectfunc,
 	switch(type) {
 		case SOCK_STREAM:
 			objref(data);
-			framework_mkthread(tcpsock_serv, tcpsock_serv_clean, NULL, servsock);
+			framework_mkthread(tcpsock_serv, serv_threadclean, NULL, servsock);
 			break;
 		case SOCK_DGRAM:
 			if (sock->ssl) {
 				objref(data);
-				framework_mkthread(dtls_serv, dtls_serv_clean, NULL, servsock);
+				framework_mkthread(dtls_serv, serv_threadclean, NULL, servsock);
 			} else {
 				socketclient(sock, data, connectfunc);
 			}

@@ -145,6 +145,10 @@ int objcnt(void *data) {
 	int ret = -1;
 	struct ref_obj *ref;
 
+	if (!data) {
+		return (ret);
+	}
+
 	ptr = ptr - refobj_offset;
 	ref = (struct ref_obj*)ptr;
 

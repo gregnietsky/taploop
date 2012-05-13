@@ -48,7 +48,7 @@ unsigned char *cookie_secret = NULL;
 int generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
 	struct sockaddr peer;
 
-	if (!cookie_secret) {
+	if (!ssl || !cookie_secret) {
 		return 0;
 	}
 
@@ -64,7 +64,7 @@ int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
 	unsigned char result[EVP_MAX_MD_SIZE];
 	unsigned int resultlength;
 
-	if (!cookie_secret) {
+	if (!ssl || !cookie_secret) {
 		return 0;
 	}
 
@@ -88,10 +88,12 @@ void free_ssldata(void *data) {
 
 	if (ssl->ssl) {
 		SSL_free(ssl->ssl);
+		ssl->ssl = NULL;
 	}
 
 	if (ssl->ctx) {
 		SSL_CTX_free(ssl->ctx);
+		ssl->ctx = NULL;
 	}
 	objunlock(ssl);
 }
@@ -379,17 +381,13 @@ void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsocket *soc
 void dtsl_serveropts(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 
-	objlock(sock);
-	objlock(ssl);
-	ssl->bio = BIO_new_dgram(sock->sock, BIO_NOCLOSE);
-	objunlock(sock);
+	dtlssetopts(ssl, NULL, sock, BIO_NOCLOSE);
 
+	objlock(ssl);
 	SSL_CTX_set_cookie_generate_cb(ssl->ctx, generate_cookie);
 	SSL_CTX_set_cookie_verify_cb(ssl->ctx, verify_cookie);
 	SSL_CTX_set_session_cache_mode(ssl->ctx, SSL_SESS_CACHE_OFF);
 
-	ssl->ssl = SSL_new(ssl->ctx);
-	SSL_set_bio(ssl->ssl, ssl->bio, ssl->bio);
 	SSL_set_options(ssl->ssl, SSL_OP_COOKIE_EXCHANGE);
 	ssl->flags |= SSL_SERVER;
 	objunlock(ssl);
@@ -440,7 +438,10 @@ struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 
 	dtlssetopts(newssl, ssl, sock, BIO_NOCLOSE);
 	memset(&client, 0, sizeof(client));
-	while (DTLSv1_listen(newssl->ssl, &client) <= 0);
+	if (DTLSv1_listen(newssl->ssl, &client) <= 0) {
+		objunref(newssl);
+		return NULL;
+	}
 
 	objlock(sock);
 	if (!(newsock = make_socket(sock->addr.sa.sa_family, sock->type, sock->proto, newssl))) {
@@ -505,4 +506,19 @@ void startsslclient(struct fwsocket *sock) {
 			sslsockstart(sock, 0);
 			break;
 	}
+}
+
+void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec) {
+	objlock(sock->ssl);
+	if (!DTLSv1_get_timeout(sock->ssl->ssl, timeleft)) {
+		timeleft->tv_sec = 0;
+		timeleft->tv_usec = defusec;
+	}
+	objunlock(sock->ssl);
+}
+
+void dtlshandltimeout(struct fwsocket *sock) {
+	objlock(sock->ssl);
+	DTLSv1_handle_timeout(sock->ssl->ssl);
+	objunlock(sock->ssl);
 }
