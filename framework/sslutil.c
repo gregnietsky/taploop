@@ -404,6 +404,10 @@ void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsocket *soc
 void dtsl_serveropts(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 
+	if (!ssl) {
+		return;
+	}
+
 	dtlssetopts(ssl, NULL, sock, BIO_NOCLOSE);
 
 	objlock(ssl);
@@ -532,6 +536,10 @@ void startsslclient(struct fwsocket *sock) {
 }
 
 void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec) {
+	if (!sock || !sock->ssl || !sock->ssl->ssl) {
+		return;
+	}
+
 	objlock(sock->ssl);
 	if (!DTLSv1_get_timeout(sock->ssl->ssl, timeleft)) {
 		timeleft->tv_sec = 0;

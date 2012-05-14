@@ -154,7 +154,7 @@ struct fwsocket *udpbind(const char *ipaddr, const char *port, void *ssl);
 struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl, int backlog);
 void closesocket(struct fwsocket *sock);
 
-void socketclient(struct fwsocket *sock, void *data, socketrecv read);
+void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup);
 void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
 
 /*Radius utilities*/
