@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <framework.h>
 
-enum SSLTYPE {
+enum SSLFLAGS {
 	SSL_TLSV1	= 1 << 0,
 	SSL_SSLV2	= 1 << 1,
 	SSL_SSLV3	= 1 << 2,
@@ -79,24 +79,53 @@ int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
 	return 0;
 }
 
-void free_ssldata(void *data) {
+void ssl_shutdown(void *data) {
 	struct ssldata *ssl = data;
+	int err, ret;
 
-	objlock(ssl);
-	if (ssl->ssl && !SSL_shutdown(ssl->ssl)) {
-		SSL_shutdown(ssl->ssl);
+	if (!ssl) {
+		return;
 	}
 
+	objlock(ssl);
+	if (ssl->ssl && ((ret = SSL_shutdown(ssl->ssl)) < 1)) {
+		objunlock(ssl);
+		if (ret == 0) {
+			objlock(ssl);
+			ret = SSL_shutdown(ssl->ssl);
+		} else {
+			objlock(ssl);
+		}
+		err = SSL_get_error(ssl->ssl, ret);
+		switch(err) {
+			case SSL_ERROR_WANT_READ:
+				printf("SSL SHut R\n");
+				break;
+			case SSL_ERROR_WANT_WRITE:
+				printf("SSL SHut W\n");
+				break;
+			case SSL_ERROR_SYSCALL:
+				/* ignore this as documented*/
+				break;
+			default:
+				printf("SSL Shutdown unknown error %i\n", err);
+				break;
+		}
+	}
 	if (ssl->ssl) {
 		SSL_free(ssl->ssl);
 		ssl->ssl = NULL;
 	}
+	objunlock(ssl);
+}
+
+void free_ssldata(void *data) {
+	struct ssldata *ssl = data;
 
 	if (ssl->ctx) {
 		SSL_CTX_free(ssl->ctx);
 		ssl->ctx = NULL;
 	}
-	objunlock(ssl);
 }
 
 int verify_callback (int ok, X509_STORE_CTX *ctx) {
@@ -138,7 +167,7 @@ struct ssldata *sslinit(const char *cacert, const char *cert, const char *key, i
 		ret= 0;
 	}
 
-/*	Should create a tmp 512 bit rsa key for RSA ciphers also need DH
+/*XXX	Should create a tmp 512 bit rsa key for RSA ciphers also need DH
 	http://www.openssl.org/docs/ssl/SSL_CTX_set_cipher_list.html
 	SSL_CTX_set_cipher_list*/
 
@@ -252,6 +281,11 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 	}
 
 	objlock(ssl);
+	/* ive been shutdown*/
+	if (!ssl->ssl) {
+		objunlock(ssl);
+		return -1;
+	}
 	ret = SSL_read(ssl->ssl, buf, num);
 	err = SSL_get_error(ssl->ssl, ret);
 	if (ret == 0) {
@@ -324,13 +358,13 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 		objunlock(ssl);
 		return SSL_ERROR_SSL;
 	}
-
 	ret = SSL_write(ssl->ssl, buf, num);
 	err = SSL_get_error(ssl->ssl, ret);
-	if (ret == 0) {
-		sock->flags &= ~SOCK_FLAG_RUNNING;
-	}
 	objunlock(ssl);
+
+	if (ret == -1) {
+		clearflag(sock, SOCK_FLAG_RUNNING);
+	}
 
 	switch(err) {
 		case SSL_ERROR_NONE:
@@ -375,12 +409,12 @@ void sslstartup(void) {
 	}
 }
 
-void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsocket *sock, int flags) {
+void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsocket *sock) {
 	struct timeval timeout;
 
 	objlock(sock);
 	objlock(ssl);
-	ssl->bio = BIO_new_dgram(sock->sock, flags);
+	ssl->bio = BIO_new_dgram(sock->sock, BIO_NOCLOSE);
 	objunlock(sock);
 
 	timeout.tv_sec = 5;
@@ -408,7 +442,7 @@ void dtsl_serveropts(struct fwsocket *sock) {
 		return;
 	}
 
-	dtlssetopts(ssl, NULL, sock, BIO_NOCLOSE);
+	dtlssetopts(ssl, NULL, sock);
 
 	objlock(ssl);
 	SSL_CTX_set_cookie_generate_cb(ssl->ctx, generate_cookie);
@@ -422,7 +456,6 @@ void dtsl_serveropts(struct fwsocket *sock) {
 
 void dtlsaccept(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
-	struct timeval timeout;
 
 	objlock(sock);
 	objlock(ssl);
@@ -433,13 +466,6 @@ void dtlsaccept(struct fwsocket *sock) {
 	objunlock(sock);
 
 	SSL_accept(ssl->ssl);
-
-	timeout.tv_sec = 5;
-	timeout.tv_usec = 0;
-	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &timeout);
-	timeout.tv_sec = 5;
-	timeout.tv_usec = 0;
-	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &timeout);
 
 	if (SSL_get_peer_certificate(ssl->ssl)) {
 		printf ("A------------------------------------------------------------\n");
@@ -463,7 +489,7 @@ struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 
 	newssl->flags |= SSL_DTLSCON;
 
-	dtlssetopts(newssl, ssl, sock, BIO_NOCLOSE);
+	dtlssetopts(newssl, ssl, sock);
 	memset(&client, 0, sizeof(client));
 	if (DTLSv1_listen(newssl->ssl, &client) <= 0) {
 		objunref(newssl);
@@ -501,7 +527,7 @@ void dtlsconnect(struct fwsocket *sock) {
 		return;
 	}
 
-	dtlssetopts(ssl, NULL, sock, BIO_CLOSE);
+	dtlssetopts(ssl, NULL, sock);
 
 	objlock(sock);
 	objlock(ssl);

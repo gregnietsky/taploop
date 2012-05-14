@@ -48,53 +48,45 @@ void dtsl_serveropts(struct fwsocket *sock);
 void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec);
 void dtlshandltimeout(struct fwsocket *sock);
 
+int hash_socket(void *data, int key) {
+        int ret;
+        struct fwsocket *sock = data;
+        int *hashkey = (key) ? data : &sock->sock;
+
+        ret = *hashkey;
+
+        return (ret);
+}
+
 void closesocket(struct fwsocket *sock) {
-	int cnt;
-	void *ssl;
-
-	objlock(sock);
-	if (sock->ssl) {
-		ssl = sock->ssl;
-		objlock(ssl);
-		sock->ssl = NULL;
-		objunlock(ssl);
-		objunref(sock->ssl);
+	if (sock) {
+		setflag(sock, SOCK_FLAG_CLOSE);
+		objunref(sock);
 	}
-	sock->flags &= ~SOCK_FLAG_RUNNING;
-	objunlock(sock);
-
-	for(cnt = 10; (cnt && !testflag(sock, SOCK_FLAG_CLOSING)); cnt--) {
-		usleep(10000);
-	}
-
-	objlock(sock);
-	shutdown(sock->sock, SHUT_RDWR);
-	sock->sock = -1;
-	objunlock(sock);
-	objunref(sock);
 }
 
 void clean_fwsocket(void *data) {
 	struct fwsocket *sock = data;
-	int cnt;
-	void *ssl;
 
 	if (sock->ssl) {
-		ssl = sock->ssl;
-		objlock(ssl);
-		sock->ssl = NULL;
-		objunlock(ssl);
 		objunref(sock->ssl);
 	}
-	sock->flags &= ~SOCK_FLAG_RUNNING;
 
-	for(cnt = 10; (cnt && !testflag(sock, SOCK_FLAG_CLOSING)); cnt--) {
-		usleep(10000);
+	/*im closing remove from parent list*/
+	if (sock->parent) {
+		if (sock->parent->children) {
+			remove_bucket_item(sock->parent->children, sock);
+		}
+		objunref(sock->parent);
 	}
 
-	if (sock->sock) {
-		shutdown(sock->sock, SHUT_RDWR);
-		sock->sock = -1;
+	/*looks like the server is shut down*/
+	if (sock->children) {
+		objunref(sock->children);
+	}
+
+	if (sock->sock >= 0) {
+		close(sock->sock);
 	}
 }
 
@@ -252,9 +244,19 @@ void *sock_select(void **data) {
 	objunlock(fwsel->sock);
 
 	while (framework_threadok(data) && testflag(fwsel->sock, SOCK_FLAG_RUNNING)) {
+		objlock(fwsel->sock);
+		if (fwsel->sock->flags & SOCK_FLAG_CLOSE) {
+			ssl_shutdown(fwsel->sock->ssl);
+			fwsel->sock->flags &= ~SOCK_FLAG_RUNNING;
+			objunlock(fwsel->sock);
+			break;
+		}
+		objunlock(fwsel->sock);
+
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
+
 
 		selfd = select(sock + 1, &act_set, NULL, NULL, &tv);
 
@@ -269,7 +271,6 @@ void *sock_select(void **data) {
 		}
 	}
 	setflag(fwsel->sock, SOCK_FLAG_CLOSING);
-
 	objunref(fwsel->sock);
 
 	return NULL;
@@ -295,24 +296,35 @@ void *serv_threadclean(void *data) {
 void *socket_serv(void **data) {
 	struct socket_server *servdata = *data;
 	struct fwsocket *newsock;
+	struct fwsocket *sock = servdata->sock;
 	struct	timeval	tv;
 	fd_set	rd_set, act_set;
 	int selfd, sockfd, type;
-	struct fwsocket *newfd;
+	struct bucket_loop *bloop;
 
-	objlock(servdata->sock);
+	objlock(sock);
+	sock->children = create_bucketlist(6, hash_socket);
 	FD_ZERO(&rd_set);
-	sockfd = servdata->sock->sock;
-	type = servdata->sock->type;
+	sockfd = sock->sock;
+	type = sock->type;
 	FD_SET(sockfd, &rd_set);
-	objunlock(servdata->sock);
+	objunlock(sock);
 
 	if (type == SOCK_DGRAM) {
-		dtsl_serveropts(servdata->sock);
+		dtsl_serveropts(sock);
 	}
 
-	setflag(servdata->sock, SOCK_FLAG_RUNNING);
-	while (framework_threadok(data) && testflag(servdata->sock, SOCK_FLAG_RUNNING)) {
+	setflag(sock, SOCK_FLAG_RUNNING);
+	while (framework_threadok(data) && testflag(sock, SOCK_FLAG_RUNNING)) {
+		objlock(sock);
+		if (sock->flags & SOCK_FLAG_CLOSE) {
+			ssl_shutdown(sock->ssl);
+			sock->flags &= ~SOCK_FLAG_RUNNING;
+			objunlock(sock);
+			break;
+		}
+		objunlock(sock);
+
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
@@ -322,36 +334,56 @@ void *socket_serv(void **data) {
 		/*returned due to interupt continue or timed out*/
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
 			if (type == SOCK_DGRAM) {
-				dtlshandltimeout(servdata->sock);
+				dtlshandltimeout(sock);
 			}
      			continue;
 		} else if (selfd < 0) {
 			break;
 		}
+
 		if (FD_ISSET(sockfd, &act_set)) {
 			switch (type) {
 				case SOCK_STREAM:
 				case SOCK_SEQPACKET:
-					if ((newfd = accept_socket(servdata->sock))) {
-						socketclient(newfd, servdata->data, servdata->client, NULL);
-						if (servdata->connect) {
-							servdata->connect(newfd, servdata->data);
-						}
-						objunref(newfd);
-					}
+					newsock = accept_socket(sock);
 					break;
 				case SOCK_DGRAM:
-					if ((newsock = dtls_listenssl(servdata->sock))) {
-						socketclient(newsock, servdata->data, servdata->client, NULL);
-						if (servdata->connect) {
-							servdata->connect(newsock, servdata->data);
-						}
-					}
+					newsock = dtls_listenssl(sock);
+					break;
+				default:
+					newsock = NULL;
+					break;
+			}
+			if (newsock) {
+				newsock->flags |= SOCK_FLAG_SPAWN;
+				newsock->parent = sock;
+				objref(sock);
+				addtobucket(sock->children, newsock);
+				socketclient(newsock, servdata->data, servdata->client, NULL);
+				if (servdata->connect) {
+					servdata->connect(newsock, servdata->data);
+				}
+				objunref(newsock); /*pass ref to thread*/
 			}
 		}
 	}
-	setflag(servdata->sock, SOCK_FLAG_CLOSING);
-	objunref(servdata->sock);
+	setflag(sock, SOCK_FLAG_CLOSING);
+
+	/*close children*/
+	bloop = init_bucket_loop(sock->children);
+	while(bloop && (newsock = next_bucket_loop(bloop))) {
+		remove_bucket_loop(bloop);
+		objlock(newsock);
+		if (newsock->parent) {
+			objunref(newsock->parent);
+			newsock->parent = NULL;
+		}
+		objunlock(newsock);
+		closesocket(newsock); /*remove ref*/
+	}
+	stop_bucket_loop(bloop);
+
+	objunref(sock);
 
 	return NULL;
 }

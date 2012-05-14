@@ -208,6 +208,12 @@ int startthreads(void) {
 	return (threads && threads->list && threads->manager);
 }
 
+void stopthreads(void) {
+	if (threads->manager) {
+		clearflag(threads->manager, TL_THREAD_RUN);
+	}
+}
+
 /*
  * Stop all running threads
  * sending hup signal to manager

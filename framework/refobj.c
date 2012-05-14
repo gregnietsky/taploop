@@ -454,7 +454,7 @@ void remove_bucket_item(void *bucketlist, void *data) {
 
 	pthread_mutex_lock(&blist->locks[bucket]);
 	entry = blist_gotohash(blist->list[bucket], hash + 1, blist->bucketbits);
-	if (entry->hash == hash) {
+	if (entry && entry->hash == hash) {
 		if (entry->next && (entry == blist->list[bucket])) {
 			entry->next->prev = entry->prev;
 			blist->list[bucket] = entry->next;

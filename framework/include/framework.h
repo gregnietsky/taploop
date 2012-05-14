@@ -50,7 +50,9 @@ typedef struct ssldata ssldata;
 enum sock_flags {
 	SOCK_FLAG_BIND		= 1 << 0,
 	SOCK_FLAG_RUNNING	= 1 << 1,
-	SOCK_FLAG_CLOSING	= 1 << 2
+	SOCK_FLAG_CLOSE		= 1 << 2,
+	SOCK_FLAG_CLOSING	= 1 << 3,
+	SOCK_FLAG_SPAWN		= 1 << 4
 };
 
 struct fwsocket {
@@ -60,6 +62,8 @@ struct fwsocket {
 	enum sock_flags flags;
 	union sockstruct addr;
 	struct ssldata *ssl;
+	struct fwsocket *parent;
+	struct bucketlist *children;
 };
 
 typedef struct radius_packet radius_packet;
@@ -100,6 +104,8 @@ void framework_shutdown(void);
 void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connectfunc, threadcleanup cleanup);
 /* Test if the thread is running when passed data from thread */
 int framework_threadok(void *data);
+int starthreads(void);
+void stopthreads(void);
 
 /*
  * ref counted objects
@@ -203,6 +209,7 @@ int socketread(struct fwsocket *sock, void *buf, int num);
 int socketwrite(struct fwsocket *sock, const void *buf, int num);
 int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr);
 int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr);
+void ssl_shutdown(void *ssl);
 
 void tlsaccept(struct fwsocket *sock);
 struct fwsocket *dtls_listenssl(struct fwsocket *sock);
