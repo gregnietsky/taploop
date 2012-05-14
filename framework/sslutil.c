@@ -41,6 +41,7 @@ struct ssldata {
 	BIO *bio;
 	int flags;
 	const SSL_METHOD *meth;
+	struct ssldata *parent;
 };
 
 #define COOKIE_SECRET_LENGTH 16
@@ -99,13 +100,17 @@ void ssl_shutdown(void *data) {
 		err = SSL_get_error(ssl->ssl, ret);
 		switch(err) {
 			case SSL_ERROR_WANT_READ:
-				printf("SSL SHut R\n");
+				printf("SSL_shutdown wants read\n");
 				break;
 			case SSL_ERROR_WANT_WRITE:
-				printf("SSL SHut W\n");
+				printf("SSL_shutdown wants write\n");
 				break;
+			case SSL_ERROR_SSL:
+				/*ignore im going away now*/
 			case SSL_ERROR_SYSCALL:
 				/* ignore this as documented*/
+			case SSL_ERROR_NONE:
+				/* nothing to see here moving on*/
 				break;
 			default:
 				printf("SSL Shutdown unknown error %i\n", err);
@@ -121,6 +126,10 @@ void ssl_shutdown(void *data) {
 
 void free_ssldata(void *data) {
 	struct ssldata *ssl = data;
+
+	if (ssl->parent) {
+		objunref(ssl->parent);
+	}
 
 	if (ssl->ctx) {
 		SSL_CTX_free(ssl->ctx);
@@ -225,7 +234,7 @@ void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int ver
 	return (ssl);
 }
 
-void sslsockstart(struct fwsocket *sock, int accept) {
+void sslsockstart(struct fwsocket *sock, struct ssldata *orig,int accept) {
 	struct ssldata *ssl = sock->ssl;
 
 	if (!ssl) {
@@ -234,7 +243,13 @@ void sslsockstart(struct fwsocket *sock, int accept) {
 
 	objlock(sock);
 	objlock(ssl);
-	ssl->ssl = SSL_new(ssl->ctx);
+	if (orig) {
+		objlock(orig);
+		ssl->ssl = SSL_new(orig->ctx);
+		objunlock(orig);
+	} else {
+		ssl->ssl = SSL_new(ssl->ctx);
+	}
 
 	if (ssl->ssl) {
 		ssl->bio = BIO_new_socket(sock->sock, BIO_NOCLOSE);
@@ -247,6 +262,10 @@ void sslsockstart(struct fwsocket *sock, int accept) {
 			SSL_connect(ssl->ssl);
 			ssl->flags |= SSL_CLIENT;
 		}
+		if (orig) {
+			ssl->parent = orig;
+			objref(orig);
+		}
 		objunlock(ssl);
 	} else {
 		objunlock(ssl);
@@ -257,8 +276,11 @@ void sslsockstart(struct fwsocket *sock, int accept) {
 	}
 }
 
-void tlsaccept(struct fwsocket *sock) {
-	sslsockstart(sock, 1);
+void tlsaccept(struct fwsocket *sock, struct ssldata *orig) {
+	if ((sock->ssl = objalloc(sizeof(*sock->ssl), free_ssldata))) {
+		sslsockstart(sock, orig, 1);
+	}
+
 }
 
 int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr) {
@@ -426,8 +448,13 @@ void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsocket *soc
 
 	if (orig) {
 		objlock(orig);
-		ssl->ssl = SSL_new(orig->ctx);
-		objunlock(orig);
+		if ((ssl->ssl = SSL_new(orig->ctx))) {
+			ssl->parent = orig;
+			objunlock(orig);
+			objref(orig);
+		} else {
+			objunlock(orig);
+		}
 	} else {
 		ssl->ssl = SSL_new(ssl->ctx);
 	}
@@ -556,7 +583,7 @@ void startsslclient(struct fwsocket *sock) {
 			dtlsconnect(sock);
 			break;
 		case SOCK_STREAM:
-			sslsockstart(sock, 0);
+			sslsockstart(sock, NULL, 0);
 			break;
 	}
 }

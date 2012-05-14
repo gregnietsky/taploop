@@ -130,12 +130,9 @@ struct fwsocket *accept_socket(struct fwsocket *sock) {
 	si->proto = sock->proto;
 
 	if (sock->ssl) {
-		si->ssl = sock->ssl;
-		objunlock(sock);
-		tlsaccept(si);
-	} else {
-		objunlock(sock);
+		tlsaccept(si, sock->ssl);
 	}
+	objunlock(sock);
 
 	return si;
 }

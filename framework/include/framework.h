@@ -211,7 +211,7 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr);
 void ssl_shutdown(void *ssl);
 
-void tlsaccept(struct fwsocket *sock);
+void tlsaccept(struct fwsocket *sock, struct ssldata *orig);
 struct fwsocket *dtls_listenssl(struct fwsocket *sock);
 void startsslclient(struct fwsocket *sock);
 
