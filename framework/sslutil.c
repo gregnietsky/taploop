@@ -263,8 +263,8 @@ void sslsockstart(struct fwsocket *sock, struct ssldata *orig,int accept) {
 			ssl->flags |= SSL_CLIENT;
 		}
 		if (orig) {
-			ssl->parent = orig;
 			objref(orig);
+			ssl->parent = orig;
 		}
 		objunlock(ssl);
 	} else {
@@ -296,7 +296,7 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 			ret = read(sock->sock, buf, num);
 		}
 		if (ret == 0) {
-			sock->flags &= ~SOCK_FLAG_RUNNING;
+			sock->flags |= SOCK_FLAG_CLOSE;
 		}
 		objunlock(sock);
 		return (ret);
@@ -311,27 +311,22 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 	ret = SSL_read(ssl->ssl, buf, num);
 	err = SSL_get_error(ssl->ssl, ret);
 	if (ret == 0) {
-		sock->flags &= ~SOCK_FLAG_RUNNING;
+		sock->flags |= SOCK_FLAG_CLOSE;
 	}
 	objunlock(ssl);
 	switch (err) {
 		case SSL_ERROR_NONE:
 			break;
-		case SSL_ERROR_WANT_READ:
-			printf("Want Read\n");
-			break;
 		case SSL_ERROR_WANT_X509_LOOKUP:
 			printf("Want X509\n");
+			break;
+		case SSL_ERROR_WANT_READ:
+			printf("Want Read\n");
 			break;
 		case SSL_ERROR_WANT_WRITE:
 			printf("Want write\n");
 			break;
 		case SSL_ERROR_ZERO_RETURN:
-			objlock(sock);
-			objunref(sock->ssl);
-			sock->ssl = NULL;
-			objunlock(sock);
-			break;
 		case SSL_ERROR_SSL:
 			objlock(sock);
 			objunref(sock->ssl);
@@ -358,7 +353,7 @@ int socketread(struct fwsocket *sock, void *buf, int num) {
 
 int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr) {
 	struct ssldata *ssl = (sock) ? sock->ssl : NULL;
-	int ret, err;
+	int ret, err, syserr;
 
 	if (!sock) {
 		return (-1);
@@ -395,7 +390,7 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 	objunlock(ssl);
 
 	if (ret == -1) {
-		clearflag(sock, SOCK_FLAG_RUNNING);
+		setflag(sock, SOCK_FLAG_CLOSE);
 	}
 
 	switch(err) {
@@ -404,20 +399,24 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 		case SSL_ERROR_WANT_READ:
 			printf("Want Read\n");
 			break;
-		case SSL_ERROR_WANT_X509_LOOKUP:
-			printf("Want X509\n");
-			break;
 		case SSL_ERROR_WANT_WRITE:
 			printf("Want write\n");
 			break;
-		case SSL_ERROR_ZERO_RETURN:
-			printf("zero return\n");
+		case SSL_ERROR_WANT_X509_LOOKUP:
+			printf("Want X509\n");
 			break;
+		case SSL_ERROR_ZERO_RETURN:
 		case SSL_ERROR_SSL:
-			printf("SSL ERR\n");
+			objlock(sock);
+			objunref(sock->ssl);
+			sock->ssl = NULL;
+			objunlock(sock);
 			break;
 		case SSL_ERROR_SYSCALL:
-			printf("W syscall\n");
+			syserr = ERR_get_error();
+			if (syserr || (!syserr && (ret == -1))) {
+				printf("W syscall %i %i\n", syserr, ret);
+			}
 			break;
 		default:
 			printf("other\n");
@@ -459,9 +458,9 @@ void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsocket *soc
 	if (orig) {
 		objlock(orig);
 		if ((ssl->ssl = SSL_new(orig->ctx))) {
-			ssl->parent = orig;
 			objunlock(orig);
 			objref(orig);
+			ssl->parent = orig;
 		} else {
 			objunlock(orig);
 		}
