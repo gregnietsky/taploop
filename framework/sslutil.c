@@ -367,9 +367,19 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 	if (!ssl || !ssl->ssl) {
 		objlock(sock);
 		if (addr && (sock->type == SOCK_DGRAM)) {
-			ret = sendto(sock->sock, buf, num, 0, addr, sizeof(*addr));
+			ret = sendto(sock->sock, buf, num, MSG_NOSIGNAL, addr, sizeof(*addr));
 		} else {
-			ret = write(sock->sock, buf, num);
+			ret = send(sock->sock, buf, num, MSG_NOSIGNAL);
+		}
+		if (ret == -1) {
+			switch(errno) {
+				case EBADF:
+				case EPIPE:
+				case ENOTCONN:
+				case ENOTSOCK:
+					sock->flags |= SOCK_FLAG_CLOSE;
+					break;
+			}
 		}
 		objunlock(sock);
 		return (ret);
