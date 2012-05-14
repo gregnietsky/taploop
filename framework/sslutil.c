@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -234,7 +235,7 @@ void tlsaccept(struct fwsocket *sock) {
 int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr) {
 	struct ssldata *ssl = sock->ssl;
 	socklen_t salen = sizeof(*addr);
-	int ret, err;
+	int ret, err, syserr;
 
 	if (!ssl || !ssl->ssl) {
 		objlock(sock);
@@ -243,6 +244,9 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 		} else {
 			ret = read(sock->sock, buf, num);
 		}
+		if (ret == 0) {
+			sock->flags &= ~SOCK_FLAG_RUNNING;
+		}
 		objunlock(sock);
 		return (ret);
 	}
@@ -250,6 +254,9 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 	objlock(ssl);
 	ret = SSL_read(ssl->ssl, buf, num);
 	err = SSL_get_error(ssl->ssl, ret);
+	if (ret == 0) {
+		sock->flags &= ~SOCK_FLAG_RUNNING;
+	}
 	objunlock(ssl);
 	switch (err) {
 		case SSL_ERROR_NONE:
@@ -264,13 +271,22 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 			printf("Want write\n");
 			break;
 		case SSL_ERROR_ZERO_RETURN:
-			printf("zero return\n");
+			objlock(sock);
+			objunref(sock->ssl);
+			sock->ssl = NULL;
+			objunlock(sock);
 			break;
 		case SSL_ERROR_SSL:
-			printf("SSL ERR\n");
+			objlock(sock);
+			objunref(sock->ssl);
+			sock->ssl = NULL;
+			objunlock(sock);
 			break;
 		case SSL_ERROR_SYSCALL:
-			printf("syscall\n");
+			syserr = ERR_get_error();
+			if (syserr || (!syserr && (ret == -1))) {
+				printf("R syscall %i %i\n", syserr, ret);
+			}
 			break;
 		default:
 			printf("other\n");
@@ -285,8 +301,12 @@ int socketread(struct fwsocket *sock, void *buf, int num) {
 }
 
 int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr) {
-	struct ssldata *ssl = sock->ssl;
+	struct ssldata *ssl = (sock) ? sock->ssl : NULL;
 	int ret, err;
+
+	if (!sock) {
+		return (-1);
+	}
 
 	if (!ssl || !ssl->ssl) {
 		objlock(sock);
@@ -307,6 +327,9 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 
 	ret = SSL_write(ssl->ssl, buf, num);
 	err = SSL_get_error(ssl->ssl, ret);
+	if (ret == 0) {
+		sock->flags &= ~SOCK_FLAG_RUNNING;
+	}
 	objunlock(ssl);
 
 	switch(err) {
@@ -328,7 +351,7 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 			printf("SSL ERR\n");
 			break;
 		case SSL_ERROR_SYSCALL:
-			printf("syscall\n");
+			printf("W syscall\n");
 			break;
 		default:
 			printf("other\n");
@@ -494,7 +517,7 @@ void dtlsconnect(struct fwsocket *sock) {
 
 
 void startsslclient(struct fwsocket *sock) {
-	if (!sock->ssl || (sock->ssl->flags & SSL_SERVER)) {
+	if (!sock || !sock->ssl || (sock->ssl->flags & SSL_SERVER)) {
 		return;
 	}
 
@@ -518,6 +541,10 @@ void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec) {
 }
 
 void dtlshandltimeout(struct fwsocket *sock) {
+	if (!sock->ssl) {
+		return;
+	}
+
 	objlock(sock->ssl);
 	DTLSv1_handle_timeout(sock->ssl->ssl);
 	objunlock(sock->ssl);

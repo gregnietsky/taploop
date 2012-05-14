@@ -134,6 +134,7 @@ int objunref(void *data) {
 			if (ref->destroy) {
 				ref->destroy(data);
 			}
+			ref->data = NULL;
 			free(ref);
 		}
 	}

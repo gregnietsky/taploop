@@ -149,12 +149,13 @@ struct fwsocket *make_socket(int family, int type, int proto, void *ssl);
 struct fwsocket *sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl);
 struct fwsocket *udpconnect(const char *ipaddr, const char *port, void *ssl);
 struct fwsocket *tcpconnect(const char *ipaddr, const char *port, void *ssl);
-struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl);
+struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int backlog);
 struct fwsocket *udpbind(const char *ipaddr, const char *port, void *ssl);
-struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl);
+struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl, int backlog);
+void closesocket(struct fwsocket *sock);
 
 void socketclient(struct fwsocket *sock, void *data, socketrecv read);
-void socketserver(struct fwsocket *sock, int backlog, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
+void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
 
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20

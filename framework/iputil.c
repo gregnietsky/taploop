@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 
 #include "framework.h"
@@ -35,7 +36,6 @@ struct framework_sockdata {
 /* socket server thread*/
 struct socket_server {
 	struct fwsocket *sock;
-	int backlog;
 	void *data;
 	socketrecv	client;
 	socketrecv	connect;
@@ -47,30 +47,59 @@ void dtsl_serveropts(struct fwsocket *sock);
 void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec);
 void dtlshandltimeout(struct fwsocket *sock);
 
-void clean_fwsocket(void *data) {
-	struct fwsocket *si = data;
-	int cnt = 10;
+void closesocket(struct fwsocket *sock) {
+	int cnt;
+	void *ssl;
 
-	objlock(si);
-	if (si->sock >= 0) {
-		si->flags &= ~SOCK_FLAG_RUNNING;
-		for(; (cnt && !(si->flags & SOCK_FLAG_CLOSING)) ;cnt--) {
-			usleep(1000);
-		}
-		if (si->ssl) {
-			objunref(si->ssl);
-			si->ssl = NULL;
-		}
-		close(si->sock);
-	} else if (si->ssl) {
-		objunref(si->ssl);
-		si->ssl = NULL;
+	objlock(sock);
+	if (sock->ssl) {
+		ssl = sock->ssl;
+		objlock(ssl);
+		sock->ssl = NULL;
+		objunlock(ssl);
+		objunref(sock->ssl);
 	}
-	objunlock(si);
+	sock->flags &= ~SOCK_FLAG_RUNNING;
+	objunlock(sock);
+
+	for(cnt = 10; (cnt && !testflag(sock, SOCK_FLAG_CLOSING)); cnt--) {
+		usleep(10000);
+	}
+
+	objlock(sock);
+	shutdown(sock->sock, SHUT_RDWR);
+	sock->sock = -1;
+	objunlock(sock);
+	objunref(sock);
+}
+
+void clean_fwsocket(void *data) {
+	struct fwsocket *sock = data;
+	int cnt;
+	void *ssl;
+
+	if (sock->ssl) {
+		ssl = sock->ssl;
+		objlock(ssl);
+		sock->ssl = NULL;
+		objunlock(ssl);
+		objunref(sock->ssl);
+	}
+	sock->flags &= ~SOCK_FLAG_RUNNING;
+
+	for(cnt = 10; (cnt && !testflag(sock, SOCK_FLAG_CLOSING)); cnt--) {
+		usleep(10000);
+	}
+
+	if (sock->sock) {
+		shutdown(sock->sock, SHUT_RDWR);
+		sock->sock = -1;
+	}
 }
 
 struct fwsocket *make_socket(int family, int type, int proto, void *ssl) {
 	struct fwsocket *si;
+/*	int fl;*/
 
 	if (!(si = objalloc(sizeof(*si),clean_fwsocket))) {
 		return NULL;
@@ -81,6 +110,8 @@ struct fwsocket *make_socket(int family, int type, int proto, void *ssl) {
 		return NULL;
 	};
 
+/*	fl =fcntl(si->sock, F_GETFL, 0);
+	fcntl(si->sock, F_SETFL, fl | O_NONBLOCK);*/
 	if (ssl) {
 		si->ssl = ssl;
 	}
@@ -119,7 +150,7 @@ struct fwsocket *accept_socket(struct fwsocket *sock) {
 	return si;
 }
 
-struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int ctype) {
+struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int ctype, int backlog) {
 	struct	addrinfo hint, *result, *rp;
 	struct fwsocket *sock = NULL;
 	socklen_t salen = sizeof(struct sockaddr);
@@ -153,6 +184,12 @@ struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipadd
 #ifdef SO_REUSEPORT
 		setsockopt(sock->sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
 #endif
+		switch(sock->type) {
+			case SOCK_STREAM:
+			case SOCK_SEQPACKET:
+				listen(sock->sock, backlog);
+				break;
+		}
 	} else if (sock) {
 		getsockname(sock->sock, &sock->addr.sa, &salen);
 	}
@@ -162,27 +199,27 @@ struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipadd
 }
 
 struct fwsocket *sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl) {
-	return(_opensocket(family, stype, proto, ipaddr, port, ssl, 0));
+	return(_opensocket(family, stype, proto, ipaddr, port, ssl, 0, 0));
 }
 
 struct fwsocket *udpconnect(const char *ipaddr, const char *port, void *ssl) {
-	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, ssl, 0));
+	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, ssl, 0, 0));
 }
 
 struct fwsocket *tcpconnect(const char *ipaddr, const char *port, void *ssl) {
-	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 0));
+	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 0, 0));
 }
 
-struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl) {
-	return(_opensocket(family, stype, proto, ipaddr, port, ssl, 1));
+struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int backlog) {
+	return(_opensocket(family, stype, proto, ipaddr, port, ssl, 1, backlog));
 }
 
 struct fwsocket *udpbind(const char *ipaddr, const char *port, void *ssl) {
-	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, ssl, 1));
+	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, ssl, 1, 0));
 }
 
-struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl) {
-	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 1));
+struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl, int backlog) {
+	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 1, backlog));
 }
 
 void *sock_select(void **data) {
@@ -190,6 +227,10 @@ void *sock_select(void **data) {
 	fd_set  rd_set, act_set;
 	struct  timeval tv;
 	int selfd, sock;
+
+	if (!fwsel->sock) {
+		return NULL;
+	}
 
 	FD_ZERO(&rd_set);
 	objlock(fwsel->sock);
@@ -247,14 +288,8 @@ void *tcpsock_serv(void **data) {
 	int selfd, sockfd;
 	struct fwsocket *newfd;
 
-	if (listen(tcpsock->sock->sock, tcpsock->backlog)) {
-		perror("client sock_serv (listen)");
-		objunref(tcpsock->sock);
-		return NULL;
-	}
-
-	FD_ZERO(&rd_set);
 	objlock(tcpsock->sock);
+	FD_ZERO(&rd_set);
 	sockfd = tcpsock->sock->sock;
 	FD_SET(sockfd, &rd_set);
 	objunlock(tcpsock->sock);
@@ -273,17 +308,16 @@ void *tcpsock_serv(void **data) {
 		} else if (selfd < 0) {
 			break;
 		}
-
 		if ((FD_ISSET(sockfd, &act_set)) &&
 		    (newfd = accept_socket(tcpsock->sock))) {
 			socketclient(newfd, tcpsock->data, tcpsock->client);
 			if (tcpsock->connect) {
 				tcpsock->connect(newfd, tcpsock->data);
 			}
+			objunref(newfd);
 		}
 	}
-	tcpsock->sock->flags |= SOCK_FLAG_CLOSING;
-
+	setflag(tcpsock->sock, SOCK_FLAG_CLOSING);
 	objunref(tcpsock->sock);
 
 	return NULL;
@@ -349,21 +383,21 @@ void socketclient(struct fwsocket *sock, void *data, socketrecv read) {
 	/* grab ref for data and pass fwsel*/
 	startsslclient(sock);
 	objref(data);
+	objref(sock);
 	framework_mkthread(sock_select, NULL, NULL, fwsel);
 	objunref(fwsel);
 }
 
-void socketserver(struct fwsocket *sock, int backlog, socketrecv connectfunc,
+void socketserver(struct fwsocket *sock, socketrecv connectfunc,
 				socketrecv acceptfunc, threadcleanup cleanup, void *data) {
 	struct socket_server *servsock;
 	int type;
 
-	if (!(servsock = objalloc(sizeof(*servsock), NULL))) {
+	if (!sock || !(servsock = objalloc(sizeof(*servsock), NULL))) {
 		return;
 	}
 
 	servsock->sock = sock;
-	servsock->backlog = backlog;
 	servsock->client = connectfunc;
 	servsock->cleanup = cleanup;
 	servsock->connect = acceptfunc;
@@ -376,11 +410,13 @@ void socketserver(struct fwsocket *sock, int backlog, socketrecv connectfunc,
 	switch(type) {
 		case SOCK_STREAM:
 			objref(data);
+			objref(sock);
 			framework_mkthread(tcpsock_serv, serv_threadclean, NULL, servsock);
 			break;
 		case SOCK_DGRAM:
 			if (sock->ssl) {
 				objref(data);
+				objref(sock);
 				framework_mkthread(dtls_serv, serv_threadclean, NULL, servsock);
 			} else {
 				socketclient(sock, data, connectfunc);
