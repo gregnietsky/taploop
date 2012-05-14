@@ -207,6 +207,7 @@ void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int ver
 
 int socketread(struct fwsocket *sock, void *buf, int num);
 int socketwrite(struct fwsocket *sock, const void *buf, int num);
+/*the following are only needed on server side of a dgram connection*/
 int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr);
 int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr);
 void ssl_shutdown(void *ssl);
