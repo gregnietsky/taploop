@@ -323,13 +323,8 @@ void category_callback(void *data, void *category_cb) {
 	cb_cat(category->entries, category->name);
 }
 
-void config_cat_callback(const char *configname, config_catcb cat_cb) {
-	struct bucketlist *file;
-
-	file = get_config_file(configname);
-
-	bucketlist_callback(file, category_callback, &cat_cb);
-	objunref(file);
+void config_cat_callback(struct bucketlist *categories, config_catcb cat_cb) {
+	bucketlist_callback(categories, category_callback, &cat_cb);
 }
 
 void file_callback(void *data, void *file_cb) {

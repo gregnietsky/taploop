@@ -244,7 +244,7 @@ struct bucket_loop *get_category_loop(const char *configname);
 struct bucketlist *get_category_next(struct bucket_loop *cloop, char *name, int len);
 struct bucketlist *get_config_category(const char *configname, const char *category);
 void config_file_callback(config_filecb file_cb);
-void config_cat_callback(const char *configname, config_catcb entry_cb);
+void config_cat_callback(struct bucketlist *categories, config_catcb entry_cb);
 void config_entry_callback(struct bucketlist *entries, config_entrycb entry_cb);
 
 /*easter egg copied from <linux/jhash.h>*/
