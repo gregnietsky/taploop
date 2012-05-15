@@ -63,6 +63,11 @@ struct fwsocket {
 	struct bucketlist *children;
 };
 
+struct config_entry {
+        const char *item;
+        const char *value;
+};
+
 typedef struct radius_packet radius_packet;
 
 typedef void	(*radius_cb)(struct radius_packet*, void*);
@@ -71,7 +76,7 @@ typedef void    *(*threadfunc)(void**);
 typedef void	(*syssighandler)(int, siginfo_t*, void*);
 typedef int     (*threadsighandler)(int, void*);
 typedef	int	(*frameworkfunc)(int, char**);
-typedef int	(*blisthash)(void*, int);
+typedef int	(*blisthash)(const void*, int);
 typedef void	(*objdestroy)(void*);
 typedef void	(*socketrecv)(struct fwsocket*, void*);
 
@@ -121,7 +126,7 @@ void *objalloc(int size, objdestroy);
 void *create_bucketlist(int bitmask, blisthash hash_function);
 int addtobucket(void *blist, void *data);
 int bucket_list_cnt(void *blist);
-void *bucket_list_find_key(void *list, void *key);
+void *bucket_list_find_key(void *list, const void *key);
 
 /*
  * iteration through buckets
@@ -225,6 +230,14 @@ void ssl_shutdown(void *ssl);
 void tlsaccept(struct fwsocket *sock, struct ssldata *orig);
 struct fwsocket *dtls_listenssl(struct fwsocket *sock);
 void startsslclient(struct fwsocket *sock);
+
+/*config file parsing functions*/
+void initconfigfiles(void);
+void unrefconfigfiles(void);
+int process_config(const char *configname, const char *configfile);
+struct bucket_loop *get_category_loop(const char *configname);
+struct bucketlist *get_category_next(struct bucket_loop *cloop, char *name, int len);
+struct bucketlist *get_config_category(const char *configname, const char *category);
 
 /*easter egg copied from <linux/jhash.h>*/
 #define JHASH_INITVAL           0xdeadbeef

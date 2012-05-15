@@ -34,10 +34,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "tlsock.h"
 #include "packet.h"
 
-int hash_tapdata(void *data, int key) {
+int hash_tapdata(const void *data, int key) {
 	int ret;
-	struct taploop *tap = data;
-	char* hashkey = (key) ? data : tap->pdev;
+	const struct taploop *tap = data;
+	const char* hashkey = (key) ? data : tap->pdev;
 
 	ret = jenhash(hashkey, strlen(hashkey), 0);
 

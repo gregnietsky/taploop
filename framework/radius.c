@@ -174,30 +174,30 @@ struct radius_packet *new_radpacket(unsigned char code, unsigned char id) {
 	return (packet);
 }
 
-int hash_session(void *data, int key) {
+int hash_session(const void *data, int key) {
 	unsigned int ret;
-	struct radius_session *session = data;
-	unsigned char *hashkey = (key) ? data : &session->id;
+	const struct radius_session *session = data;
+	const unsigned char *hashkey = (key) ? data : &session->id;
 
 	ret = *hashkey << 24;
 
 	return (ret);
 }
 
-int hash_connex(void *data, int key) {
+int hash_connex(const void *data, int key) {
 	int ret;
-	struct radius_connection *connex = data;
-	int *hashkey = (key) ? data : &connex->socket;
+	const struct radius_connection *connex = data;
+	const int *hashkey = (key) ? data : &connex->socket;
 
 	ret = *hashkey;
 
 	return (ret);
 }
 
-int hash_server(void *data, int key) {
+int hash_server(const void *data, int key) {
 	int ret;
-	struct radius_server *server = data;
-	unsigned char *hashkey = (key) ? data : &server->id;
+	const struct radius_server *server = data;
+	const unsigned char *hashkey = (key) ? data : &server->id;
 
 	ret = *hashkey;
 

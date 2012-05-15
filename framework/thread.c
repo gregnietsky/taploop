@@ -54,11 +54,11 @@ struct threadcontainer {
 /*
  * Global threads list
  */
-struct threadcontainer *threads;
+struct threadcontainer *threads = NULL;
 
-int hash_thread(void *data, int key) {
-        struct thread_pvt *thread = data;
-        pthread_t *hashkey = (key) ? data : &thread->thr;
+int hash_thread(const void *data, int key) {
+        const struct thread_pvt *thread = data;
+        const pthread_t *hashkey = (key) ? data : &thread->thr;
 	int ret;
 
 	ret = jenhash(hashkey, sizeof(pthread_t), 0);

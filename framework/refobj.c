@@ -268,8 +268,8 @@ struct blist_obj *blist_gotohash(struct blist_obj *cur, unsigned int hash, int b
 	return (lhead);
 }
 
-int gethash(struct bucket_list *blist, void *data, int key) {
-	char *ptr = data;
+int gethash(struct bucket_list *blist, const void *data, int key) {
+	const char *ptr = data;
 	struct ref_obj *ref;
 	int hash = 0;
 
@@ -534,7 +534,7 @@ int bucket_list_cnt(void *bucket_list) {
 	return (ret);
 }
 
-void *bucket_list_find_key(void *list, void *key) {
+void *bucket_list_find_key(void *list, const void *key) {
 	struct bucket_list *blist = list;
 	struct blist_obj *entry;
 	int hash, bucket;
@@ -544,9 +544,13 @@ void *bucket_list_find_key(void *list, void *key) {
 
 	pthread_mutex_lock(&blist->locks[bucket]);
 	entry = blist_gotohash(blist->list[bucket], hash + 1, blist->bucketbits);
-	if (entry->data) {
+	if (entry && entry->data) {
 		objref(entry->data->data);
+	} else if (!entry) {
+		pthread_mutex_unlock(&blist->locks[bucket]);
+		return NULL;
 	}
+
 	pthread_mutex_unlock(&blist->locks[bucket]);
 
 	if (entry->data && (entry->hash == hash)) {

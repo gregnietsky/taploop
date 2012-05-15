@@ -39,10 +39,10 @@ struct socket_handler {
 void dtsl_serveropts(struct fwsocket *sock);
 void dtlshandltimeout(struct fwsocket *sock);
 
-int hash_socket(void *data, int key) {
+int hash_socket(const void *data, int key) {
         int ret;
-        struct fwsocket *sock = data;
-        int *hashkey = (key) ? data : &sock->sock;
+	const struct fwsocket *sock = data;
+	const int *hashkey = (key) ? data : &sock->sock;
 
         ret = *hashkey;
 
