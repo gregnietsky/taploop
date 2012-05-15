@@ -163,7 +163,7 @@ void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acce
 /*interface functions*/
 int delete_kernvlan(char *ifname, int vid);
 int create_kernvlan(char *ifname, int vid);
-int interface_bind(char *iface, int protocol);
+int interface_bind(char *iface, int protocol, int flags);
 void randhwaddr(unsigned char *addr);
 int create_tun(const char *ifname, const unsigned char *hwaddr, int flags);
 

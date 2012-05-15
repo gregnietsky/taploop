@@ -96,7 +96,7 @@ int create_kernvlan(char *ifname, int vid) {
 /*
  * bind to device fd may be a existing socket
  */
-int interface_bind(char *iface, int protocol) {
+int interface_bind(char *iface, int protocol, int flags) {
 	struct ifreq ifr;
 	struct sockaddr_ll sll;
 	int proto = htons(protocol);
@@ -111,7 +111,7 @@ int interface_bind(char *iface, int protocol) {
 	/*set the network dev up*/
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, iface, IFNAMSIZ);
-	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
+	ifr.ifr_flags |= IFF_UP | IFF_RUNNING | flags;
 	if (ioctl(fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
        		perror("ioctl(SIOCSIFFLAGS) failed\n");
 		close(fd);

@@ -85,7 +85,6 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
  */
 struct tl_socket *phyopen(struct taploop *tap) {
 	struct ifreq ifr;
-	struct sockaddr_ll sll;
 	struct tl_socket *tlsock;
 	struct tpacket_req reqr;
 	int proto = htons(ETH_P_ALL);
@@ -129,15 +128,11 @@ struct tl_socket *phyopen(struct taploop *tap) {
 	objlock(tap);
 	memcpy(tap->hwaddr, &ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 	objunlock(tap);
+	close(fd);
 
 	/*set the device up*/
-	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST | IFF_PROMISC | IFF_NOARP | IFF_ALLMULTI;
-	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-		perror("ioctl(SIOCSIFFLAGS) failed");
-		close(fd);
-		return NULL;
+	if ((fd = interface_bind(tap->pname, proto, IFF_BROADCAST | IFF_MULTICAST | IFF_PROMISC | IFF_NOARP | IFF_ALLMULTI)) < 0) {
 	}
-
 
 #ifdef PACKET_MMAP_RX
 	/* Setup the fd for mmap() ring buffer RX*/
@@ -173,37 +168,6 @@ struct tl_socket *phyopen(struct taploop *tap) {
 		close(fd);
 	}
 #endif
-
-	/* set the interface index for bind*/
-	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
-		perror("ioctl(SIOCGIFINDEX) failed\n");
-		if (rxmmbuf) {
-			munmap(rxmmbuf, mapsiz);
-		}
-		close(fd);
-		if (ring) {
-			objunref(ring);
-		}
-		return NULL;
-	}
-
-
-	/*bind to the interface*/
-	memset(&sll, 0, sizeof(sll));
-	sll.sll_family = PF_PACKET;
-	sll.sll_protocol = proto;
-	sll.sll_ifindex = ifr.ifr_ifindex;
-	if (bind(fd, (struct sockaddr *) &sll, sizeof(sll)) < 0) {
-		perror("bind(ETH_P_ALL) failed");
-		if (rxmmbuf) {
-			munmap(rxmmbuf, mapsiz);
-		}
-		close(fd);
-		if (ring) {
-			objunref(ring);
-		}
-		return NULL;
-	}
 
 	if ((tlsock = objalloc(sizeof(*tlsock), NULL))) {
 		/*passing ref back*/
