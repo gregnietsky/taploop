@@ -40,9 +40,6 @@ FRAMEWORK_MAIN("Taploop Network Stack",
 
         int mask;
 
-	/*client socket to allow client to connect*/
-	tundev = "/dev/net/tun";
-
 	/* start up and listen for client connections from taploop*/
         mask = S_IXUSR | S_IWGRP | S_IRGRP | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH;
         framework_unixsocket("/tmp/tlsock", SOCK_STREAM, mask, clientsock_client, delclientsock_client);

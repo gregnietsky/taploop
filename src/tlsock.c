@@ -58,43 +58,13 @@ void *inittaplist(void) {
  * hwaddr used to set the tap device MAC adddress
  */
 struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
-	struct ifreq ifr;
 	struct tl_socket *tlsock;
 	int fd;
 
-	/* open the tun/tap clone dev*/
- 	if ((fd = open(tundev, O_RDWR)) < 0) {
-		return NULL;
- 	}
-
- 	memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-
-	/* configure the device as a tap with no PI*/
-	strncpy(ifr.ifr_name, tap->pdev, IFNAMSIZ);
-	if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0 ) {
-		perror("ioctl(TUNSETIFF) failed\n");
-		close(fd);
-		return NULL;
-	}
-
-	/* set the MAC address*/
-	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
 	objlock(tap);
-	memcpy(&ifr.ifr_hwaddr.sa_data, tap->hwaddr, ETH_ALEN);
-	objunlock(tap);
-	if (ioctl(fd, SIOCSIFHWADDR, &ifr) < 0) {
-		perror("ioctl(SIOCSIFHWADDR) failed\n");
-		close(fd);
-		return NULL;
-	}
-
-	/*set the network dev up*/
-	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
-	if (ioctl(phy->sock, SIOCSIFFLAGS, &ifr ) < 0 ) {
-		perror("ioctl(SIOCSIFFLAGS) failed");
-		close(fd);
-		return NULL;
+	if ((fd = create_tun(tap->pdev, tap->hwaddr, IFF_TAP | IFF_NO_PI)) < 0) {
+		objunlock(tap);
+		return (NULL);
 	}
 
 	if ((tlsock = objalloc(sizeof(*tlsock), NULL))) {
@@ -103,10 +73,10 @@ struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
 		tlsock->sock = fd;
 		tlsock->vid = 0;
 		tlsock->flags = TL_SOCKET_VIRT;
-		objlock(tap);
 		addtobucket(tap->socks, tlsock);
-		objunlock(tap);
 	}
+	objunlock(tap);
+
 	return (tlsock);
 }
 

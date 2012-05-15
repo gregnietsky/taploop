@@ -20,14 +20,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <linux/if_vlan.h>
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
+#include <linux/if_tun.h>
+#include <linux/if_arp.h>
 #include <linux/sockios.h>
 #include <linux/if.h>
 #include <sys/ioctl.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "framework.h"
+
+/*#include <sys/socket.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <errno.h>*/
 
 /*
  * instruct the kernel to remove a VLAN
@@ -138,4 +146,58 @@ void randhwaddr(unsigned char *addr) {
 	genrand(addr, ETH_ALEN);
 	addr [0] &= 0xfe;       /* clear multicast bit */
 	addr [0] |= 0x02;       /* set local assignment bit (IEEE802) */
+}
+
+int create_tun(const char *ifname, const unsigned char *hwaddr, int flags) {
+	struct ifreq ifr;
+	int fd, rfd;
+	unsigned char rndhwaddr[ETH_ALEN];
+	char *tundev = "/dev/net/tun";
+
+	/* open the tun/tap clone dev*/
+ 	if ((fd = open(tundev, O_RDWR)) < 0) {
+		return (-1);
+ 	}
+
+ 	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_flags = flags;
+
+	/* configure the device*/
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0 ) {
+		perror("ioctl(TUNSETIFF) failed\n");
+		close(fd);
+		return (-1);
+	}
+
+	/* set the MAC address*/
+	if (!hwaddr) {
+		randhwaddr(rndhwaddr);
+	}
+
+	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+	memcpy(&ifr.ifr_hwaddr.sa_data, (hwaddr) ? hwaddr : rndhwaddr, ETH_ALEN);
+	if (ioctl(fd, SIOCSIFHWADDR, &ifr) < 0) {
+		perror("ioctl(SIOCSIFHWADDR) failed\n");
+		close(fd);
+		return (-1);
+	}
+
+	/* open network raw socket */
+	if ((rfd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
+		close(fd);
+		return (-1);
+	}
+
+	/*set the network dev up*/
+	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
+	if (ioctl(rfd, SIOCSIFFLAGS, &ifr ) < 0 ) {
+		perror("ioctl(SIOCSIFFLAGS) failed");
+		close(rfd);
+		close(fd);
+		return (-1);
+	}
+	close(rfd);
+
+	return (fd);
 }
