@@ -51,14 +51,14 @@ int generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
 	struct sockaddr peer;
 
 	if (!ssl || !cookie_secret) {
-		return 0;
+		return (0);
 	}
 
 	memset(&peer, 0, sizeof(peer));
 	BIO_dgram_get_peer(SSL_get_rbio(ssl), &peer);
 	HMAC(EVP_sha1(), (const void*)cookie_secret, COOKIE_SECRET_LENGTH, (const unsigned char*)&peer, sizeof(peer), cookie, cookie_len);
 
-	return 1;
+	return (1);
 }
 
 int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
@@ -67,7 +67,7 @@ int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
 	unsigned int resultlength;
 
 	if (!ssl || !cookie_secret) {
-		return 0;
+		return (0);
 	}
 
 	memset(&peer, 0, sizeof(peer));
@@ -75,9 +75,9 @@ int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
 	HMAC(EVP_sha1(), (const void*)cookie_secret, COOKIE_SECRET_LENGTH, (const unsigned char*)&peer, sizeof(peer), result, &resultlength);
 
 	if (cookie_len == resultlength && memcmp(result, cookie, resultlength) == 0) {
-		return 1;
+		return (1);
 	}
-	return 0;
+	return (0);
 }
 
 void ssl_shutdown(void *data) {
@@ -197,7 +197,7 @@ struct ssldata *sslinit(const char *cacert, const char *cert, const char *key, i
 		return NULL;
 	}
 
-	return ssl;
+	return (ssl);
 }
 
 void *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
@@ -306,7 +306,7 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 	/* ive been shutdown*/
 	if (!ssl->ssl) {
 		objunlock(ssl);
-		return -1;
+		return (-1);
 	}
 	ret = SSL_read(ssl->ssl, buf, num);
 	err = SSL_get_error(ssl->ssl, ret);
@@ -383,7 +383,7 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 	objlock(ssl);
 	if (SSL_state(ssl->ssl) != SSL_ST_OK) {
 		objunlock(ssl);
-		return SSL_ERROR_SSL;
+		return (SSL_ERROR_SSL);
 	}
 	ret = SSL_write(ssl->ssl, buf, num);
 	err = SSL_get_error(ssl->ssl, ret);
@@ -553,7 +553,7 @@ struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 
 	dtlsaccept(newsock);
 
-	return newsock;
+	return (newsock);
 }
 
 void dtlsconnect(struct fwsocket *sock) {

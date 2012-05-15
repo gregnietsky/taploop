@@ -196,14 +196,17 @@ uint32_t        initval)         /* the previous hash, or an arbitrary value */
   switch(length)                     /* all the case statements fall through */
   { 
   case 3 : c+=k[2];
+  /* no break */
   case 2 : b+=k[1];
+  /* no break */
   case 1 : a+=k[0];
     final(a,b,c);
+    /* no break */
   case 0:     /* case 0: nothing left to add */
     break;
   }
   /*------------------------------------------------------ report the result */
-  return c;
+  return (c);
 }
 
 
@@ -242,9 +245,12 @@ uint32_t       *pb)               /* IN: more seed OUT: secondary hash value */
   switch(length)                     /* all the case statements fall through */
   { 
   case 3 : c+=k[2];
+  /* no break */
   case 2 : b+=k[1];
+  /* no break */
   case 1 : a+=k[0];
     final(a,b,c);
+    /* no break */
   case 0:     /* case 0: nothing left to add */
     break;
   }
@@ -331,7 +337,7 @@ uint32_t hashlittle( const void *key, size_t length, uint32_t initval)
     case 3 : a+=k[0]&0xffffff; break;
     case 2 : a+=k[0]&0xffff; break;
     case 1 : a+=k[0]&0xff; break;
-    case 0 : return c;              /* zero length strings require no mixing */
+    case 0 : return (c);              /* zero length strings require no mixing */
     }
 
 #else /* make valgrind happy */
@@ -380,27 +386,32 @@ uint32_t hashlittle( const void *key, size_t length, uint32_t initval)
              a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 11: c+=((uint32_t)k8[10])<<16;     /* fall through */
+    /* no break */
     case 10: c+=k[4];
              b+=k[2]+(((uint32_t)k[3])<<16);
              a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 9 : c+=k8[8];                      /* fall through */
+    /* no break */
     case 8 : b+=k[2]+(((uint32_t)k[3])<<16);
              a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 7 : b+=((uint32_t)k8[6])<<16;      /* fall through */
+    /* no break */
     case 6 : b+=k[2];
              a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 5 : b+=k8[4];                      /* fall through */
+    /* no break */
     case 4 : a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 3 : a+=((uint32_t)k8[2])<<16;      /* fall through */
+    /* no break */
     case 2 : a+=k[0];
              break;
     case 1 : a+=k8[0];
              break;
-    case 0 : return c;                     /* zero length requires no mixing */
+    case 0 : return (c);                     /* zero length requires no mixing */
     }
 
   } else {                        /* need to read the key one byte at a time */
@@ -430,24 +441,35 @@ uint32_t hashlittle( const void *key, size_t length, uint32_t initval)
     switch(length)                   /* all the case statements fall through */
     {
     case 12: c+=((uint32_t)k[11])<<24;
+    /* no break */
     case 11: c+=((uint32_t)k[10])<<16;
+    /* no break */
     case 10: c+=((uint32_t)k[9])<<8;
+    /* no break */
     case 9 : c+=k[8];
+    /* no break */
     case 8 : b+=((uint32_t)k[7])<<24;
+    /* no break */
     case 7 : b+=((uint32_t)k[6])<<16;
+    /* no break */
     case 6 : b+=((uint32_t)k[5])<<8;
+    /* no break */
     case 5 : b+=k[4];
+    /* no break */
     case 4 : a+=((uint32_t)k[3])<<24;
+    /* no break */
     case 3 : a+=((uint32_t)k[2])<<16;
+    /* no break */
     case 2 : a+=((uint32_t)k[1])<<8;
+    /* no break */
     case 1 : a+=k[0];
              break;
-    case 0 : return c;
+    case 0 : return (c);
     }
   }
 
   final(a,b,c);
-  return c;
+  return (c);
 }
 
 
@@ -567,22 +589,27 @@ void hashlittle2(
              a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 11: c+=((uint32_t)k8[10])<<16;     /* fall through */
+    /* no break */
     case 10: c+=k[4];
              b+=k[2]+(((uint32_t)k[3])<<16);
              a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 9 : c+=k8[8];                      /* fall through */
+    /* no break */
     case 8 : b+=k[2]+(((uint32_t)k[3])<<16);
              a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 7 : b+=((uint32_t)k8[6])<<16;      /* fall through */
+    /* no break */
     case 6 : b+=k[2];
              a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 5 : b+=k8[4];                      /* fall through */
+    /* no break */
     case 4 : a+=k[0]+(((uint32_t)k[1])<<16);
              break;
     case 3 : a+=((uint32_t)k8[2])<<16;      /* fall through */
+    /* no break */
     case 2 : a+=k[0];
              break;
     case 1 : a+=k8[0];
@@ -617,16 +644,27 @@ void hashlittle2(
     switch(length)                   /* all the case statements fall through */
     {
     case 12: c+=((uint32_t)k[11])<<24;
+    /* no break */
     case 11: c+=((uint32_t)k[10])<<16;
+    /* no break */
     case 10: c+=((uint32_t)k[9])<<8;
+    /* no break */
     case 9 : c+=k[8];
+    /* no break */
     case 8 : b+=((uint32_t)k[7])<<24;
+    /* no break */
     case 7 : b+=((uint32_t)k[6])<<16;
+    /* no break */
     case 6 : b+=((uint32_t)k[5])<<8;
+    /* no break */
     case 5 : b+=k[4];
+    /* no break */
     case 4 : a+=((uint32_t)k[3])<<24;
+    /* no break */
     case 3 : a+=((uint32_t)k[2])<<16;
+    /* no break */
     case 2 : a+=((uint32_t)k[1])<<8;
+    /* no break */
     case 1 : a+=k[0];
              break;
     case 0 : *pc=c; *pb=b; return;  /* zero length strings require no mixing */
@@ -696,7 +734,7 @@ uint32_t hashbig( const void *key, size_t length, uint32_t initval)
     case 3 : a+=k[0]&0xffffff00; break;
     case 2 : a+=k[0]&0xffff0000; break;
     case 1 : a+=k[0]&0xff000000; break;
-    case 0 : return c;              /* zero length strings require no mixing */
+    case 0 : return (c);              /* zero length strings require no mixing */
     }
 
 #else  /* make valgrind happy */
@@ -748,24 +786,35 @@ uint32_t hashbig( const void *key, size_t length, uint32_t initval)
     switch(length)                   /* all the case statements fall through */
     {
     case 12: c+=k[11];
+    /* no break */
     case 11: c+=((uint32_t)k[10])<<8;
+    /* no break */
     case 10: c+=((uint32_t)k[9])<<16;
+    /* no break */
     case 9 : c+=((uint32_t)k[8])<<24;
+    /* no break */
     case 8 : b+=k[7];
+    /* no break */
     case 7 : b+=((uint32_t)k[6])<<8;
+    /* no break */
     case 6 : b+=((uint32_t)k[5])<<16;
+    /* no break */
     case 5 : b+=((uint32_t)k[4])<<24;
+    /* no break */
     case 4 : a+=k[3];
+    /* no break */
     case 3 : a+=((uint32_t)k[2])<<8;
+    /* no break */
     case 2 : a+=((uint32_t)k[1])<<16;
+    /* no break */
     case 1 : a+=((uint32_t)k[0])<<24;
              break;
-    case 0 : return c;
+    case 0 : return (c);
     }
   }
 
   final(a,b,c);
-  return c;
+  return (c);
 }
 
 

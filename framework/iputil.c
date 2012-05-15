@@ -37,7 +37,6 @@ struct socket_handler {
 
 /*from sslutils im the only consumer*/
 void dtsl_serveropts(struct fwsocket *sock);
-void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec);
 void dtlshandltimeout(struct fwsocket *sock);
 
 int hash_socket(void *data, int key) {
@@ -100,7 +99,7 @@ struct fwsocket *make_socket(int family, int type, int proto, void *ssl) {
 	si->type = type;
 	si->proto = proto;
 
-	return si;
+	return (si);
 }
 
 struct fwsocket *accept_socket(struct fwsocket *sock) {
@@ -126,7 +125,7 @@ struct fwsocket *accept_socket(struct fwsocket *sock) {
 	}
 	objunlock(sock);
 
-	return si;
+	return (si);
 }
 
 struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int ctype, int backlog) {
