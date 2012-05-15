@@ -96,7 +96,7 @@ int create_kernvlan(char *ifname, int vid) {
 /*
  * bind to device fd may be a existing socket
  */
-int interface_bind(char *iface, int family, int protocol) {
+int interface_bind(char *iface, int protocol) {
 	struct ifreq ifr;
 	struct sockaddr_ll sll;
 	int proto = htons(protocol);
@@ -127,11 +127,11 @@ int interface_bind(char *iface, int family, int protocol) {
 
 	/*bind to the interface*/
 	memset(&sll, 0, sizeof(sll));
-	sll.sll_family = family;
+	sll.sll_family = PF_PACKET;
 	sll.sll_protocol = proto;
 	sll.sll_ifindex = ifr.ifr_ifindex;
 	if (bind(fd, (struct sockaddr *) &sll, sizeof(sll)) < 0) {
-		perror("bind(ETH_P_ALL) failed");
+		perror("bind failed");
 		close(fd);
 		return (-1);
 	}

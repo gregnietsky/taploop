@@ -69,7 +69,7 @@ int add_kernvlan(char *iface, int vid) {
 
 	/*set the network dev up*/
 	snprintf(ifname, IFNAMSIZ, "%s.%i", iface, vid);
-	if ((fd = interface_bind(ifname, PF_PACKET, ETH_P_ALL)) < 0) {
+	if ((fd = interface_bind(ifname, ETH_P_ALL)) < 0) {
 		objunref(tap);
 		return (-1);
 	}
