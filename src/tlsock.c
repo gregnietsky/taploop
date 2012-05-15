@@ -57,7 +57,7 @@ void *inittaplist(void) {
 /* tap the taploop struct
  * hwaddr used to set the tap device MAC adddress
  */
-struct tl_socket *virtopen(struct taploop *tap, struct tl_socket *phy) {
+struct tl_socket *virtopen(struct taploop *tap) {
 	struct tl_socket *tlsock;
 	int fd;
 
@@ -322,7 +322,7 @@ void *mainloop(void **data) {
 	}
 
 	/* initialise virtual device*/
-	if (!(virt = virtopen(tap, phy))) {
+	if (!(virt = virtopen(tap))) {
 		printf("Could not create TAP clone\n");
 		close(phy->sock);
 		objunref(phy);
