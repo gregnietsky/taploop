@@ -49,10 +49,7 @@ typedef struct ssldata ssldata;
 
 enum sock_flags {
 	SOCK_FLAG_BIND		= 1 << 0,
-	SOCK_FLAG_RUNNING	= 1 << 1,
-	SOCK_FLAG_CLOSE		= 1 << 2,
-	SOCK_FLAG_CLOSING	= 1 << 3,
-	SOCK_FLAG_SPAWN		= 1 << 4
+	SOCK_FLAG_CLOSE		= 1 << 1
 };
 
 struct fwsocket {

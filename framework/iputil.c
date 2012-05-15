@@ -26,8 +26,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "framework.h"
 
-/* socket server thread*/
-struct socket_server {
+/* socket handling thread*/
+struct socket_handler {
 	struct fwsocket *sock;
 	void *data;
 	socketrecv	client;
@@ -201,8 +201,8 @@ struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl, int ba
 	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 1, backlog));
 }
 
-void *serv_threadclean(void *data) {
-	struct socket_server *fwsel = data;
+void *_socket_handler_clean(void *data) {
+	struct socket_handler *fwsel = data;
 
 	/*call cleanup and remove refs to data*/
 	if (fwsel->cleanup) {
@@ -215,10 +215,10 @@ void *serv_threadclean(void *data) {
 	return NULL;
 }
 
-void *socket_serv(void **data) {
-	struct socket_server *servdata = *data;
+void *_socket_handler(void **data) {
+	struct socket_handler *sockh = *data;
+	struct fwsocket *sock = sockh->sock;
 	struct fwsocket *newsock;
-	struct fwsocket *sock = servdata->sock;
 	struct	timeval	tv;
 	fd_set	rd_set, act_set;
 	int selfd, sockfd, type, flags;
@@ -228,8 +228,7 @@ void *socket_serv(void **data) {
 	FD_ZERO(&rd_set);
 	sockfd = sock->sock;
 	type = sock->type;
-	if (((type == SOCK_DGRAM) && sock->ssl) ||
-	    (!(type == SOCK_DGRAM) && (sock->flags & SOCK_FLAG_BIND))) {
+	if ((sock->flags & SOCK_FLAG_BIND) && (sock->ssl || !(sock->type == SOCK_DGRAM))) {
 		flags = (SOCK_FLAG_BIND & sock->flags);
 	} else {
 		flags = 0;
@@ -237,24 +236,7 @@ void *socket_serv(void **data) {
 	FD_SET(sockfd, &rd_set);
 	objunlock(sock);
 
-
-	if ((type == SOCK_DGRAM) && (flags & SOCK_FLAG_BIND)) {
-		dtsl_serveropts(sock);
-	} else if (flags & SOCK_FLAG_BIND) {
-		sock->children = create_bucketlist(6, hash_socket);
-	}
-
-	setflag(sock, SOCK_FLAG_RUNNING);
-	while (framework_threadok(data) && testflag(sock, SOCK_FLAG_RUNNING)) {
-		objlock(sock);
-		if (sock->flags & SOCK_FLAG_CLOSE) {
-			ssl_shutdown(sock->ssl);
-			sock->flags &= ~SOCK_FLAG_RUNNING;
-			objunlock(sock);
-			break;
-		}
-		objunlock(sock);
-
+	while (framework_threadok(data) && !testflag(sock, SOCK_FLAG_CLOSE)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
@@ -271,78 +253,104 @@ void *socket_serv(void **data) {
 			break;
 		}
 
-		if ((flags & SOCK_FLAG_BIND) && FD_ISSET(sockfd, &act_set)) {
-			switch (type) {
-				case SOCK_STREAM:
-				case SOCK_SEQPACKET:
-					newsock = accept_socket(sock);
-					break;
-				case SOCK_DGRAM:
-					newsock = dtls_listenssl(sock);
-					break;
-				default:
-					newsock = NULL;
-					break;
-			}
-
-			if (newsock) {
-				newsock->flags |= SOCK_FLAG_SPAWN;
-				newsock->parent = sock;
-				objref(sock);
-				addtobucket(sock->children, newsock);
-				socketclient(newsock, servdata->data, servdata->client, NULL);
-				if (servdata->connect) {
-					servdata->connect(newsock, servdata->data);
+		if (FD_ISSET(sockfd, &act_set)) {
+			if (flags & SOCK_FLAG_BIND) {
+				switch (type) {
+					case SOCK_STREAM:
+					case SOCK_SEQPACKET:
+						newsock = accept_socket(sock);
+						break;
+					case SOCK_DGRAM:
+						newsock = dtls_listenssl(sock);
+						break;
+					default:
+						newsock = NULL;
+						break;
 				}
-				objunref(newsock); /*pass ref to thread*/
+				if (newsock) {
+					newsock->parent = sock;
+					objref(sock);
+					addtobucket(sock->children, newsock);
+					socketclient(newsock, sockh->data, sockh->client, NULL);
+					if (sockh->connect) {
+						sockh->connect(newsock, sockh->data);
+					}
+					objunref(newsock); /*pass ref to thread*/
+				}
+			} else {
+				sockh->client(sockh->sock, sockh->data);
 			}
-		} else if (servdata->client && FD_ISSET(sockfd, &act_set)) {
-			servdata->client(servdata->sock, servdata->data);
 		}
 	}
-	setflag(sock, SOCK_FLAG_CLOSING);
+
+	if (sock->ssl) {
+		ssl_shutdown(sock->ssl);
+	}
 
 	/*close children*/
-	bloop = init_bucket_loop(sock->children);
-	while(bloop && (newsock = next_bucket_loop(bloop))) {
-		remove_bucket_loop(bloop);
-		objlock(newsock);
-		if (newsock->parent) {
-			objunref(newsock->parent);
-			newsock->parent = NULL;
+	if (sock->children) {
+		bloop = init_bucket_loop(sock->children);
+		while(bloop && (newsock = next_bucket_loop(bloop))) {
+			remove_bucket_loop(bloop);
+			objlock(newsock);
+			if (newsock->parent) {
+				objunref(newsock->parent);
+				newsock->parent = NULL;
+			}
+			objunlock(newsock);
+			closesocket(newsock); /*remove ref*/
 		}
-		objunlock(newsock);
-		closesocket(newsock); /*remove ref*/
+		stop_bucket_loop(bloop);
 	}
-	stop_bucket_loop(bloop);
 
 	objunref(sock);
 
 	return NULL;
 }
 
-void socketserver(struct fwsocket *sock, socketrecv read,
+void _sockethandler(struct fwsocket *sock, socketrecv read,
 				socketrecv acceptfunc, threadcleanup cleanup, void *data) {
-	struct socket_server *servsock;
+	struct socket_handler *sockh;
 
-	if (!sock || !(servsock = objalloc(sizeof(*servsock), NULL))) {
+	if (!sock || !read || !(sockh = objalloc(sizeof(*sockh), NULL))) {
 		return;
 	}
 
-	servsock->sock = sock;
-	servsock->client = read;
-	servsock->cleanup = cleanup;
-	servsock->connect = acceptfunc;
-	servsock->data = data;
+	sockh->sock = sock;
+	sockh->client = read;
+	sockh->cleanup = cleanup;
+	sockh->connect = acceptfunc;
+	sockh->data = data;
 
-	/* grab ref for data and pass servsock*/
+	/* grab ref for data and pass sockh*/
 	objref(data);
 	objref(sock);
-	framework_mkthread(socket_serv, serv_threadclean, NULL, servsock);
-	objunref(servsock);
+	framework_mkthread(_socket_handler, _socket_handler_clean, NULL, sockh);
+	objunref(sockh);
+}
+
+void socketserver(struct fwsocket *sock, socketrecv read,
+				socketrecv acceptfunc, threadcleanup cleanup, void *data) {
+
+	objlock(sock);
+	if (sock->flags & SOCK_FLAG_BIND) {
+		if (sock->ssl || !(sock->type == SOCK_DGRAM)) {
+			sock->children = create_bucketlist(6, hash_socket);
+		}
+		if (sock->ssl && (sock->type == SOCK_DGRAM)) {
+			objunlock(sock);
+			dtsl_serveropts(sock);
+		} else {
+			objunlock(sock);
+		}
+	} else {
+		objunlock(sock);
+	}
+	_sockethandler(sock, read, acceptfunc, cleanup, data);
 }
 
 void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup) {
 	startsslclient(sock);
-	socketserver(sock, read, NULL, cleanup, data);
+
+	_sockethandler(sock, read, NULL, cleanup, data);
 }
