@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <framework.h>
+#include "framework.h"
 
 struct config_category {
 	const char *name;
@@ -276,7 +276,7 @@ struct bucketlist *get_config_category(const char *configname, const char *categ
 struct bucketlist *get_category_next(struct bucket_loop *cloop, char *name, int len) {
 	struct config_category *category;
 
-	if ((category = next_bucket_loop(cloop))) {
+	if (cloop && (category = next_bucket_loop(cloop))) {
 		if (category->entries) {
 			objref(category->entries);
 			if (!strlenzero(name)) {
@@ -300,4 +300,47 @@ struct bucket_loop *get_category_loop(const char *configname) {
 	cloop = init_bucket_loop(file);
 	objunref(file);
 	return (cloop);
+}
+
+void entry_callback(void *data, void *entry_cb) {
+	struct config_entry *entry = data;
+	config_entrycb *cb_entry = entry_cb, callback;
+	callback = *cb_entry;
+
+	callback(entry->item, entry->value);
+}
+
+void config_entry_callback(struct bucketlist *entries, config_entrycb entry_cb) {
+	bucketlist_callback(entries, entry_callback, &entry_cb);
+}
+
+void category_callback(void *data, void *category_cb) {
+	struct config_category *category = data;
+	config_catcb *cb_catptr = category_cb, cb_cat;
+
+	cb_cat = *cb_catptr;
+
+	cb_cat(category->entries, category->name);
+}
+
+void config_cat_callback(const char *configname, config_catcb cat_cb) {
+	struct bucketlist *file;
+
+	file = get_config_file(configname);
+
+	bucketlist_callback(file, category_callback, &cat_cb);
+	objunref(file);
+}
+
+void file_callback(void *data, void *file_cb) {
+	struct config_file *file = data;
+	config_filecb *cb_fileptr = file_cb, cb_file;
+
+	cb_file = *cb_fileptr;
+
+	cb_file(file->cat, file->filename, file->filepath);
+}
+
+void config_file_callback(config_filecb file_cb) {
+	bucketlist_callback(configfiles, file_callback, &file_cb);
 }

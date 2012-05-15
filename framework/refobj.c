@@ -561,3 +561,19 @@ void *bucket_list_find_key(void *list, const void *key) {
 
 	return NULL;
 }
+
+void bucketlist_callback(struct bucketlist *blist, blist_cb callback, void *data2) {
+	struct bucket_loop *bloop;
+	void *data;
+
+	if (!blist || !callback) {
+		return;
+	}
+
+	bloop = init_bucket_loop(blist);
+	while(blist && bloop && (data = next_bucket_loop(bloop))) {
+		callback(data, data2);
+		objunref(data);
+	}
+	stop_bucket_loop(bloop);
+}

@@ -79,6 +79,10 @@ typedef	int	(*frameworkfunc)(int, char**);
 typedef int	(*blisthash)(const void*, int);
 typedef void	(*objdestroy)(void*);
 typedef void	(*socketrecv)(struct fwsocket*, void*);
+typedef void	(*blist_cb)(void*, void*);
+typedef void	(*config_filecb)(struct bucketlist*, const char*, const char*);
+typedef void	(*config_catcb)(struct bucketlist*, const char*);
+typedef void	(*config_entrycb)(const char*, const char*);
 
 /*these can be set int the application */
 struct framework_core {
@@ -127,6 +131,7 @@ void *create_bucketlist(int bitmask, blisthash hash_function);
 int addtobucket(void *blist, void *data);
 int bucket_list_cnt(void *blist);
 void *bucket_list_find_key(void *list, const void *key);
+void bucketlist_callback(struct bucketlist *blist, blist_cb callback, void *data2);
 
 /*
  * iteration through buckets
@@ -238,6 +243,9 @@ int process_config(const char *configname, const char *configfile);
 struct bucket_loop *get_category_loop(const char *configname);
 struct bucketlist *get_category_next(struct bucket_loop *cloop, char *name, int len);
 struct bucketlist *get_config_category(const char *configname, const char *category);
+void config_file_callback(config_filecb file_cb);
+void config_cat_callback(const char *configname, config_catcb entry_cb);
+void config_entry_callback(struct bucketlist *entries, config_entrycb entry_cb);
 
 /*easter egg copied from <linux/jhash.h>*/
 #define JHASH_INITVAL           0xdeadbeef
