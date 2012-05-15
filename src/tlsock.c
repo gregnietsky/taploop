@@ -18,12 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <linux/if.h>
-#include <linux/if_arp.h>
 #include <linux/if_tun.h>
-#include <netinet/in.h>
 #include <string.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -37,7 +33,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "taploop.h"
 #include "tlsock.h"
-#include "vlan.h"
 #include "packet.h"
 
 int hash_tapdata(void *data, int key) {
