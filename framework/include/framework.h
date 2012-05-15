@@ -164,6 +164,7 @@ void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acce
 int delete_kernvlan(char *ifname, int vid);
 int create_kernvlan(char *ifname, int vid);
 int interface_bind(char *iface, int family, int protocol);
+void randhwaddr(unsigned char *addr);
 
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20

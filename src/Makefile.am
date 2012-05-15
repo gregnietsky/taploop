@@ -6,5 +6,5 @@ bin_PROGRAMS = taploop
 taploop_SOURCES = tapclient.c
 
 sbin_PROGRAMS = taploopd
-taploopd_SOURCES = taploop.c util.c vlan.c tlsock.c clientserv.c packet.c radius.c
+taploopd_SOURCES = taploop.c vlan.c tlsock.c clientserv.c packet.c radius.c
 taploopd_LDADD = $(FRAMEWORK_LIBS)

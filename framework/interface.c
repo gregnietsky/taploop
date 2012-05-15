@@ -27,6 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <unistd.h>
 
+#include "framework.h"
+
 /*
  * instruct the kernel to remove a VLAN
  */
@@ -127,4 +129,13 @@ int interface_bind(char *iface, int family, int protocol) {
 	}
 
 	return (fd);
+}
+
+/*
+ * create random MAC address
+ */
+void randhwaddr(unsigned char *addr) {
+	genrand(addr, ETH_ALEN);
+	addr [0] &= 0xfe;       /* clear multicast bit */
+	addr [0] |= 0x02;       /* set local assignment bit (IEEE802) */
 }
