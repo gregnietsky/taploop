@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <openssl/rand.h>
 #include <openssl/md5.h>
+#include <ctype.h>
 
 void seedrand(void) {
 	int fd = open("/dev/random", O_RDONLY);
@@ -95,4 +96,50 @@ void md5hmac(unsigned char *buff, const void *data, unsigned long len, const voi
 
 	md5sum2(buff, ikey, 64, data, len);
 	md5sum2(buff, okey, 64, buff, 16);
+}
+
+int strlenzero(const char *str) {
+	if (str && strlen(str)) {
+		return (0);
+	}
+	return (1);
+}
+
+char *ltrim(char *str) {
+	char *cur = str;
+
+	if (strlenzero(str)) {
+		return (str);
+	}
+
+	while(isspace(cur[0])) {
+		cur++;
+	}
+
+	return cur;
+}
+
+char *rtrim(const char *str) {
+	int len;
+	char *cur = (char *)str;
+
+	if (strlenzero(str)) {
+		return (cur);
+	}
+
+	len = strlen(str) - 1;
+	while(len && isspace(cur[len])) {
+		cur[len] = '\0';
+		len--;
+	}
+
+	return cur;
+}
+
+char *trim(const char *str) {
+	char *cur = (char*)str;
+
+	cur = ltrim(cur);
+	cur = rtrim(cur);
+	return (cur);
 }

@@ -145,7 +145,10 @@ void md5sum2(unsigned char *buff, const void *data, unsigned long len, const voi
 void md5sum(unsigned char *buff, const void *data, unsigned long len);
 int md5cmp(unsigned char *md51, unsigned char *md52, int len);
 void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
-
+int strlenzero(const char *str);
+char *ltrim(char *str);
+char *rtrim(const char *str);
+char *trim(const char *str);
 
 /*IP Utilities*/
 struct fwsocket *make_socket(int family, int type, int proto, void *ssl);
