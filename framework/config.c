@@ -305,6 +305,7 @@ struct bucket_loop *get_category_loop(const char *configname) {
 void entry_callback(void *data, void *entry_cb) {
 	struct config_entry *entry = data;
 	config_entrycb *cb_entry = entry_cb, callback;
+
 	callback = *cb_entry;
 
 	callback(entry->item, entry->value);
@@ -338,4 +339,12 @@ void file_callback(void *data, void *file_cb) {
 
 void config_file_callback(config_filecb file_cb) {
 	bucketlist_callback(configfiles, file_callback, &file_cb);
+}
+
+struct config_entry *get_config_entry(struct bucketlist *categories, const char *item) {
+	struct config_entry *entry;
+
+	entry = bucket_list_find_key(categories, item);
+
+	return (entry);
 }
