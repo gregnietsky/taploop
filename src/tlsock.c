@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <linux/if_tun.h>
 #include <string.h>
 #include <stdio.h>
@@ -79,54 +78,23 @@ struct tl_socket *virtopen(struct taploop *tap) {
  * Initialise the physical device
  */
 struct tl_socket *phyopen(struct taploop *tap) {
-	struct ifreq ifr;
 	struct tl_socket *tlsock;
 	struct tpacket_req reqr;
-	int proto = htons(ETH_P_ALL);
 	int fd, mapsiz = 0;
 	void *rxmmbuf = NULL;
 	struct iovec *ring = NULL;
 
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
+	if (ifrename(tap->pdev, tap->pname)) {
 		return NULL;
 	}
 
-	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, tap->pdev, sizeof(ifr.ifr_name) - 1);
 
-	/*down the device before renameing*/
-	ifr.ifr_flags &= ~IFF_UP & ~IFF_RUNNING;
-	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-		perror("ioctl(SIOCSIFFLAGS) failed");
-		close(fd);
-		return NULL;
-	}
-
-	/* rename the device*/
-	strncpy(ifr.ifr_newname, tap->pname, IFNAMSIZ);
-	if (ioctl(fd, SIOCSIFNAME, &ifr) <0 ) {
-		perror("ioctl(SIOCSIFNAME) failed\n");
-		close(fd);
-		return NULL;
-	} else {
-		strncpy(ifr.ifr_name, tap->pname, sizeof(ifr.ifr_name) - 1);
-	}
-
-	/*get the MAC address to be returned to allow tap to clone it*/
-	if ((ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) ||
-	    (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER)) {
-		perror("ioctl(SIOCGIFHWADDR) failed\n");
-		close(fd);
-		return NULL;
-	}
 	objlock(tap);
-	memcpy(tap->hwaddr, &ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+	ifhwaddr(tap->pname, tap->hwaddr);
 	objunlock(tap);
-	close(fd);
 
 	/*set the device up*/
-	if ((fd = interface_bind(tap->pname, proto, IFF_BROADCAST | IFF_MULTICAST | IFF_PROMISC | IFF_NOARP | IFF_ALLMULTI)) < 0) {
+	if ((fd = interface_bind(tap->pname, ETH_P_ALL, IFF_BROADCAST | IFF_MULTICAST | IFF_PROMISC | IFF_NOARP | IFF_ALLMULTI)) < 0) {
 	}
 
 #ifdef PACKET_MMAP_RX

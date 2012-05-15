@@ -166,6 +166,9 @@ int create_kernvlan(char *ifname, int vid);
 int interface_bind(char *iface, int protocol, int flags);
 void randhwaddr(unsigned char *addr);
 int create_tun(const char *ifname, const unsigned char *hwaddr, int flags);
+int ifrename(const char *oldname, const char *newname);
+int ifdown(const char *ifname);
+int ifhwaddr(const char *ifname, unsigned char *hwaddr);
 
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20

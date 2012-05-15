@@ -201,3 +201,87 @@ int create_tun(const char *ifname, const unsigned char *hwaddr, int flags) {
 
 	return (fd);
 }
+
+int ifdown(const char *ifname) {
+	int proto = htons(ETH_P_ALL);
+	struct ifreq ifr;
+	int fd;
+
+	/* open network raw socket */
+	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
+		return (-1);
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
+
+	/*down the device*/
+	ifr.ifr_flags &= ~IFF_UP & ~IFF_RUNNING;
+	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
+		perror("ioctl(SIOCSIFFLAGS) failed");
+		close(fd);
+		return (-1);
+	}
+
+	close(fd);
+	return (0);
+}
+
+int ifrename(const char *oldname, const char *newname) {
+	int proto = htons(ETH_P_ALL);
+	struct ifreq ifr;
+	int fd;
+
+	/* open network raw socket */
+	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
+		return (-1);
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	strncpy(ifr.ifr_name, oldname, sizeof(ifr.ifr_name) - 1);
+
+	/*down the device before renameing*/
+	ifr.ifr_flags &= ~IFF_UP & ~IFF_RUNNING;
+	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
+		perror("ioctl(SIOCSIFFLAGS) failed");
+		close(fd);
+		return (-1);
+	}
+	/* rename the device*/
+	strncpy(ifr.ifr_newname, newname, IFNAMSIZ);
+	if (ioctl(fd, SIOCSIFNAME, &ifr) <0 ) {
+		perror("ioctl(SIOCSIFNAME) failed\n");
+		close(fd);
+		return (-1);
+	} else {
+		strncpy(ifr.ifr_name, newname, sizeof(ifr.ifr_name) - 1);
+	}
+
+	close(fd);
+	return (0);
+}
+
+int ifhwaddr(const char *ifname, unsigned char *hwaddr) {
+	int proto = htons(ETH_P_ALL);
+	struct ifreq ifr;
+	int fd;
+
+	/* open network raw socket */
+	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
+		return (-1);
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
+
+	/*get the MAC address*/
+	if ((ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) ||
+	    (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER)) {
+		perror("ioctl(SIOCGIFHWADDR) failed\n");
+		close(fd);
+		return (-1);
+	}
+	memcpy(hwaddr, &ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+	close(fd);
+	return (0);
+}
