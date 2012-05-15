@@ -160,6 +160,11 @@ void closesocket(struct fwsocket *sock);
 void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup);
 void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
 
+/*interface functions*/
+int delete_kernvlan(char *ifname, int vid);
+int create_kernvlan(char *ifname, int vid);
+int interface_bind(char *iface, int family, int protocol);
+
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20
 #define RAD_AUTH_PACKET_LEN	4096

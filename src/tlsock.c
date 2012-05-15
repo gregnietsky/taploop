@@ -287,10 +287,9 @@ void *stoptap(void *data) {
 			virt = socket;
 		} else {
 			if (socket->flags & TL_SOCKET_8021Q) {
-				delete_kernvlan(socket->sock, tap->pdev, socket->vid);
-			} else {
-				close(socket->sock);
+				delete_kernvlan(tap->pdev, socket->vid);
 			}
+			close(socket->sock);
 			objunref(socket);
 		}
 		objunref(socket);

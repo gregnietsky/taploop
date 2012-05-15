@@ -32,63 +32,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "tlsock.h"
 
 /*
- * instruct the kernel to remove a VLAN
- */
-int delete_kernvlan(int fd, char *ifname, int vid) {
-	struct vlan_ioctl_args vifr;
-
-	memset(&vifr, 0, sizeof(vifr));
-	snprintf(vifr.device1, IFNAMSIZ, "%s.%i", ifname, vid);
-	vifr.u.VID = vid;
-	vifr.cmd = DEL_VLAN_CMD;
-
-	/*Delete the vlan*/
-	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
-		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
-		close(fd);
-		return (-1);
-	}
-	close(fd);
-	return (0);
-}
-
-/*
- * instruct the kernel to create a VLAN
- */
-int create_kernvlan(char *ifname, int vid) {
-	struct vlan_ioctl_args vifr;
-	int proto = htons(ETH_P_ALL);
-	int fd;
-
-	memset(&vifr, 0, sizeof(vifr));
-	strncpy(vifr.device1, ifname, IFNAMSIZ);
-	vifr.u.VID = vid;
-	vifr.cmd = ADD_VLAN_CMD;
-
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
-		return (-1);
-	}
-
-	/*Create the vlan*/
-	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
-		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
-		close(fd);
-		return (-1);
-	}
-	return (fd);
-}
-
-/*
  * Create a VLAN on the device
  */
 int add_kernvlan(char *iface, int vid) {
 	struct taploop *tap = NULL;
-	struct ifreq ifr;
-	struct sockaddr_ll sll;
 	struct tl_socket *tlsock;
 	struct bucket_loop *bloop;
-	int proto = htons(ETH_P_ALL);
+	char ifname[IFNAMSIZ];
 	int fd;
 
 	/*check VID*/
@@ -112,38 +62,14 @@ int add_kernvlan(char *iface, int vid) {
 		return (-1);
 	}
 
-	if ((fd = create_kernvlan(iface, vid)) < 0) {
+	if ((create_kernvlan(iface, vid))) {
 		objunref(tap);
 		return (-1);
 	}
 
 	/*set the network dev up*/
-	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s.%i", iface, vid);
-	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
-	if (ioctl(fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-       		perror("ioctl(SIOCSIFFLAGS) failed\n");
-		delete_kernvlan(fd, iface, vid);
-		objunref(tap);
-	        return (-1);
-	}
-
-	/* set the interface index for bind*/
-	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
-		perror("ioctl(SIOCGIFINDEX) failed\n");
-		delete_kernvlan(fd, iface, vid);
-		objunref(tap);
-		return (-1);
-	}
-
-	/*bind to the interface*/
-	memset(&sll, 0, sizeof(sll));
-	sll.sll_family = PF_PACKET;
-	sll.sll_protocol = proto;
-	sll.sll_ifindex = ifr.ifr_ifindex;
-	if (bind(fd, (struct sockaddr *) &sll, sizeof(sll)) < 0) {
-		perror("bind(ETH_P_ALL) failed");
-		delete_kernvlan(fd, iface, vid);
+	snprintf(ifname, IFNAMSIZ, "%s.%i", iface, vid);
+	if ((fd = interface_bind(ifname, PF_PACKET, ETH_P_ALL)) < 0) {
 		objunref(tap);
 		return (-1);
 	}
@@ -160,10 +86,14 @@ int add_kernvlan(char *iface, int vid) {
 		objlock(tap);
 		addtobucket(tap->socks, tlsock);
 		objunlock(tap);
+		objunref(tap);
 	} else {
 		printf("Memmory error\n");
-		delete_kernvlan(fd, iface, vid);
+		delete_kernvlan(iface, vid);
+		close(fd);
+		objunref(tap);
+		return (-1);
 	}
-	objunref(tap);
+
 	return (0);
 }
