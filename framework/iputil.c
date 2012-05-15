@@ -308,7 +308,7 @@ void *_socket_handler(void **data) {
 	return NULL;
 }
 
-void _sockethandler(struct fwsocket *sock, socketrecv read,
+void _start_socket_handler(struct fwsocket *sock, socketrecv read,
 				socketrecv acceptfunc, threadcleanup cleanup, void *data) {
 	struct socket_handler *sockh;
 
@@ -346,11 +346,11 @@ void socketserver(struct fwsocket *sock, socketrecv read,
 	} else {
 		objunlock(sock);
 	}
-	_sockethandler(sock, read, acceptfunc, cleanup, data);
+	_start_socket_handler(sock, read, acceptfunc, cleanup, data);
 }
 
 void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup) {
 	startsslclient(sock);
 
-	_sockethandler(sock, read, NULL, cleanup, data);
+	_start_socket_handler(sock, read, NULL, cleanup, data);
 }
