@@ -16,6 +16,8 @@
 @SET_MAKE@
 
 
+
+
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
@@ -37,7 +39,7 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = framework
 DIST_COMMON = $(am__include_HEADERS_DIST) $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in
+	$(srcdir)/Makefile.in $(srcdir)/framework.pc.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
@@ -47,8 +49,14 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES =
+CONFIG_CLEAN_FILES = framework.pc
 CONFIG_CLEAN_VPATH_FILES =
+LIBRARIES = $(noinst_LIBRARIES)
+ARFLAGS = cru
+libnetlink_a_AR = $(AR) $(ARFLAGS)
+libnetlink_a_LIBADD =
+am_libnetlink_a_OBJECTS = libnetlink_a-netlink.$(OBJEXT)
+libnetlink_a_OBJECTS = $(am_libnetlink_a_OBJECTS)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -76,16 +84,22 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
+am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgconfigdir)" \
+	"$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
-libframework_0_1_la_LIBADD =
-am_libframework_0_1_la_OBJECTS = refobj.lo lookup3.lo thread.lo \
-	main.lo unixsock.lo util.lo radius.lo iputil.lo sslutil.lo \
-	interface.lo config.lo
-libframework_0_1_la_OBJECTS = $(am_libframework_0_1_la_OBJECTS)
-@FRAMEWORK_INSTALL_FALSE@am_libframework_0_1_la_rpath =
-@FRAMEWORK_INSTALL_TRUE@am_libframework_0_1_la_rpath = -rpath \
-@FRAMEWORK_INSTALL_TRUE@	$(libdir)
+libframework_la_DEPENDENCIES = libnetlink.a
+am_libframework_la_OBJECTS = libframework_la-refobj.lo \
+	libframework_la-lookup3.lo libframework_la-thread.lo \
+	libframework_la-main.lo libframework_la-unixsock.lo \
+	libframework_la-util.lo libframework_la-radius.lo \
+	libframework_la-iputil.lo libframework_la-sslutil.lo \
+	libframework_la-interface.lo libframework_la-config.lo
+libframework_la_OBJECTS = $(am_libframework_la_OBJECTS)
+libframework_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libframework_la_CFLAGS) \
+	$(CFLAGS) $(libframework_la_LDFLAGS) $(LDFLAGS) -o $@
+@FRAMEWORK_INSTALL_FALSE@am_libframework_la_rpath =
+@FRAMEWORK_INSTALL_TRUE@am_libframework_la_rpath = -rpath $(libdir)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -99,8 +113,9 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libframework_0_1_la_SOURCES)
-DIST_SOURCES = $(libframework_0_1_la_SOURCES)
+SOURCES = $(libnetlink_a_SOURCES) $(libframework_la_SOURCES)
+DIST_SOURCES = $(libnetlink_a_SOURCES) $(libframework_la_SOURCES)
+DATA = $(pkgconfig_DATA)
 am__include_HEADERS_DIST = include/framework.h
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -146,6 +161,8 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBNL3_CFLAGS = @LIBNL3_CFLAGS@
+LIBNL3_LIBS = @LIBNL3_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -169,6 +186,9 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -231,10 +251,18 @@ top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -I./include $(DEVELOPER_CFLAGS)
 EXTRA_DIST = include
-@FRAMEWORK_INSTALL_TRUE@lib_LTLIBRARIES = libframework-0.1.la
+@FRAMEWORK_INSTALL_TRUE@lib_LTLIBRARIES = libframework.la
 @FRAMEWORK_INSTALL_TRUE@include_HEADERS = include/framework.h
-@FRAMEWORK_INSTALL_FALSE@noinst_LTLIBRARIES = libframework-0.1.la
-libframework_0_1_la_SOURCES = refobj.c lookup3.c thread.c main.c unixsock.c util.c radius.c iputil.c sslutil.c interface.c config.c
+@FRAMEWORK_INSTALL_FALSE@noinst_LTLIBRARIES = libframework.la
+noinst_LIBRARIES = libnetlink.a
+libnetlink_a_SOURCES = netlink.c
+libnetlink_a_CFLAGS = -I./include
+libframework_la_SOURCES = refobj.c lookup3.c thread.c main.c unixsock.c util.c radius.c iputil.c sslutil.c interface.c config.c
+libframework_la_LIBADD = libnetlink.a
+libframework_la_CFLAGS = -I./include $(DEVELOPER_CFLAGS)
+libframework_la_LDFLAGS = -version-info 1:0:1
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = framework.pc
 all: all-am
 
 .SUFFIXES:
@@ -269,6 +297,15 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+framework.pc: $(top_builddir)/config.status $(srcdir)/framework.pc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+libnetlink.a: $(libnetlink_a_OBJECTS) $(libnetlink_a_DEPENDENCIES) $(EXTRA_libnetlink_a_DEPENDENCIES) 
+	-rm -f libnetlink.a
+	$(libnetlink_a_AR) libnetlink.a $(libnetlink_a_OBJECTS) $(libnetlink_a_LIBADD)
+	$(RANLIB) libnetlink.a
 install-libLTLIBRARIES: $(lib_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
 	test -z "$(libdir)" || $(MKDIR_P) "$(DESTDIR)$(libdir)"
@@ -309,8 +346,8 @@ clean-noinstLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libframework-0.1.la: $(libframework_0_1_la_OBJECTS) $(libframework_0_1_la_DEPENDENCIES) $(EXTRA_libframework_0_1_la_DEPENDENCIES) 
-	$(LINK) $(am_libframework_0_1_la_rpath) $(libframework_0_1_la_OBJECTS) $(libframework_0_1_la_LIBADD) $(LIBS)
+libframework.la: $(libframework_la_OBJECTS) $(libframework_la_DEPENDENCIES) $(EXTRA_libframework_la_DEPENDENCIES) 
+	$(libframework_la_LINK) $(am_libframework_la_rpath) $(libframework_la_OBJECTS) $(libframework_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -318,17 +355,18 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/config.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/interface.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iputil.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lookup3.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/radius.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/refobj.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslutil.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unixsock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-config.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-interface.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-iputil.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-lookup3.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-main.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-radius.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-refobj.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-sslutil.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-thread.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-unixsock.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-util.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnetlink_a-netlink.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -351,11 +389,120 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
+libnetlink_a-netlink.o: netlink.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libnetlink_a_CFLAGS) $(CFLAGS) -MT libnetlink_a-netlink.o -MD -MP -MF $(DEPDIR)/libnetlink_a-netlink.Tpo -c -o libnetlink_a-netlink.o `test -f 'netlink.c' || echo '$(srcdir)/'`netlink.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libnetlink_a-netlink.Tpo $(DEPDIR)/libnetlink_a-netlink.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='netlink.c' object='libnetlink_a-netlink.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libnetlink_a_CFLAGS) $(CFLAGS) -c -o libnetlink_a-netlink.o `test -f 'netlink.c' || echo '$(srcdir)/'`netlink.c
+
+libnetlink_a-netlink.obj: netlink.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libnetlink_a_CFLAGS) $(CFLAGS) -MT libnetlink_a-netlink.obj -MD -MP -MF $(DEPDIR)/libnetlink_a-netlink.Tpo -c -o libnetlink_a-netlink.obj `if test -f 'netlink.c'; then $(CYGPATH_W) 'netlink.c'; else $(CYGPATH_W) '$(srcdir)/netlink.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libnetlink_a-netlink.Tpo $(DEPDIR)/libnetlink_a-netlink.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='netlink.c' object='libnetlink_a-netlink.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libnetlink_a_CFLAGS) $(CFLAGS) -c -o libnetlink_a-netlink.obj `if test -f 'netlink.c'; then $(CYGPATH_W) 'netlink.c'; else $(CYGPATH_W) '$(srcdir)/netlink.c'; fi`
+
+libframework_la-refobj.lo: refobj.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-refobj.lo -MD -MP -MF $(DEPDIR)/libframework_la-refobj.Tpo -c -o libframework_la-refobj.lo `test -f 'refobj.c' || echo '$(srcdir)/'`refobj.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-refobj.Tpo $(DEPDIR)/libframework_la-refobj.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='refobj.c' object='libframework_la-refobj.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-refobj.lo `test -f 'refobj.c' || echo '$(srcdir)/'`refobj.c
+
+libframework_la-lookup3.lo: lookup3.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-lookup3.lo -MD -MP -MF $(DEPDIR)/libframework_la-lookup3.Tpo -c -o libframework_la-lookup3.lo `test -f 'lookup3.c' || echo '$(srcdir)/'`lookup3.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-lookup3.Tpo $(DEPDIR)/libframework_la-lookup3.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lookup3.c' object='libframework_la-lookup3.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-lookup3.lo `test -f 'lookup3.c' || echo '$(srcdir)/'`lookup3.c
+
+libframework_la-thread.lo: thread.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-thread.lo -MD -MP -MF $(DEPDIR)/libframework_la-thread.Tpo -c -o libframework_la-thread.lo `test -f 'thread.c' || echo '$(srcdir)/'`thread.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-thread.Tpo $(DEPDIR)/libframework_la-thread.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='thread.c' object='libframework_la-thread.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-thread.lo `test -f 'thread.c' || echo '$(srcdir)/'`thread.c
+
+libframework_la-main.lo: main.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-main.lo -MD -MP -MF $(DEPDIR)/libframework_la-main.Tpo -c -o libframework_la-main.lo `test -f 'main.c' || echo '$(srcdir)/'`main.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-main.Tpo $(DEPDIR)/libframework_la-main.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='main.c' object='libframework_la-main.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-main.lo `test -f 'main.c' || echo '$(srcdir)/'`main.c
+
+libframework_la-unixsock.lo: unixsock.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-unixsock.lo -MD -MP -MF $(DEPDIR)/libframework_la-unixsock.Tpo -c -o libframework_la-unixsock.lo `test -f 'unixsock.c' || echo '$(srcdir)/'`unixsock.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-unixsock.Tpo $(DEPDIR)/libframework_la-unixsock.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='unixsock.c' object='libframework_la-unixsock.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-unixsock.lo `test -f 'unixsock.c' || echo '$(srcdir)/'`unixsock.c
+
+libframework_la-util.lo: util.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-util.lo -MD -MP -MF $(DEPDIR)/libframework_la-util.Tpo -c -o libframework_la-util.lo `test -f 'util.c' || echo '$(srcdir)/'`util.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-util.Tpo $(DEPDIR)/libframework_la-util.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util.c' object='libframework_la-util.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-util.lo `test -f 'util.c' || echo '$(srcdir)/'`util.c
+
+libframework_la-radius.lo: radius.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-radius.lo -MD -MP -MF $(DEPDIR)/libframework_la-radius.Tpo -c -o libframework_la-radius.lo `test -f 'radius.c' || echo '$(srcdir)/'`radius.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-radius.Tpo $(DEPDIR)/libframework_la-radius.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='radius.c' object='libframework_la-radius.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-radius.lo `test -f 'radius.c' || echo '$(srcdir)/'`radius.c
+
+libframework_la-iputil.lo: iputil.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-iputil.lo -MD -MP -MF $(DEPDIR)/libframework_la-iputil.Tpo -c -o libframework_la-iputil.lo `test -f 'iputil.c' || echo '$(srcdir)/'`iputil.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-iputil.Tpo $(DEPDIR)/libframework_la-iputil.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='iputil.c' object='libframework_la-iputil.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-iputil.lo `test -f 'iputil.c' || echo '$(srcdir)/'`iputil.c
+
+libframework_la-sslutil.lo: sslutil.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-sslutil.lo -MD -MP -MF $(DEPDIR)/libframework_la-sslutil.Tpo -c -o libframework_la-sslutil.lo `test -f 'sslutil.c' || echo '$(srcdir)/'`sslutil.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-sslutil.Tpo $(DEPDIR)/libframework_la-sslutil.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sslutil.c' object='libframework_la-sslutil.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-sslutil.lo `test -f 'sslutil.c' || echo '$(srcdir)/'`sslutil.c
+
+libframework_la-interface.lo: interface.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-interface.lo -MD -MP -MF $(DEPDIR)/libframework_la-interface.Tpo -c -o libframework_la-interface.lo `test -f 'interface.c' || echo '$(srcdir)/'`interface.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-interface.Tpo $(DEPDIR)/libframework_la-interface.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='interface.c' object='libframework_la-interface.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-interface.lo `test -f 'interface.c' || echo '$(srcdir)/'`interface.c
+
+libframework_la-config.lo: config.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-config.lo -MD -MP -MF $(DEPDIR)/libframework_la-config.Tpo -c -o libframework_la-config.lo `test -f 'config.c' || echo '$(srcdir)/'`config.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-config.Tpo $(DEPDIR)/libframework_la-config.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='config.c' object='libframework_la-config.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-config.lo `test -f 'config.c' || echo '$(srcdir)/'`config.c
+
 mostlyclean-libtool:
 	-rm -f *.lo
 
 clean-libtool:
 	-rm -rf .libs _libs
+install-pkgconfigDATA: $(pkgconfig_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(pkgconfigdir)" || $(MKDIR_P) "$(DESTDIR)$(pkgconfigdir)"
+	@list='$(pkgconfig_DATA)'; test -n "$(pkgconfigdir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(pkgconfigdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(pkgconfigdir)" || exit $$?; \
+	done
+
+uninstall-pkgconfigDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(pkgconfig_DATA)'; test -n "$(pkgconfigdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(pkgconfigdir)'; $(am__uninstall_files_from_dir)
 install-includeHEADERS: $(include_HEADERS)
 	@$(NORMAL_INSTALL)
 	test -z "$(includedir)" || $(MKDIR_P) "$(DESTDIR)$(includedir)"
@@ -459,9 +606,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(HEADERS)
+all-am: Makefile $(LIBRARIES) $(LTLIBRARIES) $(DATA) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -497,7 +644,7 @@ maintainer-clean-generic:
 clean: clean-am
 
 clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
-	clean-noinstLTLIBRARIES mostlyclean-am
+	clean-noinstLIBRARIES clean-noinstLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -517,7 +664,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-includeHEADERS
+install-data-am: install-includeHEADERS install-pkgconfigDATA
 
 install-dvi: install-dvi-am
 
@@ -563,25 +710,26 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES
+uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES \
+	uninstall-pkgconfigDATA
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libLTLIBRARIES clean-libtool clean-noinstLTLIBRARIES \
-	ctags distclean distclean-compile distclean-generic \
-	distclean-libtool distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am \
+	clean-libLTLIBRARIES clean-libtool clean-noinstLIBRARIES \
+	clean-noinstLTLIBRARIES ctags distclean distclean-compile \
+	distclean-generic distclean-libtool distclean-tags distdir dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-data install-data-am install-dvi install-dvi-am \
+	install-exec install-exec-am install-html install-html-am \
 	install-includeHEADERS install-info install-info-am \
 	install-libLTLIBRARIES install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
+	install-pkgconfigDATA install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-includeHEADERS \
-	uninstall-libLTLIBRARIES
+	uninstall-libLTLIBRARIES uninstall-pkgconfigDATA
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

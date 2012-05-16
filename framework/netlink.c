@@ -16,3 +16,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <netlink/route/link.h>
+
+void nltest(void) {
+	struct nl_cache *cache;
+	struct rtnl_link *link;
+	struct nl_sock *sock;
+
+	if ((rtnl_link_alloc_cache(sock, AF_UNSPEC, &cache)) < 0) {
+	}
+
+	if (!(link = rtnl_link_get_by_name(cache, "eth1"))) {
+	}
+
+	rtnl_link_put(link);
+/*	nl_cache_put(cache);*/
+}

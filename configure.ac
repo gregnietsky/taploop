@@ -21,6 +21,7 @@ AC_PROG_MAKE_SET
 AM_INIT_AUTOMAKE
 AC_CONFIG_MACRO_DIR([m4])
 LT_INIT()
+AM_PROG_CC_C_O
 
 AC_CHECK_LIB([pthread], [pthread_create])
 
@@ -35,7 +36,7 @@ AS_IF([test "$enable_framework_install" != "yes"],
 
 if test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes ; then
  FRAMEWORK_INCL="-I../framework/include"
- FRAMEWORK_LIBS="../framework/libframework-0.1.la"
+ FRAMEWORK_LIBS="../framework/libframework.la"
 fi;
 
 if test "$enable_dev_mode" = "yes" ; then
@@ -56,8 +57,12 @@ AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys
 AC_CHECK_LIB([ssl], [SSL_new])
 AC_CHECK_LIB([crypto], [SHA512_Init])
 AC_CHECK_LIB([uuid], [uuid_generate])
-AC_CHECK_LIB([nl-3], [nl_connect])
-AC_CHECK_LIB([nl-route-3], [rtnl_link_get_ifindex])
+
+PKG_CHECK_MODULES(LIBNL3, libnl-3.0 >= 3.1, [have_libnl3=yes], [have_libnl3=no])
+if (test "${have_libnl3}" = "yes"); then
+        CFLAGS+=" $LIBNL3_CFLAGS"
+        LIBS+=" $LIBNL3_LIBS"
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
@@ -74,5 +79,6 @@ AC_CHECK_FUNCS([memset munmap select socket])
 
 AC_CONFIG_FILES([Makefile
                  framework/Makefile
+                 framework/framework.pc
                  src/Makefile])
 AC_OUTPUT

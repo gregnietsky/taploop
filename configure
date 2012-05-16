@@ -617,6 +617,11 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+LIBNL3_LIBS
+LIBNL3_CFLAGS
+PKG_CONFIG_LIBDIR
+PKG_CONFIG_PATH
+PKG_CONFIG
 FRAMEWORK_SYSTEM_FALSE
 FRAMEWORK_SYSTEM_TRUE
 FRAMEWORK_INSTALL_FALSE
@@ -768,7 +773,12 @@ CCC
 CC
 CFLAGS
 CPP
-CXXCPP'
+CXXCPP
+PKG_CONFIG
+PKG_CONFIG_PATH
+PKG_CONFIG_LIBDIR
+LIBNL3_CFLAGS
+LIBNL3_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1424,6 +1434,14 @@ Some influential environment variables:
   CFLAGS      C compiler flags
   CPP         C preprocessor
   CXXCPP      C++ preprocessor
+  PKG_CONFIG  path to pkg-config utility
+  PKG_CONFIG_PATH
+              directories to add to pkg-config's search path
+  PKG_CONFIG_LIBDIR
+              path overriding pkg-config's built-in search path
+  LIBNL3_CFLAGS
+              C compiler flags for LIBNL3, overriding pkg-config
+  LIBNL3_LIBS linker flags for LIBNL3, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -15133,6 +15151,132 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 # Only expand once:
 
 
+if test "x$CC" != xcc; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC and cc understand -c and -o together" >&5
+$as_echo_n "checking whether $CC and cc understand -c and -o together... " >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether cc understands -c and -o together" >&5
+$as_echo_n "checking whether cc understands -c and -o together... " >&6; }
+fi
+set dummy $CC; ac_cc=`$as_echo "$2" |
+		      sed 's/[^a-zA-Z0-9_]/_/g;s/^[0-9]/_/'`
+if eval \${ac_cv_prog_cc_${ac_cc}_c_o+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+# Make sure it works both with $CC and with simple cc.
+# We do the test twice because some compilers refuse to overwrite an
+# existing .o file with -o, though they will create one.
+ac_try='$CC -c conftest.$ac_ext -o conftest2.$ac_objext >&5'
+rm -f conftest2.*
+if { { case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_try") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; } &&
+   test -f conftest2.$ac_objext && { { case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_try") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; };
+then
+  eval ac_cv_prog_cc_${ac_cc}_c_o=yes
+  if test "x$CC" != xcc; then
+    # Test first that cc exists at all.
+    if { ac_try='cc -c conftest.$ac_ext >&5'
+  { { case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_try") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+      ac_try='cc -c conftest.$ac_ext -o conftest2.$ac_objext >&5'
+      rm -f conftest2.*
+      if { { case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_try") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; } &&
+	 test -f conftest2.$ac_objext && { { case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_try") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; };
+      then
+	# cc works too.
+	:
+      else
+	# cc exists but doesn't like -o.
+	eval ac_cv_prog_cc_${ac_cc}_c_o=no
+      fi
+    fi
+  fi
+else
+  eval ac_cv_prog_cc_${ac_cc}_c_o=no
+fi
+rm -f core conftest*
+
+fi
+if eval test \$ac_cv_prog_cc_${ac_cc}_c_o = yes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+$as_echo "#define NO_MINUS_C_MINUS_O 1" >>confdefs.h
+
+fi
+
+# FIXME: we rely on the cache variable name because
+# there is no other way.
+set dummy $CC
+am_cc=`echo $2 | sed 's/[^a-zA-Z0-9_]/_/g;s/^[0-9]/_/'`
+eval am_t=\$ac_cv_prog_cc_${am_cc}_c_o
+if test "$am_t" != yes; then
+   # Losing compiler, so override with the script.
+   # FIXME: It is wrong to rewrite CC.
+   # But if we don't then we get into trouble of one sort or another.
+   # A longer-term fix would be to have automake use am__CC in this case,
+   # and then we could set am__CC="\$(top_srcdir)/compile \$(CC)"
+   CC="$am_aux_dir/compile $CC"
+fi
+
+
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
 $as_echo_n "checking for pthread_create in -lpthread... " >&6; }
@@ -15254,7 +15398,7 @@ fi
 
 if test "$ac_cv_lib_framework_0_1_framework_mkthread" != yes ; then
  FRAMEWORK_INCL="-I../framework/include"
- FRAMEWORK_LIBS="../framework/libframework-0.1.la"
+ FRAMEWORK_LIBS="../framework/libframework.la"
 fi;
 
 if test "$enable_dev_mode" = "yes" ; then
@@ -15433,96 +15577,202 @@ _ACEOF
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for nl_connect in -lnl-3" >&5
-$as_echo_n "checking for nl_connect in -lnl-3... " >&6; }
-if ${ac_cv_lib_nl_3_nl_connect+:} false; then :
+
+
+
+
+
+
+
+
+if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
+	if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKG_CONFIG+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lnl-3  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+  case $PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char nl_connect ();
-int
-main ()
-{
-return nl_connect ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_nl_3_nl_connect=yes
+  ;;
+esac
+fi
+PKG_CONFIG=$ac_cv_path_PKG_CONFIG
+if test -n "$PKG_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKG_CONFIG" >&5
+$as_echo "$PKG_CONFIG" >&6; }
 else
-  ac_cv_lib_nl_3_nl_connect=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nl_3_nl_connect" >&5
-$as_echo "$ac_cv_lib_nl_3_nl_connect" >&6; }
-if test "x$ac_cv_lib_nl_3_nl_connect" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBNL_3 1
-_ACEOF
-
-  LIBS="-lnl-3 $LIBS"
-
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for rtnl_link_get_ifindex in -lnl-route-3" >&5
-$as_echo_n "checking for rtnl_link_get_ifindex in -lnl-route-3... " >&6; }
-if ${ac_cv_lib_nl_route_3_rtnl_link_get_ifindex+:} false; then :
+
+fi
+if test -z "$ac_cv_path_PKG_CONFIG"; then
+  ac_pt_PKG_CONFIG=$PKG_CONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_PKG_CONFIG+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lnl-route-3  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+  case $ac_pt_PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKG_CONFIG="$ac_pt_PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_ac_pt_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char rtnl_link_get_ifindex ();
-int
-main ()
-{
-return rtnl_link_get_ifindex ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_nl_route_3_rtnl_link_get_ifindex=yes
+  ;;
+esac
+fi
+ac_pt_PKG_CONFIG=$ac_cv_path_ac_pt_PKG_CONFIG
+if test -n "$ac_pt_PKG_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKG_CONFIG" >&5
+$as_echo "$ac_pt_PKG_CONFIG" >&6; }
 else
-  ac_cv_lib_nl_route_3_rtnl_link_get_ifindex=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nl_route_3_rtnl_link_get_ifindex" >&5
-$as_echo "$ac_cv_lib_nl_route_3_rtnl_link_get_ifindex" >&6; }
-if test "x$ac_cv_lib_nl_route_3_rtnl_link_get_ifindex" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBNL_ROUTE_3 1
-_ACEOF
-
-  LIBS="-lnl-route-3 $LIBS"
-
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 fi
 
+  if test "x$ac_pt_PKG_CONFIG" = x; then
+    PKG_CONFIG=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKG_CONFIG=$ac_pt_PKG_CONFIG
+  fi
+else
+  PKG_CONFIG="$ac_cv_path_PKG_CONFIG"
+fi
+
+fi
+if test -n "$PKG_CONFIG"; then
+	_pkg_min_version=0.9.0
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking pkg-config is at least version $_pkg_min_version" >&5
+$as_echo_n "checking pkg-config is at least version $_pkg_min_version... " >&6; }
+	if $PKG_CONFIG --atleast-pkgconfig-version $_pkg_min_version; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	else
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+		PKG_CONFIG=""
+	fi
+fi
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBNL3" >&5
+$as_echo_n "checking for LIBNL3... " >&6; }
+
+if test -n "$LIBNL3_CFLAGS"; then
+    pkg_cv_LIBNL3_CFLAGS="$LIBNL3_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libnl-3.0 >= 3.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libnl-3.0 >= 3.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBNL3_CFLAGS=`$PKG_CONFIG --cflags "libnl-3.0 >= 3.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LIBNL3_LIBS"; then
+    pkg_cv_LIBNL3_LIBS="$LIBNL3_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libnl-3.0 >= 3.1\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libnl-3.0 >= 3.1") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBNL3_LIBS=`$PKG_CONFIG --libs "libnl-3.0 >= 3.1" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LIBNL3_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-3.0 >= 3.1" 2>&1`
+        else
+	        LIBNL3_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-3.0 >= 3.1" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LIBNL3_PKG_ERRORS" >&5
+
+	have_libnl3=no
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	have_libnl3=no
+else
+	LIBNL3_CFLAGS=$pkg_cv_LIBNL3_CFLAGS
+	LIBNL3_LIBS=$pkg_cv_LIBNL3_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	have_libnl3=yes
+fi
+if (test "${have_libnl3}" = "yes"); then
+        CFLAGS+=" $LIBNL3_CFLAGS"
+        LIBS+=" $LIBNL3_LIBS"
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 ac_fn_c_check_type "$LINENO" "pid_t" "ac_cv_type_pid_t" "$ac_includes_default"
@@ -16083,7 +16333,7 @@ fi
 done
 
 
-ac_config_files="$ac_config_files Makefile framework/Makefile src/Makefile"
+ac_config_files="$ac_config_files Makefile framework/Makefile framework/framework.pc src/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -17206,6 +17456,7 @@ do
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "framework/Makefile") CONFIG_FILES="$CONFIG_FILES framework/Makefile" ;;
+    "framework/framework.pc") CONFIG_FILES="$CONFIG_FILES framework/framework.pc" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
