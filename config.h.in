@@ -21,6 +21,12 @@
 /* Define to 1 if you have the `framework-0.1' library (-lframework-0.1). */
 #undef HAVE_LIBFRAMEWORK_0_1
 
+/* Define to 1 if you have the `nl-3' library (-lnl-3). */
+#undef HAVE_LIBNL_3
+
+/* Define to 1 if you have the `nl-route-3' library (-lnl-route-3). */
+#undef HAVE_LIBNL_ROUTE_3
+
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #undef HAVE_LIBPTHREAD
 

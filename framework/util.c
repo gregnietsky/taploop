@@ -116,7 +116,7 @@ char *ltrim(char *str) {
 		cur++;
 	}
 
-	return cur;
+	return (cur);
 }
 
 char *rtrim(const char *str) {
@@ -133,7 +133,7 @@ char *rtrim(const char *str) {
 		len--;
 	}
 
-	return cur;
+	return (cur);
 }
 
 char *trim(const char *str) {

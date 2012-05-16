@@ -15433,6 +15433,96 @@ _ACEOF
 
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for nl_connect in -lnl-3" >&5
+$as_echo_n "checking for nl_connect in -lnl-3... " >&6; }
+if ${ac_cv_lib_nl_3_nl_connect+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lnl-3  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char nl_connect ();
+int
+main ()
+{
+return nl_connect ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_nl_3_nl_connect=yes
+else
+  ac_cv_lib_nl_3_nl_connect=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nl_3_nl_connect" >&5
+$as_echo "$ac_cv_lib_nl_3_nl_connect" >&6; }
+if test "x$ac_cv_lib_nl_3_nl_connect" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBNL_3 1
+_ACEOF
+
+  LIBS="-lnl-3 $LIBS"
+
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for rtnl_link_get_ifindex in -lnl-route-3" >&5
+$as_echo_n "checking for rtnl_link_get_ifindex in -lnl-route-3... " >&6; }
+if ${ac_cv_lib_nl_route_3_rtnl_link_get_ifindex+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lnl-route-3  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char rtnl_link_get_ifindex ();
+int
+main ()
+{
+return rtnl_link_get_ifindex ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_nl_route_3_rtnl_link_get_ifindex=yes
+else
+  ac_cv_lib_nl_route_3_rtnl_link_get_ifindex=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nl_route_3_rtnl_link_get_ifindex" >&5
+$as_echo "$ac_cv_lib_nl_route_3_rtnl_link_get_ifindex" >&6; }
+if test "x$ac_cv_lib_nl_route_3_rtnl_link_get_ifindex" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBNL_ROUTE_3 1
+_ACEOF
+
+  LIBS="-lnl-route-3 $LIBS"
+
+fi
+
 
 # Checks for typedefs, structures, and compiler characteristics.
 ac_fn_c_check_type "$LINENO" "pid_t" "ac_cv_type_pid_t" "$ac_includes_default"

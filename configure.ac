@@ -56,6 +56,8 @@ AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys
 AC_CHECK_LIB([ssl], [SSL_new])
 AC_CHECK_LIB([crypto], [SHA512_Init])
 AC_CHECK_LIB([uuid], [uuid_generate])
+AC_CHECK_LIB([nl-3], [nl_connect])
+AC_CHECK_LIB([nl-route-3], [rtnl_link_get_ifindex])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
