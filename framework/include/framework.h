@@ -176,6 +176,8 @@ void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acce
 /*interface functions*/
 int delete_kernvlan(char *ifname, int vid);
 int create_kernvlan(char *ifname, int vid);
+int delete_kernmac(char *macdev);
+int create_kernmac(char *ifname, char *macdev);
 int interface_bind(char *iface, int protocol, int flags);
 void randhwaddr(unsigned char *addr);
 int create_tun(const char *ifname, const unsigned char *hwaddr, int flags);
@@ -208,10 +210,10 @@ enum RADIUS_CODE {
 	RAD_CODE_AUTHCHALLENGE	=	11
 };
 
-unsigned char *addattr(struct radius_packet *packet, char type, unsigned char *val, char len);
-void addattrint(struct radius_packet *packet, char type, unsigned int val);
-void addattrip(struct radius_packet *packet, char type, char *ipaddr);
-void addattrstr(struct radius_packet *packet, char type, char *str);
+unsigned char *addradattr(struct radius_packet *packet, char type, unsigned char *val, char len);
+void addradattrint(struct radius_packet *packet, char type, unsigned int val);
+void addradattrip(struct radius_packet *packet, char type, char *ipaddr);
+void addradattrstr(struct radius_packet *packet, char type, char *str);
 struct radius_packet *new_radpacket(unsigned char code, unsigned char id);
 int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data);
 void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret, int timeout);

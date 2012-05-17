@@ -87,7 +87,7 @@ struct radius_server {
 struct bucket_list *servers = NULL;
 struct radius_connection *radconnect(struct radius_server *server);
 
-unsigned char *addattr(struct radius_packet *packet, char type, unsigned char *val, char len) {
+unsigned char *addradattr(struct radius_packet *packet, char type, unsigned char *val, char len) {
 	unsigned char *data = packet->attrs + packet->len - RAD_AUTH_HDR_LEN;
 
 	if (!len) {
@@ -104,25 +104,25 @@ unsigned char *addattr(struct radius_packet *packet, char type, unsigned char *v
 	return (data);
 }
 
-void addattrint(struct radius_packet *packet, char type, unsigned int val) {
+void addradattrint(struct radius_packet *packet, char type, unsigned int val) {
 	unsigned int tval;
 
 	tval = htonl(val);
-	addattr(packet, type, (unsigned char*)&tval, sizeof(tval));
+	addradattr(packet, type, (unsigned char*)&tval, sizeof(tval));
 }
 
-void addattrip(struct radius_packet *packet, char type, char *ipaddr) {
+void addradattrip(struct radius_packet *packet, char type, char *ipaddr) {
 	unsigned int tval;
 
 	tval = inet_addr(ipaddr);
-	addattr(packet, type, (unsigned char*)&tval, sizeof(tval));
+	addradattr(packet, type, (unsigned char*)&tval, sizeof(tval));
 }
 
-void addattrstr(struct radius_packet *packet, char type, char *str) {
-	addattr(packet, type, (unsigned char*)str, strlen(str));
+void addradattrstr(struct radius_packet *packet, char type, char *str) {
+	addradattr(packet, type, (unsigned char*)str, strlen(str));
 }
 
-void addattrpasswd(struct radius_packet *packet, const char *pw, const char *secret) {
+void addradattrpasswd(struct radius_packet *packet, const char *pw, const char *secret) {
 	unsigned char pwbuff[RAD_MAX_PASS_LEN];
 	unsigned char digest[RAD_AUTH_TOKEN_LEN];
 	MD5_CTX c, old;
@@ -159,7 +159,7 @@ void addattrpasswd(struct radius_packet *packet, const char *pw, const char *sec
 			pwbuff[i + n] ^= digest[i];
 		}
 	}
-	addattr(packet, RAD_ATTR_USER_PASSWORD, pwbuff, len);
+	addradattr(packet, RAD_ATTR_USER_PASSWORD, pwbuff, len);
 }
 
 struct radius_packet *new_radpacket(unsigned char code, unsigned char id) {
@@ -347,10 +347,10 @@ int _send_radpacket(struct radius_packet *packet, const char *userpass, struct r
 			objunlock(connex);
 
 			if (session->passwd) {
-				addattrpasswd(packet, session->passwd,  server->secret);
+				addradattrpasswd(packet, session->passwd,  server->secret);
 			}
 
-			vector = addattr(packet, RAD_ATTR_MESSAGE, NULL, RAD_AUTH_TOKEN_LEN);
+			vector = addradattr(packet, RAD_ATTR_MESSAGE, NULL, RAD_AUTH_TOKEN_LEN);
 			len = packet->len;
 			packet->len = htons(len);
 			md5hmac(vector + 2, packet, len, server->secret, strlen(server->secret));
@@ -409,10 +409,10 @@ void rad_resend(struct radius_connection *connex) {
 			}
 
 			if (session->passwd) {
-				addattrpasswd(session->packet, session->passwd, connex->server->secret);
+				addradattrpasswd(session->packet, session->passwd, connex->server->secret);
 			}
 
-			vector = addattr(session->packet, RAD_ATTR_MESSAGE, NULL, RAD_AUTH_TOKEN_LEN);
+			vector = addradattr(session->packet, RAD_ATTR_MESSAGE, NULL, RAD_AUTH_TOKEN_LEN);
 			len = session->packet->len;
 			session->packet->len = htons(len);
 			md5hmac(vector + 2, session->packet, len, connex->server->secret, strlen(connex->server->secret));

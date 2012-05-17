@@ -58,22 +58,22 @@ int radmain (void) {
 	add_radserver("127.0.0.1", "1812", NULL, "RadSecret", 10);
 
 	lrp = new_radpacket(RAD_CODE_AUTHREQUEST, 1);
-	addattrstr(lrp, RAD_ATTR_USER_NAME, user);
-	addattrip(lrp, RAD_ATTR_NAS_IP_ADDR, "127.0.0.1");
-	addattrint(lrp, RAD_ATTR_NAS_PORT, 0);
-	addattrint(lrp, RAD_ATTR_SERVICE_TYPE, 1);
-	addattrint(lrp, RAD_ATTR_PORT_TYPE, 15);
+	addradattrstr(lrp, RAD_ATTR_USER_NAME, user);
+	addradattrip(lrp, RAD_ATTR_NAS_IP_ADDR, "127.0.0.1");
+	addradattrint(lrp, RAD_ATTR_NAS_PORT, 0);
+	addradattrint(lrp, RAD_ATTR_SERVICE_TYPE, 1);
+	addradattrint(lrp, RAD_ATTR_PORT_TYPE, 15);
 
 	eap.type = 1;
 	eap.code = 2;
 	eap.id = 1;
 	cnt = 5 + strlen(user);
 	eap.len = htons(cnt);
-	ebuff = addattr(lrp, RAD_ATTR_EAP, (unsigned char*)&eap, cnt);
+	ebuff = addradattr(lrp, RAD_ATTR_EAP, (unsigned char*)&eap, cnt);
 	memcpy(ebuff + 7, user, strlen(user));
 
 	uuid_generate(uuid);
-	addattr(lrp, RAD_ATTR_ACCTID, uuid, 16);
+	addradattr(lrp, RAD_ATTR_ACCTID, uuid, 16);
 
 	if (send_radpacket(lrp, "testpass", radius_read, NULL)) {
 		printf("Sending Failed\n");
