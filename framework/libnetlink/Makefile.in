@@ -55,7 +55,7 @@ am_libnetlink_la_OBJECTS = libnetlink_la-libnetlink.lo \
 	libnetlink_la-ll_types.lo libnetlink_la-ll_proto.lo \
 	libnetlink_la-ll_addr.lo libnetlink_la-inet_proto.lo \
 	libnetlink_la-ipx_ntop.lo libnetlink_la-dnet_ntop.lo \
-	libnetlink_la-dnet_pton.lo
+	libnetlink_la-dnet_pton.lo libnetlink_la-ll_map.lo
 libnetlink_la_OBJECTS = $(am_libnetlink_la_OBJECTS)
 libnetlink_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libnetlink_la_CFLAGS) \
@@ -242,10 +242,12 @@ top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -I./include $(DEVELOPER_CFLAGS)
 noinst_LTLIBRARIES = libnetlink.la
-libnetlink_la_SOURCES = libnetlink.c utils.c rt_names.c ll_types.c ll_proto.c ll_addr.c inet_proto.c ipx_ntop.c dnet_ntop.c dnet_pton.c
+libnetlink_la_SOURCES = libnetlink.c utils.c rt_names.c ll_types.c ll_proto.c ll_addr.c inet_proto.c \
+			ipx_ntop.c dnet_ntop.c dnet_pton.c ll_map.c
+
 libnetlink_la_CFLAGS = -I./include
 includeinstdir = $(oldincludedir)/framework
-includeinst_DATA = include/libnetlink.h
+includeinst_DATA = include/libnetlink.h include/utils.h include/ll_map.h include/rtm_map.h
 all: all-am
 
 .SUFFIXES:
@@ -304,6 +306,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnetlink_la-ipx_ntop.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnetlink_la-libnetlink.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnetlink_la-ll_addr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnetlink_la-ll_map.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnetlink_la-ll_proto.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnetlink_la-ll_types.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnetlink_la-rt_names.Plo@am__quote@
@@ -399,6 +402,13 @@ libnetlink_la-dnet_pton.lo: dnet_pton.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dnet_pton.c' object='libnetlink_la-dnet_pton.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libnetlink_la_CFLAGS) $(CFLAGS) -c -o libnetlink_la-dnet_pton.lo `test -f 'dnet_pton.c' || echo '$(srcdir)/'`dnet_pton.c
+
+libnetlink_la-ll_map.lo: ll_map.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libnetlink_la_CFLAGS) $(CFLAGS) -MT libnetlink_la-ll_map.lo -MD -MP -MF $(DEPDIR)/libnetlink_la-ll_map.Tpo -c -o libnetlink_la-ll_map.lo `test -f 'll_map.c' || echo '$(srcdir)/'`ll_map.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libnetlink_la-ll_map.Tpo $(DEPDIR)/libnetlink_la-ll_map.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ll_map.c' object='libnetlink_la-ll_map.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libnetlink_la_CFLAGS) $(CFLAGS) -c -o libnetlink_la-ll_map.lo `test -f 'll_map.c' || echo '$(srcdir)/'`ll_map.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
