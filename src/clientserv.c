@@ -46,12 +46,26 @@ void client_tap(enum client_action act, struct client_tap *ctap, struct client_r
 void client_vlan(enum client_action act, struct client_vlan *cvlan, struct client_response *res) {
 	switch (act) {
 		case CA_ADD:
-			res->error = add_kernvlan(cvlan->device, cvlan->vid);
+			res->error = create_kernvlan(cvlan->device, cvlan->vid);
 			snprintf(res->message, sizeof(res->message) - 1, "Adding VLAN %s.%i", cvlan->device, cvlan->vid);
 			break;
 		case CA_REM:
-			res->error = -1;
-			snprintf(res->message, sizeof(res->message) - 1, "Removing VLAN %s.%i Not Supported", cvlan->device, cvlan->vid);
+			res->error = delete_kernvlan(cvlan->device, cvlan->vid);
+			snprintf(res->message, sizeof(res->message) - 1, "Removing VLAN %s.%i", cvlan->device, cvlan->vid);
+			break;
+	}
+
+}
+
+void client_macvlan(enum client_action act, struct client_mac *cmvlan, struct client_response *res) {
+	switch (act) {
+		case CA_ADD:
+			res->error = create_kernmac(cmvlan->device, cmvlan->name);
+			snprintf(res->message, sizeof(res->message) - 1, "Adding MAC %s to %s", cmvlan->name, cmvlan->device);
+			break;
+		case CA_REM:
+			res->error = delete_kernmac(cmvlan->device);
+			snprintf(res->message, sizeof(res->message) - 1, "Removing MAC %s", cmvlan->device);
 			break;
 	}
 
@@ -75,6 +89,8 @@ void *clientsock_client(void **data) {
 		case CD_TAP: client_tap(cmd.action, &cmd.payload.tap, &res);
 			break;
 		case CD_VLAN: client_vlan(cmd.action, &cmd.payload.vlan, &res);
+			break;
+		case CD_MACVLAN: client_macvlan(cmd.action, &cmd.payload.macvlan, &res);
 			break;
 	}
 
