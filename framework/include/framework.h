@@ -176,8 +176,6 @@ void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acce
 /*interface functions*/
 int delete_kernvlan(char *ifname, int vid);
 int create_kernvlan(char *ifname, int vid);
-int delete_kernmac(char *macdev);
-int create_kernmac(char *ifname, char *macdev);
 int interface_bind(char *iface, int protocol, int flags);
 void randhwaddr(unsigned char *addr);
 int create_tun(const char *ifname, const unsigned char *hwaddr, int flags);

@@ -26,16 +26,10 @@ enum client_action {
 
 enum client_acttype {
 	CD_TAP		=	1 << 0,
-	CD_VLAN		=	1 << 1,
-	CD_MACVLAN	=	1 << 2
+	CD_VLAN		=	1 << 1
 };
 
 struct client_tap {
-	char			device[IFNAMSIZ+1];
-	char			name[IFNAMSIZ+1];
-};
-
-struct client_mac {
 	char			device[IFNAMSIZ+1];
 	char			name[IFNAMSIZ+1];
 };
@@ -48,7 +42,6 @@ struct client_vlan {
 union client_payload {
 	struct client_tap	tap;
 	struct client_vlan	vlan;
-	struct client_mac	macvlan;
 };
 
 struct client_command {
