@@ -2,10 +2,10 @@ Gregory Hinton Nietsky <gregory@distrotech.co.za>
 Distrotech Solutions
 
 There is code taken from other projects please note the code in this
-repositiory may differ from the base verify any issues against the base
+repository may differ from the base verify any issues against the base
 code before contacting the authors of such code.
 
-it is recomended that you contact the author of this package prior to
+it is recommended that you contact the author of this package prior to
 filing a issue with any authors listed bellow.
 
 libnetlink code included from iproute2
