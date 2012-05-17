@@ -126,27 +126,35 @@ int create_kernvlan(char *ifname, int vid) {
  * instruct the kernel to remove a VLAN
  */
 int delete_kernmac(char *ifname) {
-	struct vlan_ioctl_args vifr;
-	int proto = htons(ETH_P_ALL);
-	int fd;
+	struct iplink_req *req;
+	int ifindex;
 
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
+	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ)) {
 		return (-1);
 	}
 
-	memset(&vifr, 0, sizeof(vifr));
-/*	snprintf(vifr.device1, IFNAMSIZ, "%s.%i", ifname, vid);
-	vifr.u.VID = vid;*/
-	vifr.cmd = DEL_VLAN_CMD;
-
-	/*Delete the vlan*/
-	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
-		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
-		close(fd);
+	if (!(nlh = nlhandle(0))) {
 		return (-1);
 	}
-	close(fd);
+
+	/*set the index of base interface*/
+	if (!(ifindex = ll_name_to_index(ifname))) {
+		objunref(nlh);
+		return (-1);
+	}
+
+	req = objalloc(sizeof(*req), NULL);
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+	req->n.nlmsg_flags = NLM_F_REQUEST;
+	req->n.nlmsg_type = RTM_DELLINK;
+
+	/*config base/dev/mac*/
+	req->i.ifi_index = ll_name_to_index(ifname);
+
+	rtnl_talk(nlh, &req->n, 0, 0, NULL);
+
+	objunref(nlh);
 	return (0);
 }
 

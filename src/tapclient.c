@@ -79,10 +79,13 @@ int main(int argc, char *argv[]) {
 		cmd.datatype = CD_VLAN;
 		strncpy(cmd.payload.vlan.device, argv[3], IFNAMSIZ);
 		cmd.payload.vlan.vid = atoi(argv[4]);
-	} else if (!strcmp(argv[2], "mac") &&(argc >= 5)) {
+	} else if (!strcmp(argv[2], "mac") && (cmd.action == CA_ADD) && (argc >= 5)) {
 		cmd.datatype = CD_MACVLAN;
 		strncpy(cmd.payload.macvlan.device, argv[3], IFNAMSIZ);
 		strncpy(cmd.payload.macvlan.name, argv[4], IFNAMSIZ);
+	} else if (!strcmp(argv[2], "mac") && (cmd.action == CA_REM) && (argc == 4)) {
+		cmd.datatype = CD_MACVLAN;
+		strncpy(cmd.payload.macvlan.device, argv[3], IFNAMSIZ);
 	} else {
 		printf("Invalid command\n");
 		goto out;
