@@ -60,7 +60,7 @@ void client_vlan(enum client_action act, struct client_vlan *cvlan, struct clien
 void client_macvlan(enum client_action act, struct client_mac *cmvlan, struct client_response *res) {
 	switch (act) {
 		case CA_ADD:
-			res->error = create_kernmac(cmvlan->device, cmvlan->name);
+			res->error = create_kernmac(cmvlan->device, cmvlan->name, NULL);
 			snprintf(res->message, sizeof(res->message) - 1, "Adding MAC %s to %s", cmvlan->name, cmvlan->device);
 			break;
 		case CA_REM:

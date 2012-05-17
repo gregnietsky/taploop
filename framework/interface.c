@@ -31,11 +31,40 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 
 #include "framework.h"
+#include "libnetlink.h"
+#include "ll_map.h"
 
-/*#include <sys/socket.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <errno.h>*/
+struct rtnl_handle *nlh;
+
+struct iplink_req {
+        struct nlmsghdr         n;
+        struct ifinfomsg        i;
+        char                    buf[1024];
+};
+
+void nlhandle_free(void *data) {
+	struct rtnl_handle *nlh = data;
+
+	if (data) {
+		rtnl_close(nlh);
+	}
+}
+
+struct rtnl_handle *nlhandle(int subscriptions) {
+	struct rtnl_handle *nlh;
+
+	if (!(nlh = objalloc(sizeof(*nlh), nlhandle_free)) || (rtnl_open(nlh, 0))) {
+		if (nlh) {
+			objunref(nlh);
+		}
+		return (NULL);
+	}
+
+	/*initilise the map*/
+	ll_init_map(nlh);
+
+	return (nlh);
+}
 
 /*
  * instruct the kernel to remove a VLAN
@@ -121,31 +150,63 @@ int delete_kernmac(char *ifname) {
 	return (0);
 }
 
-/*
- * instruct the kernel to create a VLAN
- */
-int create_kernmac(char *ifname, char *macdev) {
-	struct vlan_ioctl_args vifr;
-	int proto = htons(ETH_P_ALL);
-	int fd;
+int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
+	struct iplink_req *req;
+	struct rtattr *data, *linkinfo;
+	unsigned char lmac[ETH_ALEN];
+	char *type = "macvlan";
+	int ifindex;
 
-	memset(&vifr, 0, sizeof(vifr));
-	strncpy(vifr.device1, ifname, IFNAMSIZ);
-/*	vifr.u.VID = vid;*/
-	vifr.cmd = ADD_VLAN_CMD;
-
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
+	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ)) {
 		return (-1);
 	}
 
-	/*Create the vlan*/
-	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
-		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
-		close(fd);
+	if (strlenzero(macdev) || (strlen(macdev) > IFNAMSIZ)) {
 		return (-1);
 	}
-	close(fd);
+
+	if (!(nlh = nlhandle(0))) {
+		return (-1);
+	}
+
+	/*set the index of base interface*/
+	if (!(ifindex = ll_name_to_index(ifname))) {
+		objunref(nlh);
+		return (-1);
+	}
+
+	if (strlenzero((char*)mac) || (strlen((char*)mac) != ETH_ALEN)) {
+		randhwaddr(lmac);
+	} else {
+		strncpy((char*)lmac, (char*)mac, ETH_ALEN);
+	}
+
+	req = objalloc(sizeof(*req), NULL);
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_EXCL | NLM_F_REQUEST;
+	req->n.nlmsg_type = RTM_NEWLINK;
+
+	/*config base/dev/mac*/
+	addattr_l(&req->n, sizeof(*req), IFLA_LINK, &ifindex, 4);
+	addattr_l(&req->n, sizeof(*req), IFLA_IFNAME, macdev, strlen(macdev));
+	addattr_l(&req->n, sizeof(*req), IFLA_ADDRESS, lmac, ETH_ALEN);
+
+	/*type*/
+	linkinfo  = NLMSG_TAIL(&req->n);
+	addattr_l(&req->n, sizeof(*req), IFLA_LINKINFO, NULL, 0);
+	addattr_l(&req->n, sizeof(*req), IFLA_INFO_KIND, type, strlen(type));
+	linkinfo->rta_len = (char*)NLMSG_TAIL(&req->n) - (char*)linkinfo;
+
+	/*mode*/
+	data = NLMSG_TAIL(&req->n);
+	addattr_l(&req->n, sizeof(*req), IFLA_INFO_DATA, NULL, 0);
+	addattr32(&req->n, 1024, IFLA_MACVLAN_MODE, MACVLAN_MODE_PRIVATE);
+	data->rta_len = (char*)NLMSG_TAIL(&req->n) - (char*)data;
+
+	rtnl_talk(nlh, &req->n, 0, 0, NULL);
+
+	objunref(nlh);
 	return (0);
 }
 
