@@ -1,0 +1,48 @@
+Gregory Hinton Nietsky <gregory@distrotech.co.za>
+Distrotech Solutions
+
+There is code taken from other projects please note the code in this
+repositiory may differ from the base verify any issues against the base
+code before contacting the authors of such code.
+
+it is recomended that you contact the author of this package prior to
+filing a issue with any authors listed bellow.
+
+libnetlink code included from iproute2
+--------------------------------------
+
+This project is released under GPL v2
+
+This is a set of utilities for Linux networking.
+
+Information:
+    http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2
+
+Download:
+    http://devresources.linuxfoundation.org/dev/iproute2/download
+
+Repository:
+    git://git.kernel.org/pub/scm/linux/kernel/git/shemminger/iproute2.git
+
+
+Stephen Hemminger
+shemminger@linux-foundation.org
+
+Alexey Kuznetsov
+kuznet@ms2.inr.ac.ru
+
+Iproute2 development is closely tied to Linux kernel networking
+development. Most new features require a kernel and a utility component.
+
+Please submit both to the Linux networking mailing list
+   <netdev@vger.kernel.org>
+
+The current source is in the git repository:
+    git://git.kernel.org/pub/scm/linux/kernel/git/shemminger/iproute2.git
+
+The master branch contains the source corresponding to the current
+code in the mainline Linux kernel (ie follows Linus). The net-next
+branch is a temporary branch that tracks the code intended for the
+next release; it corresponds with networking development branch in
+the kernel.
+
