@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "framework.h"
+#include "include/framework.h"
 
 struct config_category {
 	const char *name;

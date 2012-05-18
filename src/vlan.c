@@ -28,8 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <framework.h>
 
-#include "taploop.h"
-#include "tlsock.h"
+#include "include/taploop.h"
+#include "include/tlsock.h"
 
 /*
  * Create a VLAN on the device

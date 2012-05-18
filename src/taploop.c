@@ -17,15 +17,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <sys/stat.h>
-#include <unistd.h>
-#include <stdio.h>
 #include <framework.h>
 
-#include "taploop.h"
+#include "include/clientserv.h"
+#include "include/taploop.h"
 #include "config.h"
-
-void *clientsock_client(void **data);
-void *delclientsock_client(void *data);
 
 static void sig_handler(int sig, siginfo_t *si, void *unused) {
 }
@@ -38,11 +34,9 @@ FRAMEWORK_MAIN("Taploop Network Stack",
 		"/var/run/taploopd",
 		sig_handler) {
 
-        int mask;
-
 	/* start up and listen for client connections from taploop*/
-        mask = S_IXUSR | S_IWGRP | S_IRGRP | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH;
-        framework_unixsocket("/tmp/tlsock", SOCK_STREAM, mask, clientsock_client, delclientsock_client);
+        framework_unixsocket("/tmp/tlsock", SOCK_STREAM, S_IXUSR | S_IWGRP | S_IRGRP | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH,
+					clientsock_client, delclientsock_client);
 
 	return (0);
 }

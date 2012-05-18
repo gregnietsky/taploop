@@ -24,10 +24,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <framework.h>
 
-#include "taploop.h"
-#include "client.h"
-#include "tlsock.h"
-#include "vlan.h"
+#include "include/taploop.h"
+#include "include/client.h"
+#include "include/tlsock.h"
+#include "include/vlan.h"
 
 void client_tap(enum client_action act, struct client_tap *ctap, struct client_response *res) {
 	switch (act) {

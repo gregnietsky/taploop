@@ -30,9 +30,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <unistd.h>
 
-#include "framework.h"
-#include "libnetlink.h"
-#include "ll_map.h"
+#include "include/framework.h"
+#include "libnetlink/include/libnetlink.h"
+#include "libnetlink/include/ll_map.h"
 
 struct rtnl_handle *nlh;
 
@@ -165,15 +165,9 @@ int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
 	char *type = "macvlan";
 	int ifindex;
 
-	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ)) {
-		return (-1);
-	}
-
-	if (strlenzero(macdev) || (strlen(macdev) > IFNAMSIZ)) {
-		return (-1);
-	}
-
-	if (!(nlh = nlhandle(0))) {
+	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ) ||
+	    strlenzero(macdev) || (strlen(macdev) > IFNAMSIZ) ||
+            !(nlh = nlhandle(0))) {
 		return (-1);
 	}
 
@@ -215,6 +209,7 @@ int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
 	rtnl_talk(nlh, &req->n, 0, 0, NULL);
 
 	objunref(nlh);
+	objunref(req);
 	return (0);
 }
 

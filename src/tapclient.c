@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <sys/socket.h>
 
-#include "client.h"
+#include "include/client.h"
 
 int connect_socket(char *sock) {
 	struct sockaddr_un	adr;

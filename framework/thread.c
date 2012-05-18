@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <signal.h>
 #include <unistd.h>
 
-#include "framework.h"
+#include "include/framework.h"
 
 #define THREAD_MAGIC 0xfeedf158
 

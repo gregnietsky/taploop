@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <arpa/inet.h>
 #include <uuid/uuid.h>
 #include <openssl/md5.h>
-#include "framework.h"
+#include "include/framework.h"
 
 struct radius_packet {
         unsigned char code;

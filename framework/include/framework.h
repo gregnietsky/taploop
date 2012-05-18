@@ -70,6 +70,7 @@ struct config_entry {
 
 typedef struct radius_packet radius_packet;
 
+/*callback function type def's*/
 typedef void	(*radius_cb)(struct radius_packet*, void*);
 typedef void    *(*threadcleanup)(void*);
 typedef void    *(*threadfunc)(void**);
@@ -232,8 +233,8 @@ int socketwrite(struct fwsocket *sock, const void *buf, int num);
 /*the following are only needed on server side of a dgram connection*/
 int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr);
 int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr);
-void ssl_shutdown(void *ssl);
 
+void ssl_shutdown(void *ssl);
 void tlsaccept(struct fwsocket *sock, struct ssldata *orig);
 struct fwsocket *dtls_listenssl(struct fwsocket *sock);
 void startsslclient(struct fwsocket *sock);
