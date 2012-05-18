@@ -23,16 +23,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 struct config_category {
 	const char *name;
-	struct bucketlist *entries;
+	struct bucket_list *entries;
 };
 
 struct config_file {
 	const char *filename;
 	const char *filepath;
-	struct bucketlist *cat;
+	struct bucket_list *cat;
 };
 
-struct bucketlist *configfiles = NULL;
+struct bucket_list *configfiles = NULL;
 
 int hash_files(const void *data, int key) {
 	int ret;
@@ -238,12 +238,15 @@ int process_config(const char *configname, const char *configfile) {
 	return (0);
 }
 
-struct bucketlist *get_config_file(const char *configname) {
+struct bucket_list *get_config_file(const char *configname) {
 	struct config_file *file;
 
 	if ((file = bucket_list_find_key(configfiles, configname))) {
 		if (file->cat) {
-			objref(file->cat);
+			if (!objref(file->cat)) {
+				objunref(file);
+				return (NULL);
+			}
 			objunref(file);
 			return (file->cat);
 		}
@@ -252,8 +255,8 @@ struct bucketlist *get_config_file(const char *configname) {
 	return (NULL);
 }
 
-struct bucketlist *get_config_category(const char *configname, const char *category) {
-	struct bucketlist *file;
+struct bucket_list *get_config_category(const char *configname, const char *category) {
+	struct bucket_list *file;
 	struct config_category *cat;
 
 	file = get_config_file(configname);
@@ -265,7 +268,10 @@ struct bucketlist *get_config_category(const char *configname, const char *categ
 
 	objunref(file);
 	if (cat) {
-		objref(cat->entries);
+		if (!objref(cat->entries)) {
+			objunref(cat);
+			return (NULL);
+		}
 		objunref(cat);
 		return (cat->entries);
 	} else {
@@ -273,17 +279,19 @@ struct bucketlist *get_config_category(const char *configname, const char *categ
 	}
 }
 
-struct bucketlist *get_category_next(struct bucket_loop *cloop, char *name, int len) {
+struct bucket_list *get_category_next(struct bucket_loop *cloop, char *name, int len) {
 	struct config_category *category;
 
 	if (cloop && (category = next_bucket_loop(cloop))) {
 		if (category->entries) {
-			objref(category->entries);
+			if (!objref(category->entries)) {
+				objunref(category);
+				return (NULL);
+			}
 			if (!strlenzero(name)) {
 				strncpy(name, category->name, len);
 			}
 			objunref(category);
-
 			return (category->entries);
 		} else {
 			objunref(category);
@@ -294,7 +302,7 @@ struct bucketlist *get_category_next(struct bucket_loop *cloop, char *name, int 
 
 struct bucket_loop *get_category_loop(const char *configname) {
 	struct bucket_loop *cloop;
-	struct bucketlist *file;
+	struct bucket_list *file;
 
 	file = get_config_file(configname);
 	cloop = init_bucket_loop(file);
@@ -311,7 +319,7 @@ void entry_callback(void *data, void *entry_cb) {
 	callback(entry->item, entry->value);
 }
 
-void config_entry_callback(struct bucketlist *entries, config_entrycb entry_cb) {
+void config_entry_callback(struct bucket_list *entries, config_entrycb entry_cb) {
 	bucketlist_callback(entries, entry_callback, &entry_cb);
 }
 
@@ -324,7 +332,7 @@ void category_callback(void *data, void *category_cb) {
 	cb_cat(category->entries, category->name);
 }
 
-void config_cat_callback(struct bucketlist *categories, config_catcb cat_cb) {
+void config_cat_callback(struct bucket_list *categories, config_catcb cat_cb) {
 	bucketlist_callback(categories, category_callback, &cat_cb);
 }
 
@@ -341,7 +349,7 @@ void config_file_callback(config_filecb file_cb) {
 	bucketlist_callback(configfiles, file_callback, &file_cb);
 }
 
-struct config_entry *get_config_entry(struct bucketlist *categories, const char *item) {
+struct config_entry *get_config_entry(struct bucket_list *categories, const char *item) {
 	struct config_entry *entry;
 
 	entry = bucket_list_find_key(categories, item);

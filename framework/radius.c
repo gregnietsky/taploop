@@ -81,7 +81,7 @@ struct radius_server {
 	unsigned char	id;
 	int		timeout;
 	struct timeval	service;
-	struct bucket_lists *connex;
+	struct bucket_list *connex;
 };
 
 struct bucket_list *servers = NULL;
@@ -364,6 +364,7 @@ int _send_radpacket(struct radius_packet *packet, const char *userpass, struct r
 				session->sent = curtime;
 				objunref(session);
 				objunref(server);
+				objunref(hint);
 				stop_bucket_loop(cloop);
 				stop_bucket_loop(sloop);
 				return (0);

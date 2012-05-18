@@ -60,7 +60,7 @@ struct fwsocket {
 	union sockstruct addr;
 	struct ssldata *ssl;
 	struct fwsocket *parent;
-	struct bucketlist *children;
+	struct bucket_list *children;
 };
 
 struct config_entry {
@@ -81,8 +81,8 @@ typedef int	(*blisthash)(const void*, int);
 typedef void	(*objdestroy)(void*);
 typedef void	(*socketrecv)(struct fwsocket*, void*);
 typedef void	(*blist_cb)(void*, void*);
-typedef void	(*config_filecb)(struct bucketlist*, const char*, const char*);
-typedef void	(*config_catcb)(struct bucketlist*, const char*);
+typedef void	(*config_filecb)(struct bucket_list*, const char*, const char*);
+typedef void	(*config_catcb)(struct bucket_list*, const char*);
 typedef void	(*config_entrycb)(const char*, const char*);
 
 /*these can be set int the application */
@@ -129,19 +129,19 @@ void *objalloc(int size, objdestroy);
  * hashed bucket lists
  */
 void *create_bucketlist(int bitmask, blisthash hash_function);
-int addtobucket(void *blist, void *data);
-int bucket_list_cnt(void *blist);
-void *bucket_list_find_key(void *list, const void *key);
-void bucketlist_callback(struct bucketlist *blist, blist_cb callback, void *data2);
+int addtobucket(struct bucket_list *blist, void *data);
+void remove_bucket_item(struct bucket_list *blist, void *data);
+int bucket_list_cnt(struct bucket_list *blist);
+void *bucket_list_find_key(struct bucket_list *list, const void *key);
+void bucketlist_callback(struct bucket_list *blist, blist_cb callback, void *data2);
 
 /*
  * iteration through buckets
  */
-struct bucket_loop *init_bucket_loop(void *blist);
-void stop_bucket_loop(void *bloop);
-void *next_bucket_loop(void *bloop);
-void remove_bucket_loop(void *bloop);
-void remove_bucket_item(void *bucketlist, void *data);
+struct bucket_loop *init_bucket_loop(struct bucket_list *blist);
+void stop_bucket_loop(struct bucket_loop *bloop);
+void *next_bucket_loop(struct bucket_loop *bloop);
+void remove_bucket_loop(struct bucket_loop *bloop);
 
 /*include jenkins hash burttlebob*/
 uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
@@ -244,12 +244,12 @@ void initconfigfiles(void);
 void unrefconfigfiles(void);
 int process_config(const char *configname, const char *configfile);
 struct bucket_loop *get_category_loop(const char *configname);
-struct bucketlist *get_category_next(struct bucket_loop *cloop, char *name, int len);
-struct bucketlist *get_config_category(const char *configname, const char *category);
-struct config_entry *get_config_entry(struct bucketlist *categories, const char *item);
+struct bucket_list *get_category_next(struct bucket_loop *cloop, char *name, int len);
+struct bucket_list *get_config_category(const char *configname, const char *category);
+struct config_entry *get_config_entry(struct bucket_list *categories, const char *item);
 void config_file_callback(config_filecb file_cb);
-void config_cat_callback(struct bucketlist *categories, config_catcb entry_cb);
-void config_entry_callback(struct bucketlist *entries, config_entrycb entry_cb);
+void config_cat_callback(struct bucket_list *categories, config_catcb entry_cb);
+void config_entry_callback(struct bucket_list *entries, config_entrycb entry_cb);
 
 /*easter egg copied from <linux/jhash.h>*/
 #define JHASH_INITVAL           0xdeadbeef

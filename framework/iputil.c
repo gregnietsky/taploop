@@ -267,8 +267,8 @@ void *_socket_handler(void **data) {
 						break;
 				}
 				if (newsock) {
-					newsock->parent = sock;
 					objref(sock);
+					newsock->parent = sock;
 					addtobucket(sock->children, newsock);
 					socketclient(newsock, sockh->data, sockh->client, NULL);
 					if (sockh->connect) {

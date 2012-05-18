@@ -129,11 +129,9 @@ int delete_kernmac(char *ifname) {
 	struct iplink_req *req;
 	int ifindex;
 
-	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ)) {
-		return (-1);
-	}
-
-	if (!(nlh = nlhandle(0))) {
+	/*check ifname grab a ref to nlh or open it*/
+	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ) ||
+	    (!objref(nlh) && !(nlh = nlhandle(0)))) {
 		return (-1);
 	}
 
@@ -146,8 +144,8 @@ int delete_kernmac(char *ifname) {
 	req = objalloc(sizeof(*req), NULL);
 
 	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
-	req->n.nlmsg_flags = NLM_F_REQUEST;
 	req->n.nlmsg_type = RTM_DELLINK;
+	req->n.nlmsg_flags = NLM_F_REQUEST;
 
 	/*config base/dev/mac*/
 	req->i.ifi_index = ll_name_to_index(ifname);
@@ -155,6 +153,7 @@ int delete_kernmac(char *ifname) {
 	rtnl_talk(nlh, &req->n, 0, 0, NULL);
 
 	objunref(nlh);
+	objunref(req);
 	return (0);
 }
 
@@ -167,7 +166,7 @@ int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
 
 	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ) ||
 	    strlenzero(macdev) || (strlen(macdev) > IFNAMSIZ) ||
-            !(nlh = nlhandle(0))) {
+	    (!objref(nlh) && !(nlh = nlhandle(0)))) {
 		return (-1);
 	}
 
@@ -186,8 +185,8 @@ int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
 	req = objalloc(sizeof(*req), NULL);
 
 	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
-	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_EXCL | NLM_F_REQUEST;
 	req->n.nlmsg_type = RTM_NEWLINK;
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_EXCL | NLM_F_REQUEST;
 
 	/*config base/dev/mac*/
 	addattr_l(&req->n, sizeof(*req), IFLA_LINK, &ifindex, 4);
