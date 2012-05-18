@@ -165,6 +165,7 @@ void *stoptap(void *data) {
 	struct taploop	 *tap = data;
 	struct tl_socket *phy = NULL, *virt = NULL, *socket;
 	struct bucket_loop *bloop;
+	int ifindex;
 
 	if (!tap) {
 		return NULL;
@@ -195,20 +196,11 @@ void *stoptap(void *data) {
 		objunref(virt);
 	}
 
-	/*down the device*/
+	/*down the device and restore name*/
 	if (phy) {
-		struct ifreq ifr;
-
-		memset(&ifr, 0, sizeof(ifr));
-		strncpy(ifr.ifr_name, tap->pname, sizeof(ifr.ifr_name) - 1);
-		ifr.ifr_flags &= ~IFF_UP & ~IFF_RUNNING & ~IFF_PROMISC & ~IFF_MULTICAST & ~IFF_ALLMULTI & ~IFF_NOARP;
-		ioctl(phy->sock, SIOCSIFFLAGS, &ifr);
-
-		/*restore name*/
-		strncpy(ifr.ifr_newname, tap->pdev, IFNAMSIZ);
-		ioctl(phy->sock, SIOCSIFNAME, &ifr);
-
-		/*close phy*/
+		ifindex = get_iface_index(tap->pname);
+		set_interface_flags(ifindex, 0, IFF_UP | IFF_RUNNING | IFF_PROMISC | IFF_MULTICAST | IFF_ALLMULTI | IFF_NOARP);
+		ifrename(tap->pname, tap->pdev);
 		close(phy->sock);
 		objunref(phy);
 	}
