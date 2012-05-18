@@ -58,17 +58,19 @@ int add_kernvlan(char *iface, int vid) {
 	}
 	stop_bucket_loop(bloop);
 
-	if (!tap) {
-		return (-1);
-	}
-
 	if ((create_kernvlan(iface, vid))) {
 		objunref(tap);
 		return (-1);
 	}
 
-	/*set the network dev up*/
 	snprintf(ifname, IFNAMSIZ, "%s.%i", iface, vid);
+
+	if (!tap) {
+		ifup(ifname, 0);
+		return (0);
+	}
+
+	/*set the network dev up*/
 	if ((fd = interface_bind(ifname, ETH_P_ALL, IFF_BROADCAST | IFF_MULTICAST)) < 0) {
 		objunref(tap);
 		return (-1);

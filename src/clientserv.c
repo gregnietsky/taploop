@@ -46,7 +46,7 @@ void client_tap(enum client_action act, struct client_tap *ctap, struct client_r
 void client_vlan(enum client_action act, struct client_vlan *cvlan, struct client_response *res) {
 	switch (act) {
 		case CA_ADD:
-			res->error = create_kernvlan(cvlan->device, cvlan->vid);
+			res->error = add_kernvlan(cvlan->device, cvlan->vid);
 			snprintf(res->message, sizeof(res->message) - 1, "Adding VLAN %s.%i", cvlan->device, cvlan->vid);
 			break;
 		case CA_REM:
@@ -62,6 +62,9 @@ void client_macvlan(enum client_action act, struct client_mac *cmvlan, struct cl
 		case CA_ADD:
 			res->error = create_kernmac(cmvlan->device, cmvlan->name, NULL);
 			snprintf(res->message, sizeof(res->message) - 1, "Adding MAC %s to %s", cmvlan->name, cmvlan->device);
+			if (!res->error) {
+				ifup(cmvlan->name, 0);
+			}
 			break;
 		case CA_REM:
 			res->error = delete_kernmac(cmvlan->device);

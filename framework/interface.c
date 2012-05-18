@@ -61,100 +61,148 @@ struct rtnl_handle *nlhandle(int subscriptions) {
 	}
 
 	/*initilise the map*/
-	ll_init_map(nlh);
+	ll_init_map(nlh, 0);
+	objref(nlh);
 
 	return (nlh);
 }
 
-/*
- * instruct the kernel to remove a VLAN
- */
-int delete_kernvlan(char *ifname, int vid) {
-	struct vlan_ioctl_args vifr;
-	int proto = htons(ETH_P_ALL);
-	int fd;
-
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
-		return (-1);
+void closenetlink() {
+	if (nlh) {
+		objunref(nlh);
 	}
-
-	memset(&vifr, 0, sizeof(vifr));
-	snprintf(vifr.device1, IFNAMSIZ, "%s.%i", ifname, vid);
-	vifr.u.VID = vid;
-	vifr.cmd = DEL_VLAN_CMD;
-
-	/*Delete the vlan*/
-	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
-		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
-		close(fd);
-		return (-1);
-	}
-	close(fd);
-	return (0);
 }
 
-/*
- * instruct the kernel to create a VLAN
- */
-int create_kernvlan(char *ifname, int vid) {
-	struct vlan_ioctl_args vifr;
-	int proto = htons(ETH_P_ALL);
-	int fd;
-
-	memset(&vifr, 0, sizeof(vifr));
-	strncpy(vifr.device1, ifname, IFNAMSIZ);
-	vifr.u.VID = vid;
-	vifr.cmd = ADD_VLAN_CMD;
-
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
-		return (-1);
-	}
-
-	/*Create the vlan*/
-	if (ioctl(fd , SIOCSIFVLAN, &vifr) < 0) {
-		perror("VLAN ioctl(SIOCSIFVLAN) Failed");
-		close(fd);
-		return (-1);
-	}
-	close(fd);
-	return (0);
-}
-
-/*
- * instruct the kernel to remove a VLAN
- */
-int delete_kernmac(char *ifname) {
-	struct iplink_req *req;
+int get_iface_index(const char *ifname) {
 	int ifindex;
 
+	if (!objref(nlh) && !(nlh = nlhandle(0))) {
+		return (0);
+	}
+
+	objlock(nlh);
+	ll_init_map(nlh, 1);
+	objunlock(nlh);
+
+	ifindex = ll_name_to_index(ifname);
+
+	objunref(nlh);
+	return (ifindex);
+}
+
+/*
+ * instruct the kernel to remove a link
+ */
+int delete_interface(char *iface) {
+	struct iplink_req *req;
+	int ifindex, ret;
+
 	/*check ifname grab a ref to nlh or open it*/
-	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ) ||
+	if (strlenzero(iface) || (strlen(iface) > IFNAMSIZ) ||
 	    (!objref(nlh) && !(nlh = nlhandle(0)))) {
 		return (-1);
 	}
 
 	/*set the index of base interface*/
-	if (!(ifindex = ll_name_to_index(ifname))) {
+	if (!(ifindex = get_iface_index(iface))) {
 		objunref(nlh);
 		return (-1);
 	}
 
-	req = objalloc(sizeof(*req), NULL);
+	if (!(req = objalloc(sizeof(*req), NULL))) {
+		objunref(nlh);
+		return (-1);
+	}
 
 	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
 	req->n.nlmsg_type = RTM_DELLINK;
 	req->n.nlmsg_flags = NLM_F_REQUEST;
 
 	/*config base/dev/mac*/
-	req->i.ifi_index = ll_name_to_index(ifname);
+	req->i.ifi_index = ifindex;
 
-	rtnl_talk(nlh, &req->n, 0, 0, NULL);
+	objlock(nlh);
+	ret = rtnl_talk(nlh, &req->n, 0, 0, NULL);
+	objunlock(nlh);
 
 	objunref(nlh);
 	objunref(req);
-	return (0);
+
+	return (ret);
+}
+
+int delete_kernvlan(char *ifname, int vid) {
+	char iface[IFNAMSIZ+1];
+
+	/*check ifname grab a ref to nlh or open it*/
+	snprintf(iface, IFNAMSIZ, "%s.%i", ifname, vid);
+	return (delete_interface(iface));
+}
+
+/*
+ * instruct the kernel to create a VLAN
+ */
+int create_kernvlan(char *ifname, unsigned short vid) {
+	struct iplink_req *req;
+	char iface[IFNAMSIZ+1];
+	struct rtattr *data, *linkinfo;
+	char *type = "vlan";
+	int ifindex, ret;
+
+	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ) ||
+	    (!objref(nlh) && !(nlh = nlhandle(0)))) {
+		return (-1);
+	}
+
+	/*set the index of base interface*/
+	if (!(ifindex = get_iface_index(ifname))) {
+		objunref(nlh);
+		return (-1);
+	}
+
+	if (!(req = objalloc(sizeof(*req), NULL))) {
+		objunref(nlh);
+		return (-1);
+	}
+
+	snprintf(iface, IFNAMSIZ, "%s.%i", ifname, vid);
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+	req->n.nlmsg_type = RTM_NEWLINK;
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_EXCL | NLM_F_REQUEST;
+
+	/*config base/dev/mac*/
+	addattr_l(&req->n, sizeof(*req), IFLA_LINK, &ifindex, sizeof(ifindex));
+	addattr_l(&req->n, sizeof(*req), IFLA_IFNAME, iface, strlen(iface));
+
+	/*type*/
+	linkinfo  = NLMSG_TAIL(&req->n);
+	addattr_l(&req->n, sizeof(*req), IFLA_LINKINFO, NULL, 0);
+	addattr_l(&req->n, sizeof(*req), IFLA_INFO_KIND, type, strlen(type));
+
+	/*vid*/
+	data = NLMSG_TAIL(&req->n);
+	addattr_l(&req->n, sizeof(*req), IFLA_INFO_DATA, NULL, 0);
+	addattr_l(&req->n, sizeof(*req), IFLA_VLAN_ID, &vid, sizeof(vid));
+
+	data->rta_len = (char*)NLMSG_TAIL(&req->n) - (char*)data;
+	linkinfo->rta_len = (char*)NLMSG_TAIL(&req->n) - (char*)linkinfo;
+
+	objlock(nlh);
+	ret = rtnl_talk(nlh, &req->n, 0, 0, NULL);
+	objunlock(nlh);
+
+	objunref(nlh);
+	objunref(req);
+
+	return (ret);
+}
+
+/*
+ * instruct the kernel to remove a VLAN
+ */
+int delete_kernmac(char *ifname) {
+
+	return (delete_interface(ifname));
 }
 
 int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
@@ -162,7 +210,7 @@ int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
 	struct rtattr *data, *linkinfo;
 	unsigned char lmac[ETH_ALEN];
 	char *type = "macvlan";
-	int ifindex;
+	int ifindex, ret;
 
 	if (strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ) ||
 	    strlenzero(macdev) || (strlen(macdev) > IFNAMSIZ) ||
@@ -171,18 +219,21 @@ int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
 	}
 
 	/*set the index of base interface*/
-	if (!(ifindex = ll_name_to_index(ifname))) {
+	if (!(ifindex = get_iface_index(ifname))) {
 		objunref(nlh);
 		return (-1);
 	}
 
-	if (strlenzero((char*)mac) || (strlen((char*)mac) != ETH_ALEN)) {
+	if (!mac) {
 		randhwaddr(lmac);
 	} else {
 		strncpy((char*)lmac, (char*)mac, ETH_ALEN);
 	}
 
-	req = objalloc(sizeof(*req), NULL);
+	if (!(req = objalloc(sizeof(*req), NULL))) {
+		objunref(nlh);
+		return (-1);
+	}
 
 	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
 	req->n.nlmsg_type = RTM_NEWLINK;
@@ -197,15 +248,111 @@ int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
 	linkinfo  = NLMSG_TAIL(&req->n);
 	addattr_l(&req->n, sizeof(*req), IFLA_LINKINFO, NULL, 0);
 	addattr_l(&req->n, sizeof(*req), IFLA_INFO_KIND, type, strlen(type));
-	linkinfo->rta_len = (char*)NLMSG_TAIL(&req->n) - (char*)linkinfo;
 
 	/*mode*/
 	data = NLMSG_TAIL(&req->n);
 	addattr_l(&req->n, sizeof(*req), IFLA_INFO_DATA, NULL, 0);
-	addattr32(&req->n, 1024, IFLA_MACVLAN_MODE, MACVLAN_MODE_PRIVATE);
+	addattr32(&req->n, sizeof(*req), IFLA_MACVLAN_MODE, MACVLAN_MODE_PRIVATE);
 	data->rta_len = (char*)NLMSG_TAIL(&req->n) - (char*)data;
+	linkinfo->rta_len = (char*)NLMSG_TAIL(&req->n) - (char*)linkinfo;
 
+	objlock(nlh);
+	ret = rtnl_talk(nlh, &req->n, 0, 0, NULL);
+	objunlock(nlh);
+
+	objunref(nlh);
+	objunref(req);
+
+	return (ret);
+}
+
+int set_interface_flags(int ifindex, int set, int clear) {
+	struct iplink_req *req;
+	int flags;
+
+	if (!objref(nlh) && !(nlh = nlhandle(0))) {
+		return (-1);
+	}
+
+	flags = ll_index_to_flags(ifindex);
+
+	flags |= set;
+	flags &= ~(clear);
+
+	if (!(req = objalloc(sizeof(*req), NULL))) {
+		objunref(nlh);
+		return (-1);
+	}
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+	req->n.nlmsg_type = RTM_NEWLINK;
+	req->n.nlmsg_flags = NLM_F_REQUEST;
+
+	/*config base/dev/mac*/
+	req->i.ifi_index = ifindex;
+	req->i.ifi_flags = flags;
+	req->i.ifi_change = set | clear;
+
+	objlock(nlh);
 	rtnl_talk(nlh, &req->n, 0, 0, NULL);
+	objunlock(nlh);
+
+	objunref(nlh);
+	objunref(req);
+	return (0);
+}
+
+int set_interface_addr(int ifindex, const unsigned char *hwaddr) {
+	struct iplink_req *req;
+
+	if ((!objref(nlh) && !(nlh = nlhandle(0)))) {
+		return (-1);
+	}
+
+	if (!(req = objalloc(sizeof(*req), NULL))) {
+		objunref(nlh);
+		return (-1);
+	}
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+	req->n.nlmsg_type = RTM_NEWLINK;
+	req->n.nlmsg_flags = NLM_F_REQUEST;
+	req->i.ifi_index = ifindex;
+
+	/*config base/dev/mac*/
+	addattr_l(&req->n, sizeof(*req), IFLA_ADDRESS, hwaddr, ETH_ALEN);
+
+	objlock(nlh);
+	rtnl_talk(nlh, &req->n, 0, 0, NULL);
+	objunlock(nlh);
+
+	objunref(nlh);
+	objunref(req);
+	return (0);
+}
+
+int set_interface_name(int ifindex, const char *name) {
+	struct iplink_req *req;
+
+	if ((!objref(nlh) && !(nlh = nlhandle(0)))) {
+		return (-1);
+	}
+
+	if (!(req = objalloc(sizeof(*req), NULL))) {
+		objunref(nlh);
+		return (-1);
+	}
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+	req->n.nlmsg_type = RTM_NEWLINK;
+	req->n.nlmsg_flags = NLM_F_REQUEST;
+	req->i.ifi_index = ifindex;
+
+	addattr_l(&req->n, sizeof(*req), IFLA_IFNAME, name, strlen((char *)name));
+
+	objlock(nlh);
+	rtnl_talk(nlh, &req->n, 0, 0, NULL);
+	objunlock(nlh);
 
 	objunref(nlh);
 	objunref(req);
@@ -216,31 +363,18 @@ int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
  * bind to device fd may be a existing socket
  */
 int interface_bind(char *iface, int protocol, int flags) {
-	struct ifreq ifr;
 	struct sockaddr_ll sll;
 	int proto = htons(protocol);
-	int fd;
+	int fd, ifindex;
 
+	/*set the network dev up*/
+	if (!(ifindex = get_iface_index(iface))) {
+		return (-1);
+	}
+	set_interface_flags(ifindex, IFF_UP | IFF_RUNNING, 0);
 
 	/* open network raw socket */
 	if ((fd = socket(PF_PACKET, SOCK_RAW,  proto)) < 0) {
-		return (-1);
-	}
-
-	/*set the network dev up*/
-	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, iface, IFNAMSIZ);
-	ifr.ifr_flags |= IFF_UP | IFF_RUNNING | flags;
-	if (ioctl(fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-       		perror("ioctl(SIOCSIFFLAGS) failed\n");
-		close(fd);
-	        return (-1);
-	}
-
-	/* set the interface index for bind*/
-	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
-		perror("ioctl(SIOCGIFINDEX) failed\n");
-		close(fd);
 		return (-1);
 	}
 
@@ -248,8 +382,8 @@ int interface_bind(char *iface, int protocol, int flags) {
 	memset(&sll, 0, sizeof(sll));
 	sll.sll_family = PF_PACKET;
 	sll.sll_protocol = proto;
-	sll.sll_ifindex = ifr.ifr_ifindex;
-	if (bind(fd, (struct sockaddr *) &sll, sizeof(sll)) < 0) {
+	sll.sll_ifindex = ifindex;
+	if (bind(fd, (struct sockaddr*)&sll, sizeof(sll)) < 0) {
 		perror("bind failed");
 		close(fd);
 		return (-1);
@@ -269,8 +403,7 @@ void randhwaddr(unsigned char *addr) {
 
 int create_tun(const char *ifname, const unsigned char *hwaddr, int flags) {
 	struct ifreq ifr;
-	int fd, rfd;
-	unsigned char rndhwaddr[ETH_ALEN];
+	int fd, ifindex;
 	char *tundev = "/dev/net/tun";
 
 	/* open the tun/tap clone dev*/
@@ -278,10 +411,9 @@ int create_tun(const char *ifname, const unsigned char *hwaddr, int flags) {
 		return (-1);
  	}
 
+	/* configure the device*/
  	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = flags;
-
-	/* configure the device*/
 	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
 	if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0 ) {
 		perror("ioctl(TUNSETIFF) failed\n");
@@ -289,118 +421,77 @@ int create_tun(const char *ifname, const unsigned char *hwaddr, int flags) {
 		return (-1);
 	}
 
+	if (!(ifindex = get_iface_index(ifname))) {
+		return (-1);
+	}
+
 	/* set the MAC address*/
-	if (!hwaddr) {
-		randhwaddr(rndhwaddr);
-	}
-
-	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-	memcpy(&ifr.ifr_hwaddr.sa_data, (hwaddr) ? hwaddr : rndhwaddr, ETH_ALEN);
-	if (ioctl(fd, SIOCSIFHWADDR, &ifr) < 0) {
-		perror("ioctl(SIOCSIFHWADDR) failed\n");
-		close(fd);
-		return (-1);
-	}
-
-	/* open network raw socket */
-	if ((rfd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
-		close(fd);
-		return (-1);
+	if (hwaddr) {
+		set_interface_addr(ifindex, hwaddr);
 	}
 
 	/*set the network dev up*/
-	ifr.ifr_flags |= IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
-	if (ioctl(rfd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-		perror("ioctl(SIOCSIFFLAGS) failed");
-		close(rfd);
-		close(fd);
-		return (-1);
-	}
-	close(rfd);
+	set_interface_flags(ifindex, IFF_UP | IFF_RUNNING | IFF_MULTICAST | IFF_BROADCAST, 0);
 
 	return (fd);
 }
 
-int ifdown(const char *ifname) {
-	int proto = htons(ETH_P_ALL);
-	struct ifreq ifr;
-	int fd;
-
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
-		return (-1);
-	}
-
-	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
+int ifdown(const char *ifname, int flags) {
+	int ifindex;
 
 	/*down the device*/
-	ifr.ifr_flags &= ~IFF_UP & ~IFF_RUNNING;
-	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-		perror("ioctl(SIOCSIFFLAGS) failed");
-		close(fd);
+	if (!(ifindex = get_iface_index(ifname))) {
 		return (-1);
 	}
 
-	close(fd);
+	/*set the network dev up*/
+	set_interface_flags(ifindex, 0, IFF_UP | IFF_RUNNING | flags);
+
+	return (0);
+}
+
+int ifup(const char *ifname, int flags) {
+	int ifindex;
+
+	/*down the device*/
+	if (!(ifindex = get_iface_index(ifname))) {
+		return (-1);
+	}
+
+	/*set the network dev up*/
+	set_interface_flags(ifindex, IFF_UP | IFF_RUNNING | flags, 0);
+
 	return (0);
 }
 
 int ifrename(const char *oldname, const char *newname) {
-	int proto = htons(ETH_P_ALL);
-	struct ifreq ifr;
-	int fd;
+	int ifindex;
 
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
+	ifdown(oldname, 0);
+
+	if (!(ifindex = get_iface_index(oldname))) {
 		return (-1);
 	}
+	set_interface_name(ifindex, newname);
 
-	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, oldname, sizeof(ifr.ifr_name) - 1);
-
-	/*down the device before renameing*/
-	ifr.ifr_flags &= ~IFF_UP & ~IFF_RUNNING;
-	if (ioctl( fd, SIOCSIFFLAGS, &ifr ) < 0 ) {
-		perror("ioctl(SIOCSIFFLAGS) failed");
-		close(fd);
-		return (-1);
-	}
-	/* rename the device*/
-	strncpy(ifr.ifr_newname, newname, IFNAMSIZ);
-	if (ioctl(fd, SIOCSIFNAME, &ifr) <0 ) {
-		perror("ioctl(SIOCSIFNAME) failed\n");
-		close(fd);
-		return (-1);
-	} else {
-		strncpy(ifr.ifr_name, newname, sizeof(ifr.ifr_name) - 1);
-	}
-
-	close(fd);
 	return (0);
 }
 
 int ifhwaddr(const char *ifname, unsigned char *hwaddr) {
-	int proto = htons(ETH_P_ALL);
-	struct ifreq ifr;
-	int fd;
+	int ifindex;
 
-	/* open network raw socket */
-	if ((fd = socket(PF_PACKET, SOCK_RAW, proto)) < 0) {
+	if (!hwaddr || strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ) ||
+	    (!objref(nlh) && !(nlh = nlhandle(0)))) {
 		return (-1);
 	}
 
-	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
-
-	/*get the MAC address*/
-	if ((ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) ||
-	    (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER)) {
-		perror("ioctl(SIOCGIFHWADDR) failed\n");
-		close(fd);
+	/*set the index of base interface*/
+	if (!(ifindex = get_iface_index(ifname))) {
+		objunref(nlh);
 		return (-1);
 	}
-	memcpy(hwaddr, &ifr.ifr_hwaddr.sa_data, ETH_ALEN);
-	close(fd);
+
+	ll_index_to_addr(ifindex, hwaddr, ETH_ALEN);
+	objunref(nlh);
 	return (0);
 }

@@ -176,15 +176,17 @@ void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acce
 
 /*interface functions*/
 int delete_kernvlan(char *ifname, int vid);
-int create_kernvlan(char *ifname, int vid);
+int create_kernvlan(char *ifname, unsigned short vid);
 int delete_kernmac(char *macdev);
 int create_kernmac(char *ifname, char *macdev, unsigned char *mac);
 int interface_bind(char *iface, int protocol, int flags);
 void randhwaddr(unsigned char *addr);
 int create_tun(const char *ifname, const unsigned char *hwaddr, int flags);
 int ifrename(const char *oldname, const char *newname);
-int ifdown(const char *ifname);
+int ifdown(const char *ifname, int flags);
+int ifup(const char *ifname, int flags);
 int ifhwaddr(const char *ifname, unsigned char *hwaddr);
+void closenetlink(void);
 
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20

@@ -88,13 +88,13 @@ struct tl_socket *phyopen(struct taploop *tap) {
 		return NULL;
 	}
 
-
 	objlock(tap);
 	ifhwaddr(tap->pname, tap->hwaddr);
 	objunlock(tap);
 
 	/*set the device up*/
 	if ((fd = interface_bind(tap->pname, ETH_P_ALL, IFF_BROADCAST | IFF_MULTICAST | IFF_PROMISC | IFF_NOARP | IFF_ALLMULTI)) < 0) {
+		return NULL;
 	}
 
 #ifdef PACKET_MMAP_RX
@@ -163,16 +163,12 @@ struct tl_socket *phyopen(struct taploop *tap) {
  */
 void *stoptap(void *data) {
 	struct taploop	 *tap = data;
-	struct ifreq ifr;
 	struct tl_socket *phy = NULL, *virt = NULL, *socket;
 	struct bucket_loop *bloop;
 
 	if (!tap) {
 		return NULL;
 	}
-
-	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, tap->pname, sizeof(ifr.ifr_name) - 1);
 
 	/* get physical socket to reconfigure it and drop it*/
 	bloop = init_bucket_loop(tap->socks);
@@ -201,6 +197,10 @@ void *stoptap(void *data) {
 
 	/*down the device*/
 	if (phy) {
+		struct ifreq ifr;
+
+		memset(&ifr, 0, sizeof(ifr));
+		strncpy(ifr.ifr_name, tap->pname, sizeof(ifr.ifr_name) - 1);
 		ifr.ifr_flags &= ~IFF_UP & ~IFF_RUNNING & ~IFF_PROMISC & ~IFF_MULTICAST & ~IFF_ALLMULTI & ~IFF_NOARP;
 		ioctl(phy->sock, SIOCSIFFLAGS, &ifr);
 
