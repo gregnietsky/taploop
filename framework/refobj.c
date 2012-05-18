@@ -217,7 +217,7 @@ int objunlock(void *data) {
 	return (0);
 }
 
-void empty_buckets(void *data) {
+static void empty_buckets(void *data) {
 	struct bucket_list *blist = data;
 	struct bucket_loop *bloop;
 	void *entry;
@@ -269,7 +269,7 @@ void *create_bucketlist(int bitmask, blisthash hash_function) {
 	return (new);
 }
 
-struct blist_obj *blist_gotohash(struct blist_obj *cur, unsigned int hash, int bucketbits) {
+static struct blist_obj *blist_gotohash(struct blist_obj *cur, unsigned int hash, int bucketbits) {
 	struct blist_obj *lhead = cur;
 
 	if ((hash << bucketbits) < 0) {
@@ -285,7 +285,7 @@ struct blist_obj *blist_gotohash(struct blist_obj *cur, unsigned int hash, int b
 	return (lhead);
 }
 
-int gethash(struct bucket_list *blist, const void *data, int key) {
+static int gethash(struct bucket_list *blist, const void *data, int key) {
 	const char *ptr = data;
 	struct ref_obj *ref;
 	int hash = 0;

@@ -56,7 +56,7 @@ struct threadcontainer {
  */
 struct threadcontainer *threads = NULL;
 
-int hash_thread(const void *data, int key) {
+static int hash_thread(const void *data, int key) {
         const struct thread_pvt *thread = data;
         const pthread_t *hashkey = (key) ? data : &thread->thr;
 	int ret;
@@ -78,7 +78,7 @@ int framework_threadok(void *data) {
 	return (0);
 }
 
-void *threadwrap(void *data) {
+static void *threadwrap(void *data) {
 	struct thread_pvt *thread = data;
 	void *ret = NULL;
 
@@ -136,7 +136,7 @@ struct thread_pvt *framework_mkthread(threadfunc func, threadcleanup cleanup, th
 /*
  * close all threads when we get SIGHUP
  */
-int manager_sig(int sig, void *data) {
+static int manager_sig(int sig, void *data) {
 	struct thread_pvt *thread = data;
 
 	switch(sig) {
@@ -151,7 +151,7 @@ int manager_sig(int sig, void *data) {
  * loop through all threads till they stoped
  * setting stop will flag threads to stop
  */
-void *managethread(void **data) {
+static void *managethread(void **data) {
 	struct thread_pvt *mythread = threads->manager;
 	struct thread_pvt *thread;
 	struct bucket_loop *bloop;

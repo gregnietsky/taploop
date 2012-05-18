@@ -50,7 +50,7 @@ void nlhandle_free(void *data) {
 	}
 }
 
-struct rtnl_handle *nlhandle(int subscriptions) {
+static struct rtnl_handle *nlhandle(int subscriptions) {
 	struct rtnl_handle *nlh;
 
 	if (!(nlh = objalloc(sizeof(*nlh), nlhandle_free)) || (rtnl_open(nlh, 0))) {
@@ -93,7 +93,7 @@ int get_iface_index(const char *ifname) {
 /*
  * instruct the kernel to remove a link
  */
-int delete_interface(char *iface) {
+static int delete_interface(char *iface) {
 	struct iplink_req *req;
 	int ifindex, ret;
 

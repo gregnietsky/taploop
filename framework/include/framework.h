@@ -188,6 +188,8 @@ int ifup(const char *ifname, int flags);
 int ifhwaddr(const char *ifname, unsigned char *hwaddr);
 int set_interface_flags(int ifindex, int set, int clear);
 int get_iface_index(const char *ifname);
+int set_interface_addr(int ifindex, const unsigned char *hwaddr);
+int set_interface_name(int ifindex, const char *name);
 void closenetlink(void);
 
 /*Radius utilities*/

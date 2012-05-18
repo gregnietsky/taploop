@@ -41,7 +41,7 @@ struct framework_sockthread {
 /*
  * client sock server
  */
-void *unsock_serv(void **data) {
+static void *unsock_serv(void **data) {
 	struct framework_sockthread *unsock = *data;
 	struct sockaddr_un	adr;
 	unsigned int salen;

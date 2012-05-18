@@ -34,7 +34,7 @@ struct config_file {
 
 struct bucket_list *configfiles = NULL;
 
-int hash_files(const void *data, int key) {
+static int hash_files(const void *data, int key) {
 	int ret;
 	const struct config_file *file = data;
 	const char* hashkey = (key) ? data : file->filename;
@@ -44,7 +44,7 @@ int hash_files(const void *data, int key) {
         return(ret);
 }
 
-int hash_cats(const void *data, int key) {
+static int hash_cats(const void *data, int key) {
 	int ret;
 	const struct config_category *cat = data;
 	const char* hashkey = (key) ? data : cat->name;
@@ -66,7 +66,7 @@ void unrefconfigfiles(void) {
 	}
 }
 
-void free_config_entry(void *data) {
+static void free_config_entry(void *data) {
 	struct config_entry *entry = data;
 
 	if (entry->item) {
@@ -77,7 +77,7 @@ void free_config_entry(void *data) {
 	}
 }
 
-void add_conf_entry(struct config_category *category, const char *item, const char *value) {
+static void add_conf_entry(struct config_category *category, const char *item, const char *value) {
 	struct config_entry *newentry;
 
 	if (!category || !category->entries || !(newentry = objalloc(sizeof(*newentry), free_config_entry))) {
@@ -91,7 +91,7 @@ void add_conf_entry(struct config_category *category, const char *item, const ch
 	objunref(newentry);
 }
 
-void free_config_category(void *data) {
+static void free_config_category(void *data) {
 	struct config_category *cat = data;
 
 	if (cat->name) {
@@ -102,7 +102,7 @@ void free_config_category(void *data) {
 	}
 }
 
-struct config_category *create_conf_category(const char *name) {
+static struct config_category *create_conf_category(const char *name) {
 	struct config_category *newcat;
 
 	if (!(newcat = objalloc(sizeof(*newcat), free_config_category))) {
@@ -115,7 +115,7 @@ struct config_category *create_conf_category(const char *name) {
 	return (newcat);
 }
 
-void free_config_file(void *data) {
+static void free_config_file(void *data) {
 	struct config_file *file = data;
 
 	if (file->filename) {
@@ -129,7 +129,7 @@ void free_config_file(void *data) {
 	}
 }
 
-struct config_file *create_conf_file(const char *filename, const char *filepath) {
+static struct config_file *create_conf_file(const char *filename, const char *filepath) {
 	struct config_file *newfile;
 
 	if (!(newfile = objalloc(sizeof(*newfile), free_config_file))) {
@@ -143,7 +143,7 @@ struct config_file *create_conf_file(const char *filename, const char *filepath)
 	return (newfile);
 }
 
-char *filterconf(const char *str, int minlen) {
+static char *filterconf(const char *str, int minlen) {
 	char *tmp, *token;
 
 	/*trim leading and trailing white space*/
@@ -310,7 +310,7 @@ struct bucket_loop *get_category_loop(const char *configname) {
 	return (cloop);
 }
 
-void entry_callback(void *data, void *entry_cb) {
+static void entry_callback(void *data, void *entry_cb) {
 	struct config_entry *entry = data;
 	config_entrycb *cb_entry = entry_cb, callback;
 
@@ -323,7 +323,7 @@ void config_entry_callback(struct bucket_list *entries, config_entrycb entry_cb)
 	bucketlist_callback(entries, entry_callback, &entry_cb);
 }
 
-void category_callback(void *data, void *category_cb) {
+static void category_callback(void *data, void *category_cb) {
 	struct config_category *category = data;
 	config_catcb *cb_catptr = category_cb, cb_cat;
 
@@ -336,7 +336,7 @@ void config_cat_callback(struct bucket_list *categories, config_catcb cat_cb) {
 	bucketlist_callback(categories, category_callback, &cat_cb);
 }
 
-void file_callback(void *data, void *file_cb) {
+static void file_callback(void *data, void *file_cb) {
 	struct config_file *file = data;
 	config_filecb *cb_fileptr = file_cb, cb_file;
 

@@ -70,7 +70,7 @@ void printgnu(struct framework_core *ci) {
 "    under certain condition\n\n", ci->progname, ci->year, ci->developer, ci->email, ci->www);
 }
 
-pid_t daemonize() {
+static pid_t daemonize() {
 	pid_t	forkpid;
 
 	/* fork and die daemonize*/
@@ -95,7 +95,7 @@ pid_t daemonize() {
 /*
  * create pid / run file and hold a exclusive lock on it
  */
-int lockpidfile(struct framework_core *ci) {
+static int lockpidfile(struct framework_core *ci) {
 	int lck_fd = -1;
 	char pidstr[12];
 
@@ -121,7 +121,7 @@ int lockpidfile(struct framework_core *ci) {
 /*
  * set up signal handler
  */
-void configure_sigact(struct sigaction *sa) {
+static void configure_sigact(struct sigaction *sa) {
 	sa->sa_flags = SA_SIGINFO | SA_RESTART;
 	sigemptyset(&sa->sa_mask);
 	sa->sa_sigaction = framework_sig_handler;
@@ -164,7 +164,7 @@ struct framework_core *framework_mkcore(char *progname, char *name, char *email,
 /*
  * free core
  */
-void framework_free(struct framework_core *ci) {
+static void framework_free(struct framework_core *ci) {
 	if (!ci) {
 		return;
 	}

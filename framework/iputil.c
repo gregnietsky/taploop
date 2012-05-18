@@ -39,7 +39,7 @@ struct socket_handler {
 void dtsl_serveropts(struct fwsocket *sock);
 void dtlshandltimeout(struct fwsocket *sock);
 
-int hash_socket(const void *data, int key) {
+static int hash_socket(const void *data, int key) {
         int ret;
 	const struct fwsocket *sock = data;
 	const int *hashkey = (key) ? data : &sock->sock;
@@ -56,7 +56,7 @@ void closesocket(struct fwsocket *sock) {
 	}
 }
 
-void clean_fwsocket(void *data) {
+static void clean_fwsocket(void *data) {
 	struct fwsocket *sock = data;
 
 	if (sock->ssl) {
@@ -102,7 +102,7 @@ struct fwsocket *make_socket(int family, int type, int proto, void *ssl) {
 	return (si);
 }
 
-struct fwsocket *accept_socket(struct fwsocket *sock) {
+static struct fwsocket *accept_socket(struct fwsocket *sock) {
 	struct fwsocket *si;
 	socklen_t salen = sizeof(si->addr.sa);
 
@@ -128,7 +128,7 @@ struct fwsocket *accept_socket(struct fwsocket *sock) {
 	return (si);
 }
 
-struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int ctype, int backlog) {
+static struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int ctype, int backlog) {
 	struct	addrinfo hint, *result, *rp;
 	struct fwsocket *sock = NULL;
 	socklen_t salen = sizeof(struct sockaddr);
@@ -200,7 +200,7 @@ struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl, int ba
 	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 1, backlog));
 }
 
-void *_socket_handler_clean(void *data) {
+static void *_socket_handler_clean(void *data) {
 	struct socket_handler *fwsel = data;
 
 	/*call cleanup and remove refs to data*/
@@ -214,7 +214,7 @@ void *_socket_handler_clean(void *data) {
 	return NULL;
 }
 
-void *_socket_handler(void **data) {
+static void *_socket_handler(void **data) {
 	struct socket_handler *sockh = *data;
 	struct fwsocket *sock = sockh->sock;
 	struct fwsocket *newsock;
@@ -307,7 +307,7 @@ void *_socket_handler(void **data) {
 	return NULL;
 }
 
-void _start_socket_handler(struct fwsocket *sock, socketrecv read,
+static void _start_socket_handler(struct fwsocket *sock, socketrecv read,
 				socketrecv acceptfunc, threadcleanup cleanup, void *data) {
 	struct socket_handler *sockh;
 

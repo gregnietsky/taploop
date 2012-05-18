@@ -47,7 +47,7 @@ struct ssldata {
 #define COOKIE_SECRET_LENGTH 16
 unsigned char *cookie_secret = NULL;
 
-int generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
+static int generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
 	struct sockaddr peer;
 
 	if (!ssl || !cookie_secret) {
@@ -61,7 +61,7 @@ int generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
 	return (1);
 }
 
-int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
+static int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
 	struct sockaddr peer;
 	unsigned char result[EVP_MAX_MD_SIZE];
 	unsigned int resultlength;
@@ -124,7 +124,7 @@ void ssl_shutdown(void *data) {
 	objunlock(ssl);
 }
 
-void free_ssldata(void *data) {
+static void free_ssldata(void *data) {
 	struct ssldata *ssl = data;
 
 	if (ssl->parent) {
@@ -137,11 +137,11 @@ void free_ssldata(void *data) {
 	}
 }
 
-int verify_callback (int ok, X509_STORE_CTX *ctx) {
+static int verify_callback (int ok, X509_STORE_CTX *ctx) {
 	return (1);
 }
 
-struct ssldata *sslinit(const char *cacert, const char *cert, const char *key, int verify, const SSL_METHOD *meth, int flags) {
+static struct ssldata *sslinit(const char *cacert, const char *cert, const char *key, int verify, const SSL_METHOD *meth, int flags) {
 	struct ssldata *ssl;
 	struct stat finfo;
 	int ret = -1;
@@ -234,7 +234,7 @@ void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int ver
 	return (ssl);
 }
 
-void sslsockstart(struct fwsocket *sock, struct ssldata *orig,int accept) {
+static void sslsockstart(struct fwsocket *sock, struct ssldata *orig,int accept) {
 	struct ssldata *ssl = sock->ssl;
 
 	if (!ssl) {
@@ -440,7 +440,7 @@ void sslstartup(void) {
 	}
 }
 
-void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsocket *sock) {
+static void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsocket *sock) {
 	struct timeval timeout;
 
 	objlock(sock);
@@ -490,7 +490,7 @@ void dtsl_serveropts(struct fwsocket *sock) {
 	objunlock(ssl);
 }
 
-void dtlsaccept(struct fwsocket *sock) {
+static void dtlsaccept(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 
 	objlock(sock);
@@ -556,7 +556,7 @@ struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 	return (newsock);
 }
 
-void dtlsconnect(struct fwsocket *sock) {
+static void dtlsconnect(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 
 	if (!ssl) {

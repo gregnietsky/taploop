@@ -122,7 +122,7 @@ void addradattrstr(struct radius_packet *packet, char type, char *str) {
 	addradattr(packet, type, (unsigned char*)str, strlen(str));
 }
 
-void addradattrpasswd(struct radius_packet *packet, const char *pw, const char *secret) {
+static void addradattrpasswd(struct radius_packet *packet, const char *pw, const char *secret) {
 	unsigned char pwbuff[RAD_MAX_PASS_LEN];
 	unsigned char digest[RAD_AUTH_TOKEN_LEN];
 	MD5_CTX c, old;
@@ -174,7 +174,7 @@ struct radius_packet *new_radpacket(unsigned char code, unsigned char id) {
 	return (packet);
 }
 
-int hash_session(const void *data, int key) {
+static int hash_session(const void *data, int key) {
 	unsigned int ret;
 	const struct radius_session *session = data;
 	const unsigned char *hashkey = (key) ? data : &session->id;
@@ -184,7 +184,7 @@ int hash_session(const void *data, int key) {
 	return (ret);
 }
 
-int hash_connex(const void *data, int key) {
+static int hash_connex(const void *data, int key) {
 	int ret;
 	const struct radius_connection *connex = data;
 	const int *hashkey = (key) ? data : &connex->socket;
@@ -194,7 +194,7 @@ int hash_connex(const void *data, int key) {
 	return (ret);
 }
 
-int hash_server(const void *data, int key) {
+static int hash_server(const void *data, int key) {
 	int ret;
 	const struct radius_server *server = data;
 	const unsigned char *hashkey = (key) ? data : &server->id;
@@ -204,7 +204,7 @@ int hash_server(const void *data, int key) {
 	return(ret);
 }
 
-void del_radserver(void *data) {
+static void del_radserver(void *data) {
 	struct radius_server *server = data;
 
 	if (server->name) {
@@ -244,7 +244,7 @@ void add_radserver(const char *ipaddr, const char *auth, const char *acct, const
 	objunref(server);
 }
 
-void del_radsession(void *data) {
+static void del_radsession(void *data) {
 	struct radius_session *session = data;
 
 	if (session->passwd) {
@@ -255,7 +255,7 @@ void del_radsession(void *data) {
 	}
 }
 
-struct radius_session *rad_session(struct radius_packet *packet, struct radius_connection *connex,
+static struct radius_session *rad_session(struct radius_packet *packet, struct radius_connection *connex,
 					const char *passwd, radius_cb read_cb, void *cb_data) {
 	struct radius_session *session = NULL;
 
@@ -276,7 +276,7 @@ struct radius_session *rad_session(struct radius_packet *packet, struct radius_c
 	return (session);
 }
 
-int _send_radpacket(struct radius_packet *packet, const char *userpass, struct radius_session *hint,
+static int _send_radpacket(struct radius_packet *packet, const char *userpass, struct radius_session *hint,
 			radius_cb read_cb, void *cb_data) {
 	int scnt;
 	unsigned char* vector;
@@ -385,11 +385,11 @@ int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb
 	return (_send_radpacket(packet, userpass, NULL, read_cb, cb_data));
 }
 
-int resend_radpacket(struct radius_session *session) {
+static int resend_radpacket(struct radius_session *session) {
 	return (_send_radpacket(NULL, NULL, session, NULL, NULL));
 }
 
-void rad_resend(struct radius_connection *connex) {
+static void rad_resend(struct radius_connection *connex) {
 	struct radius_session *session;
 	struct bucket_loop *bloop;
 	struct timeval tv;
@@ -434,7 +434,7 @@ void rad_resend(struct radius_connection *connex) {
 	stop_bucket_loop(bloop);
 }
 
-void radius_recv(void **data) {
+static void radius_recv(void **data) {
 	struct radius_connection *connex = *data;
 	struct radius_packet *packet;
 	unsigned char buff[RAD_AUTH_PACKET_LEN];
@@ -490,7 +490,7 @@ void radius_recv(void **data) {
 	objunref(session);
 }
 
-void *rad_return(void **data) {
+static void *rad_return(void **data) {
 	struct radius_connection *connex = *data;
 	fd_set  rd_set, act_set;
 	struct  timeval tv;
@@ -522,7 +522,7 @@ void *rad_return(void **data) {
 	return NULL;
 }
 
-void del_radconnect(void *data) {
+static void del_radconnect(void *data) {
 	struct radius_connection *connex = data;
 
 	objunref(connex->server);
