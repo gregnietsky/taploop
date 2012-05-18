@@ -32,6 +32,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 The FreeRADIUS Server Project
  */
 
+#ifndef _FW_FRAMEWORK_H
+#define _FW_FRAMEWORK_H
+
 #include <stdint.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -293,3 +296,5 @@ void config_entry_callback(struct bucket_list *entries, config_entrycb entry_cb)
 			const_var = NULL; \
 		} \
 	}
+
+#endif

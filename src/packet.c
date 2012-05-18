@@ -165,7 +165,7 @@ struct pae_hdr {
 };
 
 
-void frame_handler_pae(struct ethhdr *fr, void *packet, int *plen) {
+static void frame_handler_pae(struct ethhdr *fr, void *packet, int *plen) {
 	struct pae_hdr *pae;
 
 	pae = (struct pae_hdr*)packet;
@@ -179,14 +179,14 @@ void frame_handler_pae(struct ethhdr *fr, void *packet, int *plen) {
 	printf("\tEth Type: %i Pae V: %i Packet: %i Len %i\n", pae->etype, pae->ver, pae->ptype, pae->len);
 }
 
-void frame_handler_arp(struct ethhdr *fr, void *packet, int *plen) {
+static void frame_handler_arp(struct ethhdr *fr, void *packet, int *plen) {
 	struct arphdr *arp;
 
 	arp = (struct arphdr*)packet;
 	printf("\tHw: %i Proto: %i HW Len %i P Len %i OP %i\n", arp->ar_hrd, arp->ar_pro, arp->ar_hln, arp->ar_pln, arp->ar_op);
 }
 
-void frame_handler_ipv4(struct ethhdr *fr, void *packet, int *plen) {
+static void frame_handler_ipv4(struct ethhdr *fr, void *packet, int *plen) {
 	struct iphdr *ip;
 	unsigned char	*src,*dest;
 

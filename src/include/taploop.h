@@ -16,6 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef _TL_TAPLOOP_H
+#define _TL_TAPLOOP_H
+
 #include <sys/socket.h>
 #include <linux/if_arp.h>
 
@@ -33,3 +36,5 @@ struct taploop {
 };
 
 struct bucket_list	*taplist;
+
+#endif

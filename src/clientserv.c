@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "include/tlsock.h"
 #include "include/vlan.h"
 
-void client_tap(enum client_action act, struct client_tap *ctap, struct client_response *res) {
+static void client_tap(enum client_action act, struct client_tap *ctap, struct client_response *res) {
 	switch (act) {
 		case CA_ADD:
 			res->error = add_taploop(ctap->device, ctap->name);
@@ -43,7 +43,7 @@ void client_tap(enum client_action act, struct client_tap *ctap, struct client_r
 
 }
 
-void client_vlan(enum client_action act, struct client_vlan *cvlan, struct client_response *res) {
+static void client_vlan(enum client_action act, struct client_vlan *cvlan, struct client_response *res) {
 	switch (act) {
 		case CA_ADD:
 			res->error = add_kernvlan(cvlan->device, cvlan->vid);
@@ -57,7 +57,7 @@ void client_vlan(enum client_action act, struct client_vlan *cvlan, struct clien
 
 }
 
-void client_macvlan(enum client_action act, struct client_mac *cmvlan, struct client_response *res) {
+static void client_macvlan(enum client_action act, struct client_mac *cmvlan, struct client_response *res) {
 	switch (act) {
 		case CA_ADD:
 			res->error = create_kernmac(cmvlan->device, cmvlan->name, NULL);

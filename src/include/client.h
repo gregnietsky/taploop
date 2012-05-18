@@ -16,6 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef _TL_CLIENT_H
+#define _TL_CLIENT_H
+
 #include <sys/socket.h>
 #include <linux/if_arp.h>
 
@@ -61,3 +64,5 @@ struct client_response {
 	int	error;
 	char	message[128];
 };
+
+#endif

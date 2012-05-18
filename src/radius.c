@@ -29,7 +29,7 @@ struct eap_info {
 	char	type;
 };
 
-void packet_dump(struct radius_packet *packet) {
+static void packet_dump(struct radius_packet *packet) {
 	unsigned char *data;
 	int cnt;
 
@@ -42,7 +42,7 @@ void packet_dump(struct radius_packet *packet) {
 	}
 }
 
-void radius_read(struct radius_packet *packet, void *pvt_data) {
+static void radius_read(struct radius_packet *packet, void *pvt_data) {
 	printf("\nREAD PACKET\n");
 	packet_dump(packet);
 }

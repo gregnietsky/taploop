@@ -16,6 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef _TL_TLSOCK_H
+#define _TL_TLSOCK_H
+
 /*socket flags*/
 enum sockopt {
 	TL_SOCKET_NONE	= 0,
@@ -43,3 +46,5 @@ void *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_se
 void *mainloop(void **data);
 int add_taploop(char *dev, char *name);
 int del_taploop(char *dev, char *name);
+
+#endif

@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "include/tlsock.h"
 #include "include/packet.h"
 
-int hash_tapdata(const void *data, int key) {
+static int hash_tapdata(const void *data, int key) {
 	int ret;
 	const struct taploop *tap = data;
 	const char* hashkey = (key) ? data : tap->pdev;
@@ -44,7 +44,7 @@ int hash_tapdata(const void *data, int key) {
 	return(ret);
 }
 
-void *inittaplist(void) {
+static void *inittaplist(void) {
 	return (create_bucketlist(2, hash_tapdata));
 }
 

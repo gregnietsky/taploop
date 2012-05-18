@@ -21,6 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * a more productive approach will be to include a
  * hash for searching perhaps used as a mask to array of lists
  */
+
+#ifndef _FW_LIST_H
+#define _FW_LIST_H
+
 struct linkedlist {
 	void 	*data;
 	struct linkedlist *next;
@@ -143,3 +147,5 @@ struct hashedlist {
 #define LIST_FOREACH_END }
 
 #define LIST_REMOVE_CURRENT(head) LIST_REMOVE_ENTRY(head, _cur_head)
+
+#endif
