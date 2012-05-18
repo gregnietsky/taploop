@@ -42,7 +42,7 @@ struct iplink_req {
         char                    buf[1024];
 };
 
-void nlhandle_free(void *data) {
+static void nlhandle_free(void *data) {
 	struct rtnl_handle *nlh = data;
 
 	if (data) {
