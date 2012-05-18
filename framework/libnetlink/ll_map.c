@@ -192,11 +192,11 @@ unsigned ll_name_to_index(const char *name)
 	return idx;
 }
 
-int ll_init_map(struct rtnl_handle *rth)
+int ll_init_map(struct rtnl_handle *rth, int reinit)
 {
 	static int initialized;
 
-	if (initialized)
+	if (initialized && !reinit)
 		return 0;
 
 	if (rtnl_wilddump_request(rth, AF_UNSPEC, RTM_GETLINK) < 0) {
