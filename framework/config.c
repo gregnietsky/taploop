@@ -32,7 +32,7 @@ struct config_file {
 	struct bucket_list *cat;
 };
 
-struct bucket_list *configfiles = NULL;
+static struct bucket_list *configfiles = NULL;
 
 static int hash_files(const void *data, int key) {
 	int ret;

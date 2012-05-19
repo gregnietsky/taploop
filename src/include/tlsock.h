@@ -38,12 +38,7 @@ struct tl_socket {
 	struct tl_socket	*next;
 };
 
-struct tl_socket *virtopen(struct taploop *tap);
-struct tl_socket *phyopen(struct taploop *tap);
-void *stoptap(void *data);
-void *addsocket(struct taploop *tap, struct  tl_socket *tsock, int *maxfd, fd_set *rd_set);
 /*void rbuffread(struct taploop *tap);*/
-void *mainloop(void **data);
 int add_taploop(char *dev, char *name);
 int del_taploop(char *dev, char *name);
 

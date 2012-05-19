@@ -51,7 +51,7 @@ static void *inittaplist(void) {
 /* tap the taploop struct
  * hwaddr used to set the tap device MAC adddress
  */
-struct tl_socket *virtopen(struct taploop *tap) {
+static struct tl_socket *virtopen(struct taploop *tap) {
 	struct tl_socket *tlsock;
 	int fd;
 
@@ -77,7 +77,7 @@ struct tl_socket *virtopen(struct taploop *tap) {
 /*
  * Initialise the physical device
  */
-struct tl_socket *phyopen(struct taploop *tap) {
+static struct tl_socket *phyopen(struct taploop *tap) {
 	struct tl_socket *tlsock;
 	struct tpacket_req reqr;
 	int fd, mapsiz = 0;
@@ -161,7 +161,7 @@ struct tl_socket *phyopen(struct taploop *tap) {
 /*
  * close and free a tap loop
  */
-void *stoptap(void *data) {
+static void *stoptap(void *data) {
 	struct taploop	 *tap = data;
 	struct tl_socket *phy = NULL, *virt = NULL, *socket;
 	struct bucket_loop *bloop;
@@ -221,7 +221,7 @@ void *stoptap(void *data) {
 /*
  * return a socklist entry and add sock to fd_set
  */
-void *addsocket(struct taploop *tap, struct tl_socket *tsock, int *maxfd, fd_set *rd_set) {
+static void *addsocket(struct taploop *tap, struct tl_socket *tsock, int *maxfd, fd_set *rd_set) {
 	if (tsock->sock > *maxfd) {
 		*maxfd = tsock->sock;
 	}
@@ -254,7 +254,7 @@ void rbuffread(struct taploop *tap) {
 /*
  * pass data between physical and tap
  */
-void *mainloop(void **data) {
+static void *mainloop(void **data) {
 	struct taploop	*tap = *data;
 	/* accomodate 802.1Q [4]*/
 	fd_set	rd_set, act_set;

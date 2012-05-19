@@ -25,13 +25,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/file.h>
 
 #include "include/framework.h"
+#include "include/private.h"
 
-
-int startthreads(void);
-void jointhreads(void);
-int thread_signal(int sig);
-
-struct framework_core *framework_core_info;
+static struct framework_core *framework_core_info;
 
 /*
  * handle signals to cleanup gracefully on exit

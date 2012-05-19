@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <arpa/inet.h>
 
 #include "include/framework.h"
+#include "include/private.h"
 
 /* socket handling thread*/
 struct socket_handler {
@@ -34,10 +35,6 @@ struct socket_handler {
 	threadcleanup	cleanup;
 	socketrecv	connect;
 };
-
-/*from sslutils im the only consumer*/
-void dtsl_serveropts(struct fwsocket *sock);
-void dtlshandltimeout(struct fwsocket *sock);
 
 static int hash_socket(const void *data, int key) {
         int ret;

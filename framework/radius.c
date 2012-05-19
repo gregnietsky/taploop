@@ -84,7 +84,8 @@ struct radius_server {
 	struct bucket_list *connex;
 };
 
-struct bucket_list *servers = NULL;
+static struct bucket_list *servers = NULL;
+
 struct radius_connection *radconnect(struct radius_server *server);
 
 unsigned char *addradattr(struct radius_packet *packet, char type, unsigned char *val, char len) {

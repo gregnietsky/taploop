@@ -54,7 +54,7 @@ struct threadcontainer {
 /*
  * Global threads list
  */
-struct threadcontainer *threads = NULL;
+static struct threadcontainer *threads = NULL;
 
 static int hash_thread(const void *data, int key) {
         const struct thread_pvt *thread = data;

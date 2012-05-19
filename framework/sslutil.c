@@ -45,7 +45,7 @@ struct ssldata {
 };
 
 #define COOKIE_SECRET_LENGTH 16
-unsigned char *cookie_secret = NULL;
+static unsigned char *cookie_secret = NULL;
 
 static int generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
 	struct sockaddr peer;

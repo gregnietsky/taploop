@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libnetlink/include/libnetlink.h"
 #include "libnetlink/include/ll_map.h"
 
-struct rtnl_handle *nlh;
+static struct rtnl_handle *nlh;
 
 struct iplink_req {
         struct nlmsghdr         n;
