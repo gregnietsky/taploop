@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*
  * Create a VLAN on the device
  */
-int add_kernvlan(char *iface, int vid) {
+extern int add_kernvlan(char *iface, int vid) {
 	struct taploop *tap = NULL;
 	struct tl_socket *tlsock;
 	struct bucket_loop *bloop;

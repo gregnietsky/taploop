@@ -47,7 +47,7 @@ static void radius_read(struct radius_packet *packet, void *pvt_data) {
 	packet_dump(packet);
 }
 
-int radmain (void) {
+extern int radmain (void) {
 	unsigned char *ebuff, uuid[16];
 	struct eap_info eap;
 	int cnt;

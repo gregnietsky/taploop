@@ -74,7 +74,7 @@ static void client_macvlan(enum client_action act, struct client_mac *cmvlan, st
 
 }
 
-void *clientsock_client(void **data) {
+extern void *clientsock_client(void **data) {
 	struct client_command cmd;
 	struct client_response res;
 	int *fdptr = *data;
@@ -108,7 +108,7 @@ out:
 /*
  * cleanup routine for client sock
  */
-void *delclientsock_client(void *data) {
+extern void *delclientsock_client(void *data) {
 	int fd = *(int *)data;
 
 	if (fd >= 0) {

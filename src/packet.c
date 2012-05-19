@@ -204,7 +204,7 @@ static void frame_handler_ipv4(struct ethhdr *fr, void *packet, int *plen) {
  * PPPoE for pppoe relay to a specified dsl port
  * 802.1x pass this on to a authenticator maybe talk to radius ??
  */
-void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket *sock, struct tl_socket *osock, int offset) {
+extern void process_packet(void *buffer, int len, struct taploop *tap, struct tl_socket *sock, struct tl_socket *osock, int offset) {
 	char	*ptr = buffer;
 	struct ethhdr	*fr;
 	char		*packet;

@@ -343,7 +343,7 @@ static void *mainloop(void **data) {
 /*
  * allocate and start a phy <-> tap thread
  */
-int add_taploop(char *dev, char *name) {
+extern int add_taploop(char *dev, char *name) {
 	struct taploop		*tap = NULL;
 
 	if (!taplist && !(taplist = inittaplist())) {
@@ -375,7 +375,7 @@ int add_taploop(char *dev, char *name) {
 /*
  * stop a phy <-> tap thread
  */
-int del_taploop(char *dev, char *name) {
+extern int del_taploop(char *dev, char *name) {
 	struct taploop		*tap = NULL;
 
 	/* do not continue on zero length options*/
