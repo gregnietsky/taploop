@@ -616,10 +616,6 @@ ac_header_list=
 ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
-LIBNLROUTE3_LIBS
-LIBNLROUTE3_CFLAGS
-LIBNL3_LIBS
-LIBNL3_CFLAGS
 FRAMEWORK_SYSTEM_FALSE
 FRAMEWORK_SYSTEM_TRUE
 FRAMEWORK_INSTALL_FALSE
@@ -783,11 +779,7 @@ PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 LIBFRAMEWORK_CFLAGS
-LIBFRAMEWORK_LIBS
-LIBNL3_CFLAGS
-LIBNL3_LIBS
-LIBNLROUTE3_CFLAGS
-LIBNLROUTE3_LIBS'
+LIBFRAMEWORK_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1452,13 +1444,6 @@ Some influential environment variables:
               C compiler flags for LIBFRAMEWORK, overriding pkg-config
   LIBFRAMEWORK_LIBS
               linker flags for LIBFRAMEWORK, overriding pkg-config
-  LIBNL3_CFLAGS
-              C compiler flags for LIBNL3, overriding pkg-config
-  LIBNL3_LIBS linker flags for LIBNL3, overriding pkg-config
-  LIBNLROUTE3_CFLAGS
-              C compiler flags for LIBNLROUTE3, overriding pkg-config
-  LIBNLROUTE3_LIBS
-              linker flags for LIBNLROUTE3, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -16179,158 +16164,6 @@ _ACEOF
 
 fi
 
-
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBNL3" >&5
-$as_echo_n "checking for LIBNL3... " >&6; }
-
-if test -n "$LIBNL3_CFLAGS"; then
-    pkg_cv_LIBNL3_CFLAGS="$LIBNL3_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libnl-3.0 >= 3.1\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libnl-3.0 >= 3.1") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBNL3_CFLAGS=`$PKG_CONFIG --cflags "libnl-3.0 >= 3.1" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LIBNL3_LIBS"; then
-    pkg_cv_LIBNL3_LIBS="$LIBNL3_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libnl-3.0 >= 3.1\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libnl-3.0 >= 3.1") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBNL3_LIBS=`$PKG_CONFIG --libs "libnl-3.0 >= 3.1" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        LIBNL3_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-3.0 >= 3.1" 2>&1`
-        else
-	        LIBNL3_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-3.0 >= 3.1" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$LIBNL3_PKG_ERRORS" >&5
-
-	have_libnl3=no
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	have_libnl3=no
-else
-	LIBNL3_CFLAGS=$pkg_cv_LIBNL3_CFLAGS
-	LIBNL3_LIBS=$pkg_cv_LIBNL3_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	have_libnl3=yes
-fi
-if (test "x${have_libnl3}" = "xyes"); then
-        CFLAGS+=" $LIBNL3_CFLAGS"
-        LIBS+=" $LIBNL3_LIBS"
-fi
-
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBNLROUTE3" >&5
-$as_echo_n "checking for LIBNLROUTE3... " >&6; }
-
-if test -n "$LIBNLROUTE3_CFLAGS"; then
-    pkg_cv_LIBNLROUTE3_CFLAGS="$LIBNLROUTE3_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libnl-route-3.0 >= 3.1\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libnl-route-3.0 >= 3.1") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBNLROUTE3_CFLAGS=`$PKG_CONFIG --cflags "libnl-route-3.0 >= 3.1" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LIBNLROUTE3_LIBS"; then
-    pkg_cv_LIBNLROUTE3_LIBS="$LIBNLROUTE3_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libnl-route-3.0 >= 3.1\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libnl-route-3.0 >= 3.1") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBNLROUTE3_LIBS=`$PKG_CONFIG --libs "libnl-route-3.0 >= 3.1" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        LIBNLROUTE3_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-route-3.0 >= 3.1" 2>&1`
-        else
-	        LIBNLROUTE3_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-route-3.0 >= 3.1" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$LIBNLROUTE3_PKG_ERRORS" >&5
-
-	have_libnlrt3=no
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	have_libnlrt3=no
-else
-	LIBNLROUTE3_CFLAGS=$pkg_cv_LIBNLROUTE3_CFLAGS
-	LIBNLROUTE3_LIBS=$pkg_cv_LIBNLROUTE3_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	have_libnlrt3=yes
-fi
-if (test "x${have_libnlrt3}" = "xyes"); then
-        CFLAGS+=" $LIBNLROUTE3_CFLAGS"
-        LIBS+=" $LIBNLROUTE3_LIBS"
-fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 ac_fn_c_check_type "$LINENO" "pid_t" "ac_cv_type_pid_t" "$ac_includes_default"

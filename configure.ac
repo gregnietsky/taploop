@@ -79,18 +79,6 @@ AC_CHECK_LIB([ssl], [SSL_new])
 AC_CHECK_LIB([crypto], [SHA512_Init])
 AC_CHECK_LIB([uuid], [uuid_generate])
 
-PKG_CHECK_MODULES(LIBNL3, libnl-3.0 >= 3.1, [have_libnl3=yes], [have_libnl3=no])
-if (test "x${have_libnl3}" = "xyes"); then
-        CFLAGS+=" $LIBNL3_CFLAGS"
-        LIBS+=" $LIBNL3_LIBS"
-fi
-
-PKG_CHECK_MODULES(LIBNLROUTE3, libnl-route-3.0 >= 3.1, [have_libnlrt3=yes], [have_libnlrt3=no])
-if (test "x${have_libnlrt3}" = "xyes"); then
-        CFLAGS+=" $LIBNLROUTE3_CFLAGS"
-        LIBS+=" $LIBNLROUTE3_LIBS"
-fi
-
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
