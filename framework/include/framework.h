@@ -103,97 +103,98 @@ struct framework_core {
 };
 
 /*Initialise the framework */
-int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info);
+extern int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info);
 /* Setup the run enviroment*/
-struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile, syssighandler sigfunc);
+extern struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile, syssighandler sigfunc);
 /* Run a thread under the framework */
-struct thread_pvt *framework_mkthread(threadfunc, threadcleanup, threadsighandler, void *data);
+extern struct thread_pvt *framework_mkthread(threadfunc, threadcleanup, threadsighandler, void *data);
 /* Shutdown framework*/
-void framework_shutdown(void);
+extern void framework_shutdown(void);
 /* UNIX Socket*/
-void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connectfunc, threadcleanup cleanup);
+extern void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connectfunc, threadcleanup cleanup);
 /* Test if the thread is running when passed data from thread */
-int framework_threadok(void *data);
-int starthreads(void);
-void stopthreads(void);
+extern int framework_threadok(void *data);
+extern int starthreads(void);
+extern void stopthreads(void);
 
 /*
  * ref counted objects
  */
-int objlock(void *data);
-int objtrylock(void *data);
-int objunlock(void *data);
-int objcnt(void *data);
-int objunref(void *data);
-int objref(void *data);
-void *objalloc(int size, objdestroy);
+extern int objlock(void *data);
+extern int objtrylock(void *data);
+extern int objunlock(void *data);
+extern int objcnt(void *data);
+extern int objunref(void *data);
+extern int objref(void *data);
+extern void *objalloc(int size, objdestroy);
 
 /*
  * hashed bucket lists
  */
-void *create_bucketlist(int bitmask, blisthash hash_function);
-int addtobucket(struct bucket_list *blist, void *data);
-void remove_bucket_item(struct bucket_list *blist, void *data);
-int bucket_list_cnt(struct bucket_list *blist);
-void *bucket_list_find_key(struct bucket_list *list, const void *key);
-void bucketlist_callback(struct bucket_list *blist, blist_cb callback, void *data2);
+extern void *create_bucketlist(int bitmask, blisthash hash_function);
+extern int addtobucket(struct bucket_list *blist, void *data);
+extern void remove_bucket_item(struct bucket_list *blist, void *data);
+extern int bucket_list_cnt(struct bucket_list *blist);
+extern void *bucket_list_find_key(struct bucket_list *list, const void *key);
+extern void bucketlist_callback(struct bucket_list *blist, blist_cb callback, void *data2);
 
 /*
  * iteration through buckets
  */
-struct bucket_loop *init_bucket_loop(struct bucket_list *blist);
-void stop_bucket_loop(struct bucket_loop *bloop);
-void *next_bucket_loop(struct bucket_loop *bloop);
-void remove_bucket_loop(struct bucket_loop *bloop);
+extern struct bucket_loop *init_bucket_loop(struct bucket_list *blist);
+extern void stop_bucket_loop(struct bucket_loop *bloop);
+extern void *next_bucket_loop(struct bucket_loop *bloop);
+extern void remove_bucket_loop(struct bucket_loop *bloop);
 
 /*include jenkins hash burttlebob*/
-uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
+extern uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
 
 
 /*
  * Utilities RNG/MD5 used from the openssl library
  */
-void seedrand(void);
-int genrand(void *buf, int len);
-void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
-void md5sum(unsigned char *buff, const void *data, unsigned long len);
-int md5cmp(unsigned char *md51, unsigned char *md52, int len);
-void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
-int strlenzero(const char *str);
-char *ltrim(char *str);
-char *rtrim(const char *str);
-char *trim(const char *str);
+extern void seedrand(void);
+extern int genrand(void *buf, int len);
+extern void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
+extern void md5sum(unsigned char *buff, const void *data, unsigned long len);
+extern int md5cmp(unsigned char *md51, unsigned char *md52, int len);
+extern void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
+extern int strlenzero(const char *str);
+extern char *ltrim(char *str);
+extern char *rtrim(const char *str);
+extern char *trim(const char *str);
 
 /*IP Utilities*/
-struct fwsocket *make_socket(int family, int type, int proto, void *ssl);
-struct fwsocket *sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl);
-struct fwsocket *udpconnect(const char *ipaddr, const char *port, void *ssl);
-struct fwsocket *tcpconnect(const char *ipaddr, const char *port, void *ssl);
-struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int backlog);
-struct fwsocket *udpbind(const char *ipaddr, const char *port, void *ssl);
-struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl, int backlog);
-void closesocket(struct fwsocket *sock);
+extern struct fwsocket *make_socket(int family, int type, int proto, void *ssl);
+extern struct fwsocket *sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl);
+extern struct fwsocket *udpconnect(const char *ipaddr, const char *port, void *ssl);
+extern struct fwsocket *tcpconnect(const char *ipaddr, const char *port, void *ssl);
+extern struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int backlog);
+extern struct fwsocket *udpbind(const char *ipaddr, const char *port, void *ssl);
+extern struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl, int backlog);
+extern void closesocket(struct fwsocket *sock);
 
-void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup);
-void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
+extern void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup);
+extern void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
 
 /*interface functions*/
-int delete_kernvlan(char *ifname, int vid);
-int create_kernvlan(char *ifname, unsigned short vid);
-int delete_kernmac(char *macdev);
-int create_kernmac(char *ifname, char *macdev, unsigned char *mac);
-int interface_bind(char *iface, int protocol, int flags);
-void randhwaddr(unsigned char *addr);
-int create_tun(const char *ifname, const unsigned char *hwaddr, int flags);
-int ifrename(const char *oldname, const char *newname);
-int ifdown(const char *ifname, int flags);
-int ifup(const char *ifname, int flags);
-int ifhwaddr(const char *ifname, unsigned char *hwaddr);
-int set_interface_flags(int ifindex, int set, int clear);
-int get_iface_index(const char *ifname);
-int set_interface_addr(int ifindex, const unsigned char *hwaddr);
-int set_interface_name(int ifindex, const char *name);
-void closenetlink(void);
+extern int delete_kernvlan(char *ifname, int vid);
+extern int create_kernvlan(char *ifname, unsigned short vid);
+extern int delete_kernmac(char *macdev);
+extern int create_kernmac(char *ifname, char *macdev, unsigned char *mac);
+extern int interface_bind(char *iface, int protocol, int flags);
+extern void randhwaddr(unsigned char *addr);
+extern int create_tun(const char *ifname, const unsigned char *hwaddr, int flags);
+extern int ifrename(const char *oldname, const char *newname);
+extern int ifdown(const char *ifname, int flags);
+extern int ifup(const char *ifname, int flags);
+extern int ifhwaddr(const char *ifname, unsigned char *hwaddr);
+extern int set_interface_flags(int ifindex, int set, int clear);
+extern int get_iface_index(const char *ifname);
+extern int set_interface_addr(int ifindex, const unsigned char *hwaddr);
+extern int set_interface_name(int ifindex, const char *name);
+extern int set_interface_ipaddr(char *ifname, char *ipaddr);
+extern void closenetlink(void);
 
 /*Radius utilities*/
 #define RAD_AUTH_HDR_LEN	20
@@ -220,45 +221,45 @@ enum RADIUS_CODE {
 	RAD_CODE_AUTHCHALLENGE	=	11
 };
 
-unsigned char *addradattr(struct radius_packet *packet, char type, unsigned char *val, char len);
-void addradattrint(struct radius_packet *packet, char type, unsigned int val);
-void addradattrip(struct radius_packet *packet, char type, char *ipaddr);
-void addradattrstr(struct radius_packet *packet, char type, char *str);
-struct radius_packet *new_radpacket(unsigned char code, unsigned char id);
-int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data);
-void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret, int timeout);
-unsigned char *radius_attr_first(struct radius_packet *packet);
-unsigned char *radius_attr_next(struct radius_packet *packet, unsigned char *attr);
+extern unsigned char *addradattr(struct radius_packet *packet, char type, unsigned char *val, char len);
+extern void addradattrint(struct radius_packet *packet, char type, unsigned int val);
+extern void addradattrip(struct radius_packet *packet, char type, char *ipaddr);
+extern void addradattrstr(struct radius_packet *packet, char type, char *str);
+extern struct radius_packet *new_radpacket(unsigned char code, unsigned char id);
+extern int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data);
+extern void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret, int timeout);
+extern unsigned char *radius_attr_first(struct radius_packet *packet);
+extern unsigned char *radius_attr_next(struct radius_packet *packet, unsigned char *attr);
 
 /*SSL Socket utilities*/
-void sslstartup(void);
-void *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
-void *sslv2_init(const char *cacert, const char *cert, const char *key, int verify);
-void *sslv3_init(const char *cacert, const char *cert, const char *key, int verify);
-void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
+extern void sslstartup(void);
+extern void *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
+extern void *sslv2_init(const char *cacert, const char *cert, const char *key, int verify);
+extern void *sslv3_init(const char *cacert, const char *cert, const char *key, int verify);
+extern void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify);
 
-int socketread(struct fwsocket *sock, void *buf, int num);
-int socketwrite(struct fwsocket *sock, const void *buf, int num);
+extern int socketread(struct fwsocket *sock, void *buf, int num);
+extern int socketwrite(struct fwsocket *sock, const void *buf, int num);
 /*the following are only needed on server side of a dgram connection*/
-int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr);
-int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr);
+extern int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr);
+extern int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr);
 
-void ssl_shutdown(void *ssl);
-void tlsaccept(struct fwsocket *sock, struct ssldata *orig);
-struct fwsocket *dtls_listenssl(struct fwsocket *sock);
-void startsslclient(struct fwsocket *sock);
+extern void ssl_shutdown(void *ssl);
+extern void tlsaccept(struct fwsocket *sock, struct ssldata *orig);
+extern struct fwsocket *dtls_listenssl(struct fwsocket *sock);
+extern void startsslclient(struct fwsocket *sock);
 
 /*config file parsing functions*/
-void initconfigfiles(void);
-void unrefconfigfiles(void);
-int process_config(const char *configname, const char *configfile);
-struct bucket_loop *get_category_loop(const char *configname);
-struct bucket_list *get_category_next(struct bucket_loop *cloop, char *name, int len);
-struct bucket_list *get_config_category(const char *configname, const char *category);
-struct config_entry *get_config_entry(struct bucket_list *categories, const char *item);
-void config_file_callback(config_filecb file_cb);
-void config_cat_callback(struct bucket_list *categories, config_catcb entry_cb);
-void config_entry_callback(struct bucket_list *entries, config_entrycb entry_cb);
+extern void initconfigfiles(void);
+extern void unrefconfigfiles(void);
+extern int process_config(const char *configname, const char *configfile);
+extern struct bucket_loop *get_category_loop(const char *configname);
+extern struct bucket_list *get_category_next(struct bucket_loop *cloop, char *name, int len);
+extern struct bucket_list *get_config_category(const char *configname, const char *category);
+extern struct config_entry *get_config_entry(struct bucket_list *categories, const char *item);
+extern void config_file_callback(config_filecb file_cb);
+extern void config_cat_callback(struct bucket_list *categories, config_catcb entry_cb);
+extern void config_entry_callback(struct bucket_list *entries, config_entrycb entry_cb);
 
 /*easter egg copied from <linux/jhash.h>*/
 #define JHASH_INITVAL           0xdeadbeef
@@ -278,13 +279,13 @@ void config_entry_callback(struct bucket_list *entries, config_entrycb entry_cb)
 #define testflag(obj, flag) (objlock(obj) | (obj->flags & flag) | objunlock(obj))
 
 #define FRAMEWORK_MAIN(progname, name, email, www, year, runfile, sighfunc) \
-	int  framework_main(int argc, char *argv[]); \
-	struct framework_core *core_info; \
+	static int  framework_main(int argc, char *argv[]); \
+	static struct framework_core *core_info; \
 	int  main(int argc, char *argv[]) { \
 		core_info = framework_mkcore(progname, name, email, www, year, runfile, sighfunc); \
 		return (framework_init(argc, argv, framework_main, core_info)); \
 	} \
-	int  framework_main(int argc, char *argv[])
+	static int  framework_main(int argc, char *argv[])
 
 #define ALLOC_CONST(const_var, val) { \
 		char *tmp_char; \

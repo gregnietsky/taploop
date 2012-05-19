@@ -231,7 +231,7 @@ static void *addsocket(struct taploop *tap, struct tl_socket *tsock, int *maxfd,
 }
 
 /*
-void rbuffread(struct taploop *tap) {
+static void rbuffread(struct taploop *tap) {
 	int i=0;
 
 	while(*(unsigned long*)tap->ring[i].iov_base) {
