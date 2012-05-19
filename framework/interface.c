@@ -67,13 +67,13 @@ static struct rtnl_handle *nlhandle(int subscriptions) {
 	return (nlh);
 }
 
-void closenetlink() {
+extern void closenetlink() {
 	if (nlh) {
 		objunref(nlh);
 	}
 }
 
-int get_iface_index(const char *ifname) {
+extern int get_iface_index(const char *ifname) {
 	int ifindex;
 
 	if (!objref(nlh) && !(nlh = nlhandle(0))) {
@@ -131,7 +131,7 @@ static int delete_interface(char *iface) {
 	return (ret);
 }
 
-int delete_kernvlan(char *ifname, int vid) {
+extern int delete_kernvlan(char *ifname, int vid) {
 	char iface[IFNAMSIZ+1];
 
 	/*check ifname grab a ref to nlh or open it*/
@@ -142,7 +142,7 @@ int delete_kernvlan(char *ifname, int vid) {
 /*
  * instruct the kernel to create a VLAN
  */
-int create_kernvlan(char *ifname, unsigned short vid) {
+extern int create_kernvlan(char *ifname, unsigned short vid) {
 	struct iplink_req *req;
 	char iface[IFNAMSIZ+1];
 	struct rtattr *data, *linkinfo;
@@ -200,12 +200,12 @@ int create_kernvlan(char *ifname, unsigned short vid) {
 /*
  * instruct the kernel to remove a VLAN
  */
-int delete_kernmac(char *ifname) {
+extern int delete_kernmac(char *ifname) {
 
 	return (delete_interface(ifname));
 }
 
-int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
+extern int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
 	struct iplink_req *req;
 	struct rtattr *data, *linkinfo;
 	unsigned char lmac[ETH_ALEN];
@@ -266,7 +266,7 @@ int create_kernmac(char *ifname, char *macdev, unsigned char *mac) {
 	return (ret);
 }
 
-int set_interface_flags(int ifindex, int set, int clear) {
+extern int set_interface_flags(int ifindex, int set, int clear) {
 	struct iplink_req *req;
 	int flags;
 
@@ -302,7 +302,7 @@ int set_interface_flags(int ifindex, int set, int clear) {
 	return (0);
 }
 
-int set_interface_addr(int ifindex, const unsigned char *hwaddr) {
+extern int set_interface_addr(int ifindex, const unsigned char *hwaddr) {
 	struct iplink_req *req;
 
 	if ((!objref(nlh) && !(nlh = nlhandle(0)))) {
@@ -331,7 +331,7 @@ int set_interface_addr(int ifindex, const unsigned char *hwaddr) {
 	return (0);
 }
 
-int set_interface_name(int ifindex, const char *name) {
+extern int set_interface_name(int ifindex, const char *name) {
 	struct iplink_req *req;
 
 	if ((!objref(nlh) && !(nlh = nlhandle(0)))) {
@@ -362,7 +362,7 @@ int set_interface_name(int ifindex, const char *name) {
 /*
  * bind to device fd may be a existing socket
  */
-int interface_bind(char *iface, int protocol, int flags) {
+extern int interface_bind(char *iface, int protocol, int flags) {
 	struct sockaddr_ll sll;
 	int proto = htons(protocol);
 	int fd, ifindex;
@@ -395,13 +395,13 @@ int interface_bind(char *iface, int protocol, int flags) {
 /*
  * create random MAC address
  */
-void randhwaddr(unsigned char *addr) {
+extern void randhwaddr(unsigned char *addr) {
 	genrand(addr, ETH_ALEN);
 	addr [0] &= 0xfe;       /* clear multicast bit */
 	addr [0] |= 0x02;       /* set local assignment bit (IEEE802) */
 }
 
-int create_tun(const char *ifname, const unsigned char *hwaddr, int flags) {
+extern int create_tun(const char *ifname, const unsigned char *hwaddr, int flags) {
 	struct ifreq ifr;
 	int fd, ifindex;
 	char *tundev = "/dev/net/tun";
@@ -436,7 +436,7 @@ int create_tun(const char *ifname, const unsigned char *hwaddr, int flags) {
 	return (fd);
 }
 
-int ifdown(const char *ifname, int flags) {
+extern int ifdown(const char *ifname, int flags) {
 	int ifindex;
 
 	/*down the device*/
@@ -450,7 +450,7 @@ int ifdown(const char *ifname, int flags) {
 	return (0);
 }
 
-int ifup(const char *ifname, int flags) {
+extern int ifup(const char *ifname, int flags) {
 	int ifindex;
 
 	/*down the device*/
@@ -464,7 +464,7 @@ int ifup(const char *ifname, int flags) {
 	return (0);
 }
 
-int ifrename(const char *oldname, const char *newname) {
+extern int ifrename(const char *oldname, const char *newname) {
 	int ifindex;
 
 	ifdown(oldname, 0);
@@ -477,7 +477,7 @@ int ifrename(const char *oldname, const char *newname) {
 	return (0);
 }
 
-int ifhwaddr(const char *ifname, unsigned char *hwaddr) {
+extern int ifhwaddr(const char *ifname, unsigned char *hwaddr) {
 	int ifindex;
 
 	if (!hwaddr || strlenzero(ifname) || (strlen(ifname) > IFNAMSIZ) ||

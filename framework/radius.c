@@ -86,9 +86,9 @@ struct radius_server {
 
 static struct bucket_list *servers = NULL;
 
-struct radius_connection *radconnect(struct radius_server *server);
+extern struct radius_connection *radconnect(struct radius_server *server);
 
-unsigned char *addradattr(struct radius_packet *packet, char type, unsigned char *val, char len) {
+extern unsigned char *addradattr(struct radius_packet *packet, char type, unsigned char *val, char len) {
 	unsigned char *data = packet->attrs + packet->len - RAD_AUTH_HDR_LEN;
 
 	if (!len) {
@@ -105,21 +105,21 @@ unsigned char *addradattr(struct radius_packet *packet, char type, unsigned char
 	return (data);
 }
 
-void addradattrint(struct radius_packet *packet, char type, unsigned int val) {
+extern void addradattrint(struct radius_packet *packet, char type, unsigned int val) {
 	unsigned int tval;
 
 	tval = htonl(val);
 	addradattr(packet, type, (unsigned char*)&tval, sizeof(tval));
 }
 
-void addradattrip(struct radius_packet *packet, char type, char *ipaddr) {
+extern void addradattrip(struct radius_packet *packet, char type, char *ipaddr) {
 	unsigned int tval;
 
 	tval = inet_addr(ipaddr);
 	addradattr(packet, type, (unsigned char*)&tval, sizeof(tval));
 }
 
-void addradattrstr(struct radius_packet *packet, char type, char *str) {
+extern void addradattrstr(struct radius_packet *packet, char type, char *str) {
 	addradattr(packet, type, (unsigned char*)str, strlen(str));
 }
 
@@ -163,7 +163,7 @@ static void addradattrpasswd(struct radius_packet *packet, const char *pw, const
 	addradattr(packet, RAD_ATTR_USER_PASSWORD, pwbuff, len);
 }
 
-struct radius_packet *new_radpacket(unsigned char code, unsigned char id) {
+extern struct radius_packet *new_radpacket(unsigned char code, unsigned char id) {
 	struct radius_packet *packet;
 
 	if ((packet = malloc(sizeof(*packet)))) {
@@ -225,7 +225,7 @@ static void del_radserver(void *data) {
 	}
 }
 
-void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret, int timeout) {
+extern void add_radserver(const char *ipaddr, const char *auth, const char *acct, const char *secret, int timeout) {
 	struct radius_server *server;
 
 	if ((server = objalloc(sizeof(*server), del_radserver))) {
@@ -382,7 +382,7 @@ static int _send_radpacket(struct radius_packet *packet, const char *userpass, s
 	return (-1);
 }
 
-int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data) {
+extern int send_radpacket(struct radius_packet *packet, const char *userpass, radius_cb read_cb, void *cb_data) {
 	return (_send_radpacket(packet, userpass, NULL, read_cb, cb_data));
 }
 
@@ -531,7 +531,7 @@ static void del_radconnect(void *data) {
 	objunref(connex->socket);
 }
 
-struct radius_connection *radconnect(struct radius_server *server) {
+extern struct radius_connection *radconnect(struct radius_server *server) {
 	struct radius_connection *connex;
 	int val = 1;
 
@@ -550,11 +550,11 @@ struct radius_connection *radconnect(struct radius_server *server) {
 	return (connex);
 }
 
-unsigned char *radius_attr_first(struct radius_packet *packet) {
+extern unsigned char *radius_attr_first(struct radius_packet *packet) {
 	return (packet->attrs);
 }
 
-unsigned char *radius_attr_next(struct radius_packet *packet, unsigned char *attr) {
+extern unsigned char *radius_attr_next(struct radius_packet *packet, unsigned char *attr) {
 	int offset = (packet->len - RAD_AUTH_HDR_LEN) - (attr - packet->attrs);
 
 	if (!(offset - attr[1])) {

@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <openssl/md5.h>
 #include <ctype.h>
 
-void seedrand(void) {
+extern void seedrand(void) {
 	int fd = open("/dev/random", O_RDONLY);
 	int len;
 	char    buf[64];
@@ -43,11 +43,11 @@ void seedrand(void) {
 	RAND_seed(buf, len);
 }
 
-int genrand(void *buf, int len) {
+extern int genrand(void *buf, int len) {
 	return (RAND_bytes(buf, len));
 }
 
-void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
+extern void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
 	MD5_CTX c;
 
 	MD5_Init(&c);
@@ -58,11 +58,11 @@ void md5sum2(unsigned char *buff, const void *data, unsigned long len, const voi
 	MD5_Final(buff, &c);
 }
 
-void md5sum(unsigned char *buff, const void *data, unsigned long len) {
+extern void md5sum(unsigned char *buff, const void *data, unsigned long len) {
         md5sum2(buff, data, len, NULL, 0);
 }
 
-int md5cmp(unsigned char *md51, unsigned char *md52, int len) {
+extern int md5cmp(unsigned char *md51, unsigned char *md52, int len) {
 	int cnt;
 	int chk = 0;
 
@@ -73,8 +73,7 @@ int md5cmp(unsigned char *md51, unsigned char *md52, int len) {
 	return (chk);
 }
 
-
-void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen) {
+extern void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen) {
 	unsigned char	okey[64], ikey[64];
 	int		bcnt;
 
@@ -98,14 +97,14 @@ void md5hmac(unsigned char *buff, const void *data, unsigned long len, const voi
 	md5sum2(buff, okey, 64, buff, 16);
 }
 
-int strlenzero(const char *str) {
+extern int strlenzero(const char *str) {
 	if (str && strlen(str)) {
 		return (0);
 	}
 	return (1);
 }
 
-char *ltrim(char *str) {
+extern char *ltrim(char *str) {
 	char *cur = str;
 
 	if (strlenzero(str)) {
@@ -119,7 +118,7 @@ char *ltrim(char *str) {
 	return (cur);
 }
 
-char *rtrim(const char *str) {
+extern char *rtrim(const char *str) {
 	int len;
 	char *cur = (char *)str;
 
@@ -136,7 +135,7 @@ char *rtrim(const char *str) {
 	return (cur);
 }
 
-char *trim(const char *str) {
+extern char *trim(const char *str) {
 	char *cur = (char*)str;
 
 	cur = ltrim(cur);

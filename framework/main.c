@@ -58,7 +58,7 @@ static void framework_sig_handler(int sig, siginfo_t *si, void *unused) {
 /*
  * Print gnu snippet at program run
  */
-void printgnu(struct framework_core *ci) {
+static void printgnu(struct framework_core *ci) {
 	printf("%s\n\nCopyright (C) %i %s <%s>\n"
 "        %s\n\n"
 "    This program comes with ABSOLUTELY NO WARRANTY\n"
@@ -134,7 +134,7 @@ static void configure_sigact(struct sigaction *sa) {
 /*
  * initialise core
  */
-struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile, syssighandler sigfunc) {
+extern struct framework_core *framework_mkcore(char *progname, char *name, char *email, char *web, int year, char *runfile, syssighandler sigfunc) {
 	struct framework_core *core_info = NULL;
 
 	if (!(core_info = malloc(sizeof(*core_info)))) {
@@ -191,7 +191,7 @@ static void framework_free(struct framework_core *ci) {
 /*
  * daemonise and start socket
  */
-int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info) {
+extern int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info) {
 	int ret = 0;
 
 	seedrand();

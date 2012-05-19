@@ -70,7 +70,7 @@ struct bucket_loop {
 
 #define refobj_offset	sizeof(struct ref_obj);
 
-void *objalloc(int size,objdestroy destructor) {
+extern void *objalloc(int size,objdestroy destructor) {
 	struct ref_obj *ref;
 	int asize;
 	char *robj;
@@ -96,7 +96,7 @@ void *objalloc(int size,objdestroy destructor) {
 }
 
 /* reference a object returns 0 on error*/
-int objref(void *data) {
+extern int objref(void *data) {
 	char *ptr = data;
 	struct ref_obj *ref;
 	int ret = 0;
@@ -120,7 +120,7 @@ int objref(void *data) {
 	return (ret);
 }
 
-int objunref(void *data) {
+extern int objunref(void *data) {
 	char *ptr = data;
 	struct ref_obj *ref;
 	int ret = -1;
@@ -158,7 +158,7 @@ int objunref(void *data) {
 	return (ret);
 }
 
-int objcnt(void *data) {
+extern int objcnt(void *data) {
 	char *ptr = data;
 	int ret = -1;
 	struct ref_obj *ref;
@@ -178,7 +178,7 @@ int objcnt(void *data) {
 	return (ret);
 }
 
-int objlock(void *data) {
+extern int objlock(void *data) {
 	char *ptr = data;
 	struct ref_obj *ref;
 
@@ -191,7 +191,7 @@ int objlock(void *data) {
 	return (0);
 }
 
-int objtrylock(void *data) {
+extern int objtrylock(void *data) {
 	char *ptr = data;
 	struct ref_obj *ref;
 
@@ -204,7 +204,7 @@ int objtrylock(void *data) {
 	return (-1);
 }
 
-int objunlock(void *data) {
+extern int objunlock(void *data) {
 	char *ptr = data;
 	struct ref_obj *ref;
 
@@ -235,7 +235,7 @@ static void empty_buckets(void *data) {
  * array of "bucket" entries each has a hash
  * the default is to hash the memory when there is no call back
  */
-void *create_bucketlist(int bitmask, blisthash hash_function) {
+extern void *create_bucketlist(int bitmask, blisthash hash_function) {
 	struct bucket_list *new;
 	short int buckets, cnt;
 
@@ -304,7 +304,7 @@ static int gethash(struct bucket_list *blist, const void *data, int key) {
 /*
  * add a ref to the object for the bucket list
  */
-int addtobucket(struct bucket_list *blist, void *data) {
+extern int addtobucket(struct bucket_list *blist, void *data) {
 	char *ptr = data;
 	struct ref_obj *ref;
 	struct blist_obj *lhead, *tmp;
@@ -391,7 +391,7 @@ int addtobucket(struct bucket_list *blist, void *data) {
 /*
  * create a bucket loop and lock the list
  */
-struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
+extern struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
 	struct bucket_loop *bloop = NULL;
 
 	if (blist && (bloop = objalloc(sizeof(*bloop), NULL))) {
@@ -413,7 +413,7 @@ struct bucket_loop *init_bucket_loop(struct bucket_list *blist) {
 /*
  * release the bucket loop and unref list
  */
-void stop_bucket_loop(struct bucket_loop *bloop) {
+extern void stop_bucket_loop(struct bucket_loop *bloop) {
 
 	if (bloop) {
 		objunref(bloop->blist);
@@ -424,7 +424,7 @@ void stop_bucket_loop(struct bucket_loop *bloop) {
 /*
  * return the next object (+ref) in the list
  */
-void *next_bucket_loop(struct bucket_loop *bloop) {
+extern void *next_bucket_loop(struct bucket_loop *bloop) {
 	struct bucket_list *blist = bloop->blist;
 	struct ref_obj *entry = NULL;
 	void *data = NULL;
@@ -464,7 +464,7 @@ void *next_bucket_loop(struct bucket_loop *bloop) {
 	return (data);
 }
 
-void remove_bucket_item(struct bucket_list *blist, void *data) {
+extern void remove_bucket_item(struct bucket_list *blist, void *data) {
 	struct blist_obj *entry;
 	int hash, bucket;
 
@@ -495,7 +495,7 @@ void remove_bucket_item(struct bucket_list *blist, void *data) {
 /*
  * remove and unref the current data
  */
-void remove_bucket_loop(struct bucket_loop *bloop) {
+extern void remove_bucket_loop(struct bucket_loop *bloop) {
 	struct bucket_list *blist = bloop->blist;
 	int bucket = bloop->bucket;
 
@@ -540,7 +540,7 @@ void remove_bucket_loop(struct bucket_loop *bloop) {
 	objunlock(blist);
 }
 
-int bucket_list_cnt(struct bucket_list *blist) {
+extern int bucket_list_cnt(struct bucket_list *blist) {
 	int ret = -1;
 
 	if (blist) {
@@ -551,7 +551,7 @@ int bucket_list_cnt(struct bucket_list *blist) {
 	return (ret);
 }
 
-void *bucket_list_find_key(struct bucket_list *blist, const void *key) {
+extern void *bucket_list_find_key(struct bucket_list *blist, const void *key) {
 	struct blist_obj *entry;
 	int hash, bucket;
 
@@ -578,7 +578,7 @@ void *bucket_list_find_key(struct bucket_list *blist, const void *key) {
 	return NULL;
 }
 
-void bucketlist_callback(struct bucket_list *blist, blist_cb callback, void *data2) {
+extern void bucketlist_callback(struct bucket_list *blist, blist_cb callback, void *data2) {
 	struct bucket_loop *bloop;
 	void *data;
 

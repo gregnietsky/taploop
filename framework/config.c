@@ -54,13 +54,13 @@ static int hash_cats(const void *data, int key) {
         return(ret);
 }
 
-void initconfigfiles(void) {
+extern void initconfigfiles(void) {
 	if (!configfiles) {
 		configfiles = create_bucketlist(4, hash_files);
 	}
 }
 
-void unrefconfigfiles(void) {
+extern void unrefconfigfiles(void) {
 	if (configfiles) {
 		objunref(configfiles);
 	}
@@ -175,7 +175,7 @@ static char *filterconf(const char *str, int minlen) {
 	return (tmp);
 }
 
-int process_config(const char *configname, const char *configfile) {
+extern int process_config(const char *configname, const char *configfile) {
 	struct config_file *file;
 	struct config_category *category = NULL;
 	FILE *config;
@@ -238,7 +238,7 @@ int process_config(const char *configname, const char *configfile) {
 	return (0);
 }
 
-struct bucket_list *get_config_file(const char *configname) {
+extern struct bucket_list *get_config_file(const char *configname) {
 	struct config_file *file;
 
 	if ((file = bucket_list_find_key(configfiles, configname))) {
@@ -255,7 +255,7 @@ struct bucket_list *get_config_file(const char *configname) {
 	return (NULL);
 }
 
-struct bucket_list *get_config_category(const char *configname, const char *category) {
+extern struct bucket_list *get_config_category(const char *configname, const char *category) {
 	struct bucket_list *file;
 	struct config_category *cat;
 
@@ -279,7 +279,7 @@ struct bucket_list *get_config_category(const char *configname, const char *cate
 	}
 }
 
-struct bucket_list *get_category_next(struct bucket_loop *cloop, char *name, int len) {
+extern struct bucket_list *get_category_next(struct bucket_loop *cloop, char *name, int len) {
 	struct config_category *category;
 
 	if (cloop && (category = next_bucket_loop(cloop))) {
@@ -300,7 +300,7 @@ struct bucket_list *get_category_next(struct bucket_loop *cloop, char *name, int
 	return (NULL);
 }
 
-struct bucket_loop *get_category_loop(const char *configname) {
+extern struct bucket_loop *get_category_loop(const char *configname) {
 	struct bucket_loop *cloop;
 	struct bucket_list *file;
 
@@ -319,7 +319,7 @@ static void entry_callback(void *data, void *entry_cb) {
 	callback(entry->item, entry->value);
 }
 
-void config_entry_callback(struct bucket_list *entries, config_entrycb entry_cb) {
+extern void config_entry_callback(struct bucket_list *entries, config_entrycb entry_cb) {
 	bucketlist_callback(entries, entry_callback, &entry_cb);
 }
 
@@ -332,7 +332,7 @@ static void category_callback(void *data, void *category_cb) {
 	cb_cat(category->entries, category->name);
 }
 
-void config_cat_callback(struct bucket_list *categories, config_catcb cat_cb) {
+extern void config_cat_callback(struct bucket_list *categories, config_catcb cat_cb) {
 	bucketlist_callback(categories, category_callback, &cat_cb);
 }
 
@@ -345,11 +345,11 @@ static void file_callback(void *data, void *file_cb) {
 	cb_file(file->cat, file->filename, file->filepath);
 }
 
-void config_file_callback(config_filecb file_cb) {
+extern void config_file_callback(config_filecb file_cb) {
 	bucketlist_callback(configfiles, file_callback, &file_cb);
 }
 
-struct config_entry *get_config_entry(struct bucket_list *categories, const char *item) {
+extern struct config_entry *get_config_entry(struct bucket_list *categories, const char *item) {
 	struct config_entry *entry;
 
 	entry = bucket_list_find_key(categories, item);

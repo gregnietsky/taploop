@@ -122,7 +122,7 @@ static void *unsock_serv(void **data) {
 	return NULL;
 }
 
-void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connectfunc, threadcleanup cleanup) {
+extern void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connectfunc, threadcleanup cleanup) {
 	struct framework_sockthread *unsock;
 
 	unsock = objalloc(sizeof(*unsock), NULL);

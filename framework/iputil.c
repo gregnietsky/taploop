@@ -46,7 +46,7 @@ static int hash_socket(const void *data, int key) {
         return (ret);
 }
 
-void closesocket(struct fwsocket *sock) {
+extern void closesocket(struct fwsocket *sock) {
 	if (sock) {
 		setflag(sock, SOCK_FLAG_CLOSE);
 		objunref(sock);
@@ -78,7 +78,7 @@ static void clean_fwsocket(void *data) {
 	}
 }
 
-struct fwsocket *make_socket(int family, int type, int proto, void *ssl) {
+extern struct fwsocket *make_socket(int family, int type, int proto, void *ssl) {
 	struct fwsocket *si;
 
 	if (!(si = objalloc(sizeof(*si),clean_fwsocket))) {
@@ -173,27 +173,27 @@ static struct fwsocket *_opensocket(int family, int stype, int proto, const char
 	return (sock);
 }
 
-struct fwsocket *sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl) {
+extern struct fwsocket *sockconnect(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl) {
 	return(_opensocket(family, stype, proto, ipaddr, port, ssl, 0, 0));
 }
 
-struct fwsocket *udpconnect(const char *ipaddr, const char *port, void *ssl) {
+extern struct fwsocket *udpconnect(const char *ipaddr, const char *port, void *ssl) {
 	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, ssl, 0, 0));
 }
 
-struct fwsocket *tcpconnect(const char *ipaddr, const char *port, void *ssl) {
+extern struct fwsocket *tcpconnect(const char *ipaddr, const char *port, void *ssl) {
 	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 0, 0));
 }
 
-struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int backlog) {
+extern struct fwsocket *sockbind(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int backlog) {
 	return(_opensocket(family, stype, proto, ipaddr, port, ssl, 1, backlog));
 }
 
-struct fwsocket *udpbind(const char *ipaddr, const char *port, void *ssl) {
+extern struct fwsocket *udpbind(const char *ipaddr, const char *port, void *ssl) {
 	return (_opensocket(PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, ipaddr, port, ssl, 1, 0));
 }
 
-struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl, int backlog) {
+extern struct fwsocket *tcpbind(const char *ipaddr, const char *port, void *ssl, int backlog) {
 	return (_opensocket(PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, ipaddr, port, ssl, 1, backlog));
 }
 
@@ -325,7 +325,7 @@ static void _start_socket_handler(struct fwsocket *sock, socketrecv read,
 	objunref(sockh);
 }
 
-void socketserver(struct fwsocket *sock, socketrecv read,
+extern void socketserver(struct fwsocket *sock, socketrecv read,
 				socketrecv acceptfunc, threadcleanup cleanup, void *data) {
 
 	objlock(sock);
@@ -345,7 +345,7 @@ void socketserver(struct fwsocket *sock, socketrecv read,
 	_start_socket_handler(sock, read, acceptfunc, cleanup, data);
 }
 
-void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup) {
+extern void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup) {
 	startsslclient(sock);
 
 	_start_socket_handler(sock, read, NULL, cleanup, data);

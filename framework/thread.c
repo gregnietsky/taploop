@@ -69,7 +69,7 @@ static int hash_thread(const void *data, int key) {
  * let threads check there status by passing in a pointer to
  * there data
  */
-int framework_threadok(void *data) {
+extern int framework_threadok(void *data) {
 	struct thread_pvt *thr = data;
 
 	if (thr && (thr->magic == THREAD_MAGIC)) {
@@ -94,7 +94,7 @@ static void *threadwrap(void *data) {
 /*
  * create a thread
  */
-struct thread_pvt *framework_mkthread(threadfunc func, threadcleanup cleanup, threadsighandler sig_handler, void *data) {
+extern struct thread_pvt *framework_mkthread(threadfunc func, threadcleanup cleanup, threadsighandler sig_handler, void *data) {
 	struct thread_pvt *thread;
 
 	if (!(thread = objalloc(sizeof(*thread), NULL))) {
@@ -201,14 +201,14 @@ static void *managethread(void **data) {
  * initialise the threadlist
  * start manager thread
  */
-int startthreads(void) {
+extern int startthreads(void) {
 	threads = objalloc(sizeof(*threads), NULL);
 	threads->list = create_bucketlist(4, hash_thread);
 	threads->manager = framework_mkthread(managethread, NULL, manager_sig, NULL);
 	return (threads && threads->list && threads->manager);
 }
 
-void stopthreads(void) {
+extern void stopthreads(void) {
 	if (threads->manager) {
 		clearflag(threads->manager, TL_THREAD_RUN);
 	}
@@ -218,14 +218,14 @@ void stopthreads(void) {
  * Stop all running threads
  * sending hup signal to manager
  */
-void framework_shutdown(void) {
+extern void framework_shutdown(void) {
 	pthread_kill(threads->manager->thr, SIGHUP);
 }
 
 /*
  * Join threads
  */
-void jointhreads(void) {
+extern void jointhreads(void) {
 	pthread_join(threads->manager->thr, NULL);
 }
 
@@ -237,7 +237,7 @@ void jointhreads(void) {
  * NB sending a signal to the current thread while threads is locked
  * will cause a deadlock.
  */
-int thread_signal(int sig) {
+extern int thread_signal(int sig) {
 	struct thread_pvt *thread;
 	pthread_t me;
 	int ret = 0;

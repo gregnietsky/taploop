@@ -80,7 +80,7 @@ static int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_le
 	return (0);
 }
 
-void ssl_shutdown(void *data) {
+extern void ssl_shutdown(void *data) {
 	struct ssldata *ssl = data;
 	int err, ret;
 
@@ -200,21 +200,21 @@ static struct ssldata *sslinit(const char *cacert, const char *cert, const char 
 	return (ssl);
 }
 
-void *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
+extern void *tlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = TLSv1_method();
 
 	return (sslinit(cacert, cert, key, verify, meth, SSL_TLSV1));
 }
 
 #ifndef OPENSSL_NO_SSL2
-void *sslv2_init(const char *cacert, const char *cert, const char *key, int verify) {
+extern void *sslv2_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = SSLv2_method();
 
 	return (sslinit(cacert, cert, key, verify, meth, SSL_SSLV2));
 }
 #endif
 
-void *sslv3_init(const char *cacert, const char *cert, const char *key, int verify) {
+extern void *sslv3_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = SSLv3_method();
 	struct ssldata *ssl;
 
@@ -223,7 +223,7 @@ void *sslv3_init(const char *cacert, const char *cert, const char *key, int veri
 	return (ssl);
 }
 
-void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
+extern void *dtlsv1_init(const char *cacert, const char *cert, const char *key, int verify) {
 	const SSL_METHOD *meth = DTLSv1_method();
 	struct ssldata *ssl;
 
@@ -276,14 +276,14 @@ static void sslsockstart(struct fwsocket *sock, struct ssldata *orig,int accept)
 	}
 }
 
-void tlsaccept(struct fwsocket *sock, struct ssldata *orig) {
+extern void tlsaccept(struct fwsocket *sock, struct ssldata *orig) {
 	if ((sock->ssl = objalloc(sizeof(*sock->ssl), free_ssldata))) {
 		sslsockstart(sock, orig, 1);
 	}
 
 }
 
-int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr) {
+extern int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr) {
 	struct ssldata *ssl = sock->ssl;
 	socklen_t salen = sizeof(*addr);
 	int ret, err, syserr;
@@ -347,11 +347,11 @@ int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *add
 	return (ret);
 }
 
-int socketread(struct fwsocket *sock, void *buf, int num) {
+extern int socketread(struct fwsocket *sock, void *buf, int num) {
 	return (socketread_d(sock, buf, num, NULL));
 }
 
-int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr) {
+extern int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr) {
 	struct ssldata *ssl = (sock) ? sock->ssl : NULL;
 	int ret, err, syserr;
 
@@ -426,11 +426,11 @@ int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockad
 	return (ret);
 }
 
-int socketwrite(struct fwsocket *sock, const void *buf, int num) {
+extern int socketwrite(struct fwsocket *sock, const void *buf, int num) {
 	return (socketwrite_d(sock, buf, num, NULL));
 }
 
-void sslstartup(void) {
+extern void sslstartup(void) {
 	SSL_library_init();
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
@@ -471,7 +471,7 @@ static void dtlssetopts(struct ssldata *ssl, struct ssldata *orig, struct fwsock
 	objunlock(ssl);
 }
 
-void dtsl_serveropts(struct fwsocket *sock) {
+extern void dtsl_serveropts(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 
 	if (!ssl) {
@@ -512,7 +512,7 @@ static void dtlsaccept(struct fwsocket *sock) {
 	objunlock(ssl);
 }
 
-struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
+extern struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 	struct ssldata *newssl;
 	struct fwsocket *newsock;
@@ -582,7 +582,7 @@ static void dtlsconnect(struct fwsocket *sock) {
 }
 
 
-void startsslclient(struct fwsocket *sock) {
+extern void startsslclient(struct fwsocket *sock) {
 	if (!sock || !sock->ssl || (sock->ssl->flags & SSL_SERVER)) {
 		return;
 	}
@@ -597,7 +597,7 @@ void startsslclient(struct fwsocket *sock) {
 	}
 }
 
-void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec) {
+extern void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec) {
 	if (!sock || !sock->ssl || !sock->ssl->ssl) {
 		return;
 	}
@@ -610,7 +610,7 @@ void dtlstimeout(struct fwsocket *sock, struct timeval *timeleft, int defusec) {
 	objunlock(sock->ssl);
 }
 
-void dtlshandltimeout(struct fwsocket *sock) {
+extern void dtlshandltimeout(struct fwsocket *sock) {
 	if (!sock->ssl) {
 		return;
 	}
