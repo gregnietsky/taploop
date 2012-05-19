@@ -9,6 +9,7 @@ code before contacting the authors of such code.
 2)Jenkins hashing algorithm
 3)MD5 HMAC from rfc2104.txt
 4)Radius password function from freeradius project as in RFC
+5)SSL DTLS code
 
 it is recommended that you contact the author of this package prior to
 filing a issue with any authors listed bellow.
@@ -51,6 +52,7 @@ branch is a temporary branch that tracks the code intended for the
 next release; it corresponds with networking development branch in
 the kernel.
 
+Hash function
 --------------------------------------------------
 lookup3.c, by Bob Jenkins, May 2006, Public Domain.
 
@@ -71,3 +73,15 @@ investigation of the HMAC construction.
 -----------------------------------------------------------------------
 User password crypt function from the freeradius project (addattrpasswd)
  * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 The FreeRADIUS Server Project
+
+----------------
+DTLS Sample Code
+
+http://sctp.fh-muenster.de/index.html
+
+snipets of code have been used or reworked from this demo program
+
+ * Copyright (C) 2009 - 2011 Robin Seggelmann, seggelmann@fh-muenster.de,
+ *                           Michael Tuexen, tuexen@fh-muenster.de
+ *
+ * All rights reserved.
