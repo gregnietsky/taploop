@@ -538,6 +538,7 @@ extern int set_interface_ipaddr(char *ifname, char *ipaddr) {
 
 	addattr_l(&req->n, sizeof(*req), IFA_LOCAL, &lcl.data, lcl.bytelen);
 	addattr_l(&req->n, sizeof(*req), IFA_ADDRESS, &lcl.data, lcl.bytelen);
+	addattr32(&req->n, sizeof(*req), IFA_BROADCAST, htonl(~((1 << (32 - lcl.bitlen)) - 1)));
 
 	objlock(nlh);
 	rtnl_talk(nlh, &req->n, 0, 0, NULL);
