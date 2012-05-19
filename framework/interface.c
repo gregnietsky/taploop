@@ -33,13 +33,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "include/framework.h"
 #include "libnetlink/include/libnetlink.h"
 #include "libnetlink/include/ll_map.h"
+#include "libnetlink/include/utils.h"
 
 static struct rtnl_handle *nlh;
 
 struct iplink_req {
-        struct nlmsghdr         n;
-        struct ifinfomsg        i;
-        char                    buf[1024];
+	struct nlmsghdr		n;
+	struct ifinfomsg	i;
+	char			buf[1024];
+};
+
+struct ipaddr_req {
+	struct nlmsghdr		n;
+	struct ifaddrmsg	i;
+	char			buf[1024];
 };
 
 static void nlhandle_free(void *data) {
@@ -493,5 +500,50 @@ extern int ifhwaddr(const char *ifname, unsigned char *hwaddr) {
 
 	ll_index_to_addr(ifindex, hwaddr, ETH_ALEN);
 	objunref(nlh);
+	return (0);
+}
+
+
+extern int set_interface_ipaddr(char *ifname, char *ipaddr) {
+	struct ipaddr_req *req;
+	inet_prefix lcl;
+	int ifindex;
+
+	if ((!objref(nlh) && !(nlh = nlhandle(0)))) {
+		return (-1);
+	}
+
+	if (!(req = objalloc(sizeof(*req), NULL))) {
+		objunref(nlh);
+		return (-1);
+	}
+
+	/*set the index of base interface*/
+	if (!(ifindex = get_iface_index(ifname))) {
+		objunref(nlh);
+		return (-1);
+	}
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+	req->n.nlmsg_type = RTM_NEWADDR;
+	req->n.nlmsg_flags = NLM_F_REQUEST | NLM_F_EXCL | NLM_F_CREATE;
+
+	req->i.ifa_scope = RT_SCOPE_HOST;
+	req->i.ifa_index = ifindex;
+
+	printf("IP %s\n", ipaddr);
+	get_prefix(&lcl, ipaddr, AF_UNSPEC);
+	req->i.ifa_family = lcl.family;
+	req->i.ifa_prefixlen = lcl.bitlen;
+
+	addattr_l(&req->n, sizeof(*req), IFA_LOCAL, &lcl.data, lcl.bytelen);
+	addattr_l(&req->n, sizeof(*req), IFA_ADDRESS, &lcl.data, lcl.bytelen);
+
+	objlock(nlh);
+	rtnl_talk(nlh, &req->n, 0, 0, NULL);
+	objunlock(nlh);
+
+	objunref(nlh);
+	objunref(req);
 	return (0);
 }
