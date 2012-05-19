@@ -16,9 +16,16 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _TL_VLAN_H
-#define _TL_VLAN_H
+#ifndef _TW_PRIVATE_H
+#define _FW_PRIVATE_H
 
-int add_kernvlan(char *iface, int vid);
+/*from sslutils iputil is the only consumer*/
+void dtsl_serveropts(struct fwsocket *sock);
+void dtlshandltimeout(struct fwsocket *sock);
+
+/*for main.c*/
+int startthreads(void);
+void jointhreads(void);
+int thread_signal(int sig);
 
 #endif

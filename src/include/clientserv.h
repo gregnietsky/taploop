@@ -16,19 +16,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <netlink/route/link.h>
+#ifndef _TL_CLIENTSERV_H
+#define _TL_CLIENTSERV_H
 
-void nltest(void) {
-	struct nl_cache *cache;
-	struct rtnl_link *link;
-	struct nl_sock *sock;
+void *clientsock_client(void **data);
+void *delclientsock_client(void *data);
+int add_kernvlan(char *iface, int vid);
 
-	if ((rtnl_link_alloc_cache(sock, AF_UNSPEC, &cache)) < 0) {
-	}
-
-	if (!(link = rtnl_link_get_by_name(cache, "eth1"))) {
-	}
-
-	rtnl_link_put(link);
-/*	nl_cache_put(cache);*/
-}
+#endif
