@@ -507,7 +507,7 @@ extern int ifhwaddr(const char *ifname, unsigned char *hwaddr) {
 extern int set_interface_ipaddr(char *ifname, char *ipaddr) {
 	struct ipaddr_req *req;
 	inet_prefix lcl;
-	int ifindex;
+	int ifindex, bcast;
 
 	if ((!objref(nlh) && !(nlh = nlhandle(0)))) {
 		return (-1);
@@ -531,14 +531,16 @@ extern int set_interface_ipaddr(char *ifname, char *ipaddr) {
 	req->i.ifa_scope = RT_SCOPE_HOST;
 	req->i.ifa_index = ifindex;
 
-	printf("IP %s\n", ipaddr);
 	get_prefix(&lcl, ipaddr, AF_UNSPEC);
 	req->i.ifa_family = lcl.family;
 	req->i.ifa_prefixlen = lcl.bitlen;
 
 	addattr_l(&req->n, sizeof(*req), IFA_LOCAL, &lcl.data, lcl.bytelen);
 	addattr_l(&req->n, sizeof(*req), IFA_ADDRESS, &lcl.data, lcl.bytelen);
-	addattr32(&req->n, sizeof(*req), IFA_BROADCAST, htonl(~((1 << (32 - lcl.bitlen)) - 1)));
+	if (lcl.family == AF_INET) {
+		bcast = htonl((1 << (32 - lcl.bitlen)) - 1);
+		addattr32(&req->n, sizeof(*req), IFA_BROADCAST, lcl.data[0] | bcast);
+	}
 
 	objlock(nlh);
 	rtnl_talk(nlh, &req->n, 0, 0, NULL);
