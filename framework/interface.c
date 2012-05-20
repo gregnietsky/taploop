@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <linux/sockios.h>
 #include <linux/if.h>
 #include <sys/ioctl.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
@@ -397,6 +398,49 @@ extern int interface_bind(char *iface, int protocol, int flags) {
 	}
 
 	return (fd);
+}
+
+/*
+ * this method is sourced from the following IEEE publication
+ * Guidelines for 64-bit Global Identifier (EUI-64TM) Registration Authority
+ * mac48 is char[ETH_ALEN] eui64 is char[8]
+ */
+extern int eui48to64(unsigned char *mac48, unsigned char *eui64) {
+	eui64[0] = mac48[0] & 0xFD; /*clear local assignment and multicast bits*/
+	eui64[1] = mac48[1];
+	eui64[2] = mac48[2];
+	eui64[3] = 0xFF;
+	eui64[4] = 0xFF;
+	eui64[5] = mac48[3];
+	eui64[6] = mac48[4];
+	eui64[7] = mac48[5];
+
+	return (0);
+}
+
+/*
+ * Unique Local IPv6 Unicast Addresses RFC 4193
+ * buff is char[6]
+ */
+extern int get_ip6_addrprefix(const char *iface, unsigned char *prefix) {
+	uint64_t ntpts;
+	unsigned char eui64[8];
+	unsigned char sha1[20];
+	unsigned char mac48[ETH_ALEN];
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+	ntpts = tvtontp64(&tv);
+
+	ifhwaddr(iface, mac48);
+	eui48to64(mac48, eui64);
+
+	shasum2(sha1, (void*)&ntpts, sizeof(ntpts), (void*)eui64, sizeof(eui64));
+
+	prefix[0] = 0xFD; /*0xFC | 0x01 FC00/7 with local bit set [8th bit]*/
+	memcpy(prefix + 1, sha1+15, 5); /*LSD 40 bits of the SHA hash*/
+
+	return 0;
 }
 
 /*

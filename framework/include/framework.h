@@ -155,6 +155,8 @@ extern uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
  */
 extern void seedrand(void);
 extern int genrand(void *buf, int len);
+extern void shasum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
+extern void shasum(unsigned char *buff, const void *data, unsigned long len);
 extern void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
 extern void md5sum(unsigned char *buff, const void *data, unsigned long len);
 extern int md5cmp(unsigned char *md51, unsigned char *md52, int len);
@@ -163,6 +165,7 @@ extern int strlenzero(const char *str);
 extern char *ltrim(char *str);
 extern char *rtrim(const char *str);
 extern char *trim(const char *str);
+extern uint64_t tvtontp64(struct timeval *tv);
 
 /*IP Utilities*/
 extern struct fwsocket *make_socket(int family, int type, int proto, void *ssl);
@@ -194,6 +197,8 @@ extern int get_iface_index(const char *ifname);
 extern int set_interface_addr(int ifindex, const unsigned char *hwaddr);
 extern int set_interface_name(int ifindex, const char *name);
 extern int set_interface_ipaddr(char *ifname, char *ipaddr);
+extern int get_ip6_addrprefix(const char *iface, unsigned char *prefix);
+extern int eui48to64(unsigned char *mac48, unsigned char *eui64);
 extern void closenetlink(void);
 
 /*Radius utilities*/

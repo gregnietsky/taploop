@@ -32,7 +32,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <openssl/rand.h>
 #include <openssl/md5.h>
+#include <openssl/sha.h>
 #include <ctype.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/time.h>
 
 extern void seedrand(void) {
 	int fd = open("/dev/random", O_RDONLY);
@@ -45,6 +49,21 @@ extern void seedrand(void) {
 
 extern int genrand(void *buf, int len) {
 	return (RAND_bytes(buf, len));
+}
+
+extern void shasum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
+	SHA_CTX c;
+
+	SHA_Init(&c);
+	SHA_Update(&c, data, len);
+	if (data2) {
+		SHA_Update(&c, data2, len2);
+	}
+	SHA_Final(buff, &c);
+}
+
+extern void shasum(unsigned char *buff, const void *data, unsigned long len) {
+        shasum2(buff, data, len, NULL, 0);
 }
 
 extern void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
@@ -141,4 +160,8 @@ extern char *trim(const char *str) {
 	cur = ltrim(cur);
 	cur = rtrim(cur);
 	return (cur);
+}
+
+extern uint64_t tvtontp64(struct timeval *tv) {
+	return ((((uint64_t)tv->tv_sec + 2208988800u) << 32) + ((uint32_t)tv->tv_usec * 4294.967296));
 }
