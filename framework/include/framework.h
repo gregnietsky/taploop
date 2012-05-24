@@ -155,11 +155,21 @@ extern uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
  */
 extern void seedrand(void);
 extern int genrand(void *buf, int len);
-extern void shasum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
-extern void shasum(unsigned char *buff, const void *data, unsigned long len);
+extern void sha512sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
+extern void sha512sum(unsigned char *buff, const void *data, unsigned long len);
+extern void sha256sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
+extern void sha256sum(unsigned char *buff, const void *data, unsigned long len);
+extern void sha1sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
+extern void sha1sum(unsigned char *buff, const void *data, unsigned long len);
 extern void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2);
 extern void md5sum(unsigned char *buff, const void *data, unsigned long len);
-extern int md5cmp(unsigned char *md51, unsigned char *md52, int len);
+extern int sha512cmp(unsigned char *digest1, unsigned char *digest2);
+extern int sha256cmp(unsigned char *digest1, unsigned char *digest2);
+extern int sha1cmp(unsigned char *digest1, unsigned char *digest2);
+extern int md5cmp(unsigned char *digest1, unsigned char *digest2);
+extern void sha512hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
+extern void sha256hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
+extern void sha1hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
 extern void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen);
 extern int strlenzero(const char *str);
 extern char *ltrim(char *str);
@@ -246,8 +256,8 @@ extern void *dtlsv1_init(const char *cacert, const char *cert, const char *key, 
 extern int socketread(struct fwsocket *sock, void *buf, int num);
 extern int socketwrite(struct fwsocket *sock, const void *buf, int num);
 /*the following are only needed on server side of a dgram connection*/
-extern int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr);
-extern int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr);
+extern int socketread_d(struct fwsocket *sock, void *buf, int num, union sockstruct *addr);
+extern int socketwrite_d(struct fwsocket *sock, const void *buf, int num, union sockstruct *addr);
 
 extern void ssl_shutdown(void *ssl);
 extern void tlsaccept(struct fwsocket *sock, struct ssldata *orig);

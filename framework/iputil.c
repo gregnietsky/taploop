@@ -101,7 +101,7 @@ extern struct fwsocket *make_socket(int family, int type, int proto, void *ssl) 
 
 static struct fwsocket *accept_socket(struct fwsocket *sock) {
 	struct fwsocket *si;
-	socklen_t salen = sizeof(si->addr.sa);
+	socklen_t salen = sizeof(si->addr);
 
 	if (!(si = objalloc(sizeof(*si),clean_fwsocket))) {
 		return NULL;
@@ -128,7 +128,7 @@ static struct fwsocket *accept_socket(struct fwsocket *sock) {
 static struct fwsocket *_opensocket(int family, int stype, int proto, const char *ipaddr, const char *port, void *ssl, int ctype, int backlog) {
 	struct	addrinfo hint, *result, *rp;
 	struct fwsocket *sock = NULL;
-	socklen_t salen = sizeof(struct sockaddr);
+	socklen_t salen = sizeof(union sockstruct);
 	int on = 1;
 
 	memset(&hint, 0, sizeof(hint));
@@ -136,7 +136,7 @@ static struct fwsocket *_opensocket(int family, int stype, int proto, const char
 	hint.ai_socktype = stype;
 	hint.ai_protocol = proto;
 
-	if (getaddrinfo(ipaddr, port, &hint, &result)) {
+	if (getaddrinfo(ipaddr, port, &hint, &result) || !result) {
 		return (NULL);
 	}
 
@@ -152,7 +152,16 @@ static struct fwsocket *_opensocket(int family, int stype, int proto, const char
 		sock = NULL;
 	}
 
-	if (ctype && sock) {
+	if (!sock || !rp) {
+		if (sock) {
+			objunref(sock);
+		}
+		freeaddrinfo(result);
+
+		return (NULL);
+	}
+
+	if (ctype) {
 		sock->flags |= SOCK_FLAG_BIND;
 		memcpy(&sock->addr.ss, rp->ai_addr, sizeof(sock->addr.ss));
 		setsockopt(sock->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -163,9 +172,10 @@ static struct fwsocket *_opensocket(int family, int stype, int proto, const char
 			case SOCK_STREAM:
 			case SOCK_SEQPACKET:
 				listen(sock->sock, backlog);
+			default:
 				break;
 		}
-	} else if (sock) {
+	} else {
 		getsockname(sock->sock, &sock->addr.sa, &salen);
 	}
 

@@ -44,39 +44,40 @@ struct ssldata {
 	struct ssldata *parent;
 };
 
-#define COOKIE_SECRET_LENGTH 16
+#define COOKIE_SECRET_LENGTH 32
 static unsigned char *cookie_secret = NULL;
 
 static int generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len) {
-	struct sockaddr peer;
+	union sockstruct peer;
 
-	if (!ssl || !cookie_secret) {
+	if (!ssl || !cookie_secret || (*cookie_len < COOKIE_SECRET_LENGTH)) {
 		return (0);
 	}
 
 	memset(&peer, 0, sizeof(peer));
 	BIO_dgram_get_peer(SSL_get_rbio(ssl), &peer);
-	HMAC(EVP_sha1(), (const void*)cookie_secret, COOKIE_SECRET_LENGTH, (const unsigned char*)&peer, sizeof(peer), cookie, cookie_len);
+	sha256hmac(cookie, &peer, sizeof(peer), cookie_secret, COOKIE_SECRET_LENGTH);
+	*cookie_len = COOKIE_SECRET_LENGTH;
 
 	return (1);
 }
 
 static int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len) {
-	struct sockaddr peer;
-	unsigned char result[EVP_MAX_MD_SIZE];
-	unsigned int resultlength;
+	union sockstruct peer;
+	unsigned char hmac[COOKIE_SECRET_LENGTH];
 
-	if (!ssl || !cookie_secret) {
+	if (!ssl || !cookie_secret || (cookie_len != COOKIE_SECRET_LENGTH)) {
 		return (0);
 	}
 
 	memset(&peer, 0, sizeof(peer));
 	BIO_dgram_get_peer(SSL_get_rbio(ssl), &peer);
-	HMAC(EVP_sha1(), (const void*)cookie_secret, COOKIE_SECRET_LENGTH, (const unsigned char*)&peer, sizeof(peer), result, &resultlength);
+	sha256hmac(hmac, &peer, sizeof(peer), cookie_secret, COOKIE_SECRET_LENGTH);
 
-	if (cookie_len == resultlength && memcmp(result, cookie, resultlength) == 0) {
+	if (!sha256cmp(hmac, cookie)) {
 		return (1);
 	}
+
 	return (0);
 }
 
@@ -283,7 +284,7 @@ extern void tlsaccept(struct fwsocket *sock, struct ssldata *orig) {
 
 }
 
-extern int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockaddr *addr) {
+extern int socketread_d(struct fwsocket *sock, void *buf, int num, union sockstruct *addr) {
 	struct ssldata *ssl = sock->ssl;
 	socklen_t salen = sizeof(*addr);
 	int ret, err, syserr;
@@ -291,7 +292,7 @@ extern int socketread_d(struct fwsocket *sock, void *buf, int num, struct sockad
 	if (!ssl || !ssl->ssl) {
 		objlock(sock);
 		if (addr && (sock->type == SOCK_DGRAM)) {
-			ret = recvfrom(sock->sock, buf, num, 0, addr, &salen);
+			ret = recvfrom(sock->sock, buf, num, 0, &addr->sa, &salen);
 		} else {
 			ret = read(sock->sock, buf, num);
 		}
@@ -351,7 +352,7 @@ extern int socketread(struct fwsocket *sock, void *buf, int num) {
 	return (socketread_d(sock, buf, num, NULL));
 }
 
-extern int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct sockaddr *addr) {
+extern int socketwrite_d(struct fwsocket *sock, const void *buf, int num, union sockstruct *addr) {
 	struct ssldata *ssl = (sock) ? sock->ssl : NULL;
 	int ret, err, syserr;
 
@@ -362,7 +363,7 @@ extern int socketwrite_d(struct fwsocket *sock, const void *buf, int num, struct
 	if (!ssl || !ssl->ssl) {
 		objlock(sock);
 		if (addr && (sock->type == SOCK_DGRAM)) {
-			ret = sendto(sock->sock, buf, num, MSG_NOSIGNAL, addr, sizeof(*addr));
+			ret = sendto(sock->sock, buf, num, MSG_NOSIGNAL, &addr->sa, sizeof(*addr));
 		} else {
 			ret = send(sock->sock, buf, num, MSG_NOSIGNAL);
 		}
@@ -498,7 +499,7 @@ static void dtlsaccept(struct fwsocket *sock) {
 	ssl->flags |= SSL_SERVER;
 
 	BIO_set_fd(ssl->bio, sock->sock, BIO_NOCLOSE);
-	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr.sa);
+	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr);
 	objunlock(sock);
 
 	SSL_accept(ssl->ssl);
@@ -516,7 +517,7 @@ extern struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 	struct ssldata *ssl = sock->ssl;
 	struct ssldata *newssl;
 	struct fwsocket *newsock;
-	struct sockaddr client;
+	union sockstruct client;
 	int on = 1;
 
 	if (!(newssl = objalloc(sizeof(*newssl), free_ssldata))) {
@@ -539,7 +540,7 @@ extern struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 		return NULL;
 	}
 	objunlock(sock);
-	memcpy(&newsock->addr.sa, &client, sizeof(newsock->addr.sa));
+	memcpy(&newsock->addr, &client, sizeof(newsock->addr));
 
 	setsockopt(newsock->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 #ifdef SO_REUSEPORT
@@ -547,9 +548,9 @@ extern struct fwsocket *dtls_listenssl(struct fwsocket *sock) {
 #endif
 
 	objlock(sock);
-	bind(newsock->sock, &sock->addr.sa, sizeof(sock->addr.sa));
+	bind(newsock->sock, &sock->addr.sa, sizeof(sock->addr));
 	objunlock(sock);
-	connect(newsock->sock, &newsock->addr.sa, sizeof(newsock->addr.sa));
+	connect(newsock->sock, &newsock->addr.sa, sizeof(newsock->addr));
 
 	dtlsaccept(newsock);
 
@@ -568,7 +569,7 @@ static void dtlsconnect(struct fwsocket *sock) {
 	objlock(sock);
 	objlock(ssl);
 	ssl->flags |= SSL_CLIENT;
-	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr.sa);
+	BIO_ctrl(ssl->bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &sock->addr);
 	objunlock(sock);
 	SSL_connect(ssl->ssl);
 

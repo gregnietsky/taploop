@@ -477,7 +477,7 @@ static void radius_recv(void **data) {
 	memcpy(packet->token, session->request, RAD_AUTH_TOKEN_LEN);
 	md5sum2(rtok2, packet, plen, connex->server->secret, strlen(connex->server->secret));
 
-	if (md5cmp(rtok, rtok2, RAD_AUTH_TOKEN_LEN)) {
+	if (md5cmp(rtok, rtok2)) {
 		printf("Invalid Signature");
 		return;
 	}

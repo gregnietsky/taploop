@@ -38,6 +38,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <sys/time.h>
 
+typedef void	(*hmacfunc)(unsigned char*, const void*, unsigned long, const void*, unsigned long);
+
 extern void seedrand(void) {
 	int fd = open("/dev/random", O_RDONLY);
 	int len;
@@ -51,7 +53,37 @@ extern int genrand(void *buf, int len) {
 	return (RAND_bytes(buf, len));
 }
 
-extern void shasum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
+extern void sha512sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
+	SHA512_CTX c;
+
+	SHA512_Init(&c);
+	SHA512_Update(&c, data, len);
+	if (data2) {
+		SHA512_Update(&c, data2, len2);
+	}
+	SHA512_Final(buff, &c);
+}
+
+extern void sha512sum(unsigned char *buff, const void *data, unsigned long len) {
+        sha512sum2(buff, data, len, NULL, 0);
+}
+
+extern void sha256sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
+	SHA256_CTX c;
+
+	SHA256_Init(&c);
+	SHA256_Update(&c, data, len);
+	if (data2) {
+		SHA256_Update(&c, data2, len2);
+	}
+	SHA256_Final(buff, &c);
+}
+
+extern void sha256sum(unsigned char *buff, const void *data, unsigned long len) {
+        sha256sum2(buff, data, len, NULL, 0);
+}
+
+extern void sha1sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
 	SHA_CTX c;
 
 	SHA_Init(&c);
@@ -62,8 +94,8 @@ extern void shasum2(unsigned char *buff, const void *data, unsigned long len, co
 	SHA_Final(buff, &c);
 }
 
-extern void shasum(unsigned char *buff, const void *data, unsigned long len) {
-        shasum2(buff, data, len, NULL, 0);
+extern void sha1sum(unsigned char *buff, const void *data, unsigned long len) {
+        sha1sum2(buff, data, len, NULL, 0);
 }
 
 extern void md5sum2(unsigned char *buff, const void *data, unsigned long len, const void *data2, unsigned long len2) {
@@ -81,7 +113,7 @@ extern void md5sum(unsigned char *buff, const void *data, unsigned long len) {
         md5sum2(buff, data, len, NULL, 0);
 }
 
-extern int md5cmp(unsigned char *md51, unsigned char *md52, int len) {
+extern int _digest_cmp(unsigned char *md51, unsigned char *md52, int len) {
 	int cnt;
 	int chk = 0;
 
@@ -92,7 +124,24 @@ extern int md5cmp(unsigned char *md51, unsigned char *md52, int len) {
 	return (chk);
 }
 
-extern void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen) {
+extern int md5cmp(unsigned char *digest1, unsigned char *digest2) {
+	return (_digest_cmp(digest1, digest2, 16));
+}
+
+extern int sha1cmp(unsigned char *digest1, unsigned char *digest2) {
+	return (_digest_cmp(digest1, digest2, 20));
+}
+
+extern int sha256cmp(unsigned char *digest1, unsigned char *digest2) {
+	return (_digest_cmp(digest1, digest2, 32));
+}
+
+extern int sha512cmp(unsigned char *digest1, unsigned char *digest2) {
+	return (_digest_cmp(digest1, digest2, 64));
+}
+
+extern void _hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen,
+		hmacfunc func, short alglen) {
 	unsigned char	okey[64], ikey[64];
 	int		bcnt;
 
@@ -112,8 +161,24 @@ extern void md5hmac(unsigned char *buff, const void *data, unsigned long len, co
 		okey[bcnt] ^= 0x5c;
 	};
 
-	md5sum2(buff, ikey, 64, data, len);
-	md5sum2(buff, okey, 64, buff, 16);
+	func(buff, ikey, 64, data, len);
+	func(buff, okey, 64, buff, alglen);
+}
+
+extern void md5hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen) {
+	_hmac(buff, data, len, key, klen, md5sum2, 16);
+}
+
+extern void sha1hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen) {
+	_hmac(buff, data, len, key, klen, sha1sum2, 20);
+}
+
+extern void sha256hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen) {
+	_hmac(buff, data, len, key, klen, sha256sum2, 32);
+}
+
+extern void sha512hmac(unsigned char *buff, const void *data, unsigned long len, const void *key, unsigned long klen) {
+	_hmac(buff, data, len, key, klen, sha512sum2, 64);
 }
 
 extern int strlenzero(const char *str) {

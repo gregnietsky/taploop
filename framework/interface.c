@@ -406,11 +406,11 @@ extern int interface_bind(char *iface, int protocol, int flags) {
  * mac48 is char[ETH_ALEN] eui64 is char[8]
  */
 extern int eui48to64(unsigned char *mac48, unsigned char *eui64) {
-	eui64[0] = mac48[0] & 0xFD; /*clear local assignment and multicast bits*/
+	eui64[0] = (mac48[0] & 0xFE) | 0x02; /*clear multicast bit and set local asignment*/
 	eui64[1] = mac48[1];
 	eui64[2] = mac48[2];
 	eui64[3] = 0xFF;
-	eui64[4] = 0xFF;
+	eui64[4] = 0xFE;
 	eui64[5] = mac48[3];
 	eui64[6] = mac48[4];
 	eui64[7] = mac48[5];
@@ -429,13 +429,16 @@ extern int get_ip6_addrprefix(const char *iface, unsigned char *prefix) {
 	unsigned char mac48[ETH_ALEN];
 	struct timeval tv;
 
+	if (ifhwaddr(iface, mac48)) {
+		return (-1);
+	}
+
 	gettimeofday(&tv, NULL);
 	ntpts = tvtontp64(&tv);
 
-	ifhwaddr(iface, mac48);
 	eui48to64(mac48, eui64);
 
-	shasum2(sha1, (void*)&ntpts, sizeof(ntpts), (void*)eui64, sizeof(eui64));
+	sha1sum2(sha1, (void*)&ntpts, sizeof(ntpts), (void*)eui64, sizeof(eui64));
 
 	prefix[0] = 0xFD; /*0xFC | 0x01 FC00/7 with local bit set [8th bit]*/
 	memcpy(prefix + 1, sha1+15, 5); /*LSD 40 bits of the SHA hash*/
