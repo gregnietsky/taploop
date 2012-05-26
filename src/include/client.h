@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define _TL_CLIENT_H
 
 #include <sys/socket.h>
+#include <stdint.h>
 #include <linux/if_arp.h>
 
 enum client_action {
@@ -55,12 +56,16 @@ union client_payload {
 };
 
 struct client_command {
+	uint16_t len;
+	uint16_t csum;
 	enum	client_action	action;
 	enum	client_acttype	datatype;
 	union	client_payload	payload;
 };
 
 struct client_response {
+	uint16_t len;
+	uint16_t csum;
 	int	error;
 	char	message[128];
 };

@@ -230,3 +230,49 @@ extern char *trim(const char *str) {
 extern uint64_t tvtontp64(struct timeval *tv) {
 	return ((((uint64_t)tv->tv_sec + 2208988800u) << 32) + ((uint32_t)tv->tv_usec * 4294.967296));
 }
+
+/*
+ * RFC 1701 Checksum based on code from the RFC
+ */
+extern uint16_t _checksum(const void *data, int len, const uint16_t check) {
+	uint64_t csum = 0;
+	const uint32_t *arr = (uint32_t*)data;
+
+	/*handle 32bit chunks*/
+ 	while(len > 3) {
+		csum += *arr++;
+		len -= 4;
+	}
+
+	/*handle left over 16 bit chunk*/
+	if (len > 1) {
+		csum += *(uint16_t*)arr;
+		arr = (uint32_t*)((uint16_t*)arr + 1);
+		len -= 2;
+	}
+
+	/*handle odd byte*/
+	if (len) {
+		csum += *(uint8_t*)arr;
+	}
+
+	/*add checksum when called as verify*/
+	if (check) {
+		csum += check;
+	}
+
+	/*collapse to 16 bits adding all overflows leaving 16bit checksum*/
+	while(csum >> 16) {
+		csum = (csum & 0xffff) + (csum >> 16);
+	}
+
+	return (~(uint16_t)csum);
+}
+
+extern uint16_t checksum(const void *data, int len) {
+	return (_checksum(data, len, 0));
+}
+
+extern uint16_t verifysum(const void *data, int len, const uint16_t check) {
+	return (_checksum(data, len, check));
+}

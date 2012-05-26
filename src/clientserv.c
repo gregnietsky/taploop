@@ -83,7 +83,7 @@ extern void *clientsock_client(void **data) {
 
 	len = read(fd, &cmd, sizeof(cmd));
 
-	if (len != sizeof(cmd)) {
+	if ((cmd.len != len) || (len != sizeof(cmd)) || checksum(&cmd, len)) {
 		printf("Invalid Command\n");
 		goto out;
 	}
@@ -96,6 +96,10 @@ extern void *clientsock_client(void **data) {
 		case CD_MACVLAN: client_macvlan(cmd.action, &cmd.payload.macvlan, &res);
 			break;
 	}
+
+	res.len = sizeof(res);
+	res.csum = 0;
+	res.csum = checksum(&res, res.len);
 
 	len = write(fd, &res, sizeof(res));
 out:

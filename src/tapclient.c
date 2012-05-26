@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/socket.h>
 
 #include "include/client.h"
+#include <framework.h>
 
 static int connect_socket(char *sock) {
 	struct sockaddr_un	adr;
@@ -91,8 +92,15 @@ int main(int argc, char *argv[]) {
 		goto out;
 	}
 
-	if (write(sock, &cmd, sizeof(cmd))) {
-		if ((len = read(sock, &res, sizeof(res)) == sizeof(res))) {
+	cmd.len = sizeof(cmd);
+	cmd.csum = 0;
+	cmd.csum = checksum(&cmd, cmd.len);
+
+	if (write(sock, &cmd, cmd.len)) {
+		len = read(sock, &res, sizeof(res));
+		if ((len != res.len) || (len != sizeof(res)) || checksum(&res, res.len)) {
+			printf("Invalid result !\n");
+		} else {
 			printf("%s : %s\n", res.message, (res.error) ? "Failed" : "OK");
 			ret = res.error;
 		}

@@ -176,6 +176,8 @@ extern char *ltrim(char *str);
 extern char *rtrim(const char *str);
 extern char *trim(const char *str);
 extern uint64_t tvtontp64(struct timeval *tv);
+extern uint16_t checksum(void *data, int len);
+extern uint16_t verifysum(const void *data, int len, const uint16_t check);
 
 /*IP Utilities*/
 extern struct fwsocket *make_socket(int family, int type, int proto, void *ssl);
