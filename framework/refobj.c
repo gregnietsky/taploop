@@ -178,6 +178,26 @@ extern int objcnt(void *data) {
 	return (ret);
 }
 
+extern int objsize(void *data) {
+	char *ptr = data;
+	int ret = 0;
+	struct ref_obj *ref;
+
+	if (!data) {
+		return (ret);
+	}
+
+	ptr = ptr - refobj_offset;
+	ref = (struct ref_obj*)ptr;
+
+	if (ref->magic == REFOBJ_MAGIC) {
+		pthread_mutex_lock(ref->lock);
+		ret = ref->size;
+		pthread_mutex_unlock(ref->lock);
+	}
+	return (ret);
+}
+
 extern int objlock(void *data) {
 	char *ptr = data;
 	struct ref_obj *ref;
@@ -554,6 +574,10 @@ extern int bucket_list_cnt(struct bucket_list *blist) {
 extern void *bucket_list_find_key(struct bucket_list *blist, const void *key) {
 	struct blist_obj *entry;
 	int hash, bucket;
+
+	if (!blist) {
+		return (NULL);
+	}
 
 	hash = gethash(blist, key, 1);
 	bucket = ((hash >> (32 - blist->bucketbits)) & ((1 << blist->bucketbits) - 1));
