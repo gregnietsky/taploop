@@ -35,6 +35,10 @@ AC_ARG_ENABLE([dev-mode], AS_HELP_STRING([--enable-dev-mode], [Developer mode -g
 AC_ARG_ENABLE([world-peace], AS_HELP_STRING([--enable-world-peace], [Yeah right .....]))
 AC_ARG_WITH([system-framework], AS_HELP_STRING([--with-system-framework], [Use the system framework not the packaged version]))
 
+PKG_CHECK_MODULES(LIBNFQUEUE, libnetfilter_queue >= 0, [have_libnfqueue=yes], [have_libnfqueue=no])
+AS_IF([test "x$have_libnfqueue" = "xyes"],
+	[AC_CHECK_LIB([netfilter_queue], [nfq_open])])
+
 PKG_CHECK_MODULES(LIBFRAMEWORK, framework >= 0, [have_libframework=yes], [have_libframework=no])
 AS_IF([test "x$enable_framework_install" != "xyes"],
 	AS_IF([test "x$with_system_framework" = "xyes"],

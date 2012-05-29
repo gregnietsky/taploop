@@ -36,6 +36,10 @@
 /* Define to 1 if you have the `framework' library (-lframework). */
 #undef HAVE_LIBFRAMEWORK
 
+/* Define to 1 if you have the `netfilter_queue' library (-lnetfilter_queue).
+   */
+#undef HAVE_LIBNETFILTER_QUEUE
+
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #undef HAVE_LIBPTHREAD
 

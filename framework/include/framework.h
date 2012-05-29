@@ -124,6 +124,7 @@ extern int objlock(void *data);
 extern int objtrylock(void *data);
 extern int objunlock(void *data);
 extern int objcnt(void *data);
+extern int objsize(void *data);
 extern int objunref(void *data);
 extern int objref(void *data);
 extern void *objalloc(int size, objdestroy);
@@ -191,6 +192,15 @@ extern void closesocket(struct fwsocket *sock);
 
 extern void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup);
 extern void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
+
+/*IPv6 Utilities*/
+int checkipv6mask(const char *ipaddr, const char *network, uint8_t bits);
+
+/*netfilter queue*/
+typedef struct nfq_queue nfq_queue;
+typedef struct nfq_data nfq_data;
+typedef uint32_t (*nfqueue_cb)(struct nfq_data*, char*, uint32_t, void*, uint32_t*, void**);
+extern struct nfq_queue *nfqueue_attach(uint16_t pf, uint16_t num, uint8_t mode, uint32_t range, nfqueue_cb cb, void *data);
 
 /*interface functions*/
 extern int delete_kernvlan(char *ifname, int vid);

@@ -11,7 +11,9 @@ else
        noinst_LTLIBRARIES = libframework.la
 endif
 
-libframework_la_SOURCES = refobj.c lookup3.c thread.c main.c unixsock.c util.c radius.c iputil.c sslutil.c interface.c config.c
+libframework_la_SOURCES = refobj.c lookup3.c thread.c main.c unixsock.c util.c radius.c iputil.c sslutil.c interface.c config.c \
+                          ipv6util.c nf_queue.c
+
 libframework_la_LIBADD = ./libnetlink/libnetlink.la
 libframework_la_CFLAGS = -I./include -I./libnetlink/include $(DEVELOPER_CFLAGS)
 libframework_la_LDFLAGS = -version-info 1:0:1
