@@ -39,6 +39,10 @@ PKG_CHECK_MODULES(LIBNFQUEUE, libnetfilter_queue >= 0, [have_libnfqueue=yes], [h
 AS_IF([test "x$have_libnfqueue" = "xyes"],
 	[AC_CHECK_LIB([netfilter_queue], [nfq_open])])
 
+PKG_CHECK_MODULES(LIBNFCT, libnetfilter_conntrack >= 0, [have_libnfctrack=yes], [have_libnfctrack=no])
+AS_IF([test "x$have_libnfctrack" = "xyes"],
+	[AC_CHECK_LIB([netfilter_conntrack], [nfct_open])])
+
 PKG_CHECK_MODULES(LIBFRAMEWORK, framework >= 0, [have_libframework=yes], [have_libframework=no])
 AS_IF([test "x$enable_framework_install" != "xyes"],
 	AS_IF([test "x$with_system_framework" = "xyes"],

@@ -12,7 +12,7 @@ else
 endif
 
 libframework_la_SOURCES = refobj.c lookup3.c thread.c main.c unixsock.c util.c radius.c socket.c sslutil.c interface.c config.c \
-                          iputil.c nf_queue.c
+                          iputil.c nf_queue.c nf_ctrack.c
 
 libframework_la_LIBADD = ./libnetlink/libnetlink.la
 libframework_la_CFLAGS = -I./include -I./libnetlink/include $(DEVELOPER_CFLAGS)

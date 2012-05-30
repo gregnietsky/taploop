@@ -626,6 +626,8 @@ FRAMEWORK_INCL
 FRAMEWORK_LIBS
 LIBFRAMEWORK_LIBS
 LIBFRAMEWORK_CFLAGS
+LIBNFCT_LIBS
+LIBNFCT_CFLAGS
 LIBNFQUEUE_LIBS
 LIBNFQUEUE_CFLAGS
 PKG_CONFIG_LIBDIR
@@ -782,6 +784,8 @@ PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 LIBNFQUEUE_CFLAGS
 LIBNFQUEUE_LIBS
+LIBNFCT_CFLAGS
+LIBNFCT_LIBS
 LIBFRAMEWORK_CFLAGS
 LIBFRAMEWORK_LIBS'
 
@@ -1448,6 +1452,10 @@ Some influential environment variables:
               C compiler flags for LIBNFQUEUE, overriding pkg-config
   LIBNFQUEUE_LIBS
               linker flags for LIBNFQUEUE, overriding pkg-config
+  LIBNFCT_CFLAGS
+              C compiler flags for LIBNFCT, overriding pkg-config
+  LIBNFCT_LIBS
+              linker flags for LIBNFCT, overriding pkg-config
   LIBFRAMEWORK_CFLAGS
               C compiler flags for LIBFRAMEWORK, overriding pkg-config
   LIBFRAMEWORK_LIBS
@@ -15849,6 +15857,125 @@ if test "x$ac_cv_lib_netfilter_queue_nfq_open" = xyes; then :
 _ACEOF
 
   LIBS="-lnetfilter_queue $LIBS"
+
+fi
+
+fi
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBNFCT" >&5
+$as_echo_n "checking for LIBNFCT... " >&6; }
+
+if test -n "$LIBNFCT_CFLAGS"; then
+    pkg_cv_LIBNFCT_CFLAGS="$LIBNFCT_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libnetfilter_conntrack >= 0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libnetfilter_conntrack >= 0") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBNFCT_CFLAGS=`$PKG_CONFIG --cflags "libnetfilter_conntrack >= 0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LIBNFCT_LIBS"; then
+    pkg_cv_LIBNFCT_LIBS="$LIBNFCT_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libnetfilter_conntrack >= 0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libnetfilter_conntrack >= 0") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBNFCT_LIBS=`$PKG_CONFIG --libs "libnetfilter_conntrack >= 0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LIBNFCT_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnetfilter_conntrack >= 0" 2>&1`
+        else
+	        LIBNFCT_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnetfilter_conntrack >= 0" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LIBNFCT_PKG_ERRORS" >&5
+
+	have_libnfctrack=no
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	have_libnfctrack=no
+else
+	LIBNFCT_CFLAGS=$pkg_cv_LIBNFCT_CFLAGS
+	LIBNFCT_LIBS=$pkg_cv_LIBNFCT_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	have_libnfctrack=yes
+fi
+if test "x$have_libnfctrack" = "xyes"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for nfct_open in -lnetfilter_conntrack" >&5
+$as_echo_n "checking for nfct_open in -lnetfilter_conntrack... " >&6; }
+if ${ac_cv_lib_netfilter_conntrack_nfct_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lnetfilter_conntrack  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char nfct_open ();
+int
+main ()
+{
+return nfct_open ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_netfilter_conntrack_nfct_open=yes
+else
+  ac_cv_lib_netfilter_conntrack_nfct_open=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_netfilter_conntrack_nfct_open" >&5
+$as_echo "$ac_cv_lib_netfilter_conntrack_nfct_open" >&6; }
+if test "x$ac_cv_lib_netfilter_conntrack_nfct_open" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBNETFILTER_CONNTRACK 1
+_ACEOF
+
+  LIBS="-lnetfilter_conntrack $LIBS"
 
 fi
 
