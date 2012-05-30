@@ -50,7 +50,7 @@ static void *unsock_serv(void **data) {
 	int selfd;
 	int on = 1;
 	int *clfd;
-	int fd;
+	int fd, fdf;
 
 	if ((fd = socket(PF_UNIX, unsock->protocol, 0)) < 0) {
 		return NULL;
@@ -59,7 +59,9 @@ static void *unsock_serv(void **data) {
 	/* set user RW */
 	umask(unsock->mask);
 
-	fcntl(fd, F_SETFD, O_NONBLOCK);
+	fdf = fcntl(fd, F_GETFL);
+	fcntl(fd, F_SETFD, fdf | O_NONBLOCK);
+
 	memset(&adr, 0, sizeof(adr));
 	adr.sun_family = PF_UNIX;
 	salen = sizeof(adr);
