@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * Compare a ip address to a network address of bits long
  * in chunks of 32 bits returns 0 on match
  */
-int checkipv6mask(const char *ipaddr, const char *network, uint8_t bits) {
+extern int checkipv6mask(const char *ipaddr, const char *network, uint8_t bits) {
 	uint8_t cnt, bytelen, bitlen;
 	uint32_t mask, res = 0;
 	uint32_t *nw = (uint32_t*)network;
