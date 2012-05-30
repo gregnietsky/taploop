@@ -144,11 +144,11 @@ extern int objunref(void *data) {
 			ref->magic = 0;
 			ref->size = 0;
 			ref->data = NULL;
-			pthread_mutex_unlock(lock);
-			pthread_mutex_destroy(lock);
 			if (ref->destroy) {
 				ref->destroy(data);
 			}
+			pthread_mutex_unlock(lock);
+			pthread_mutex_destroy(lock);
 			free(lock);
 			free(ref);
 		} else {
