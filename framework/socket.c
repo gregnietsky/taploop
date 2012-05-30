@@ -172,6 +172,7 @@ static struct fwsocket *_opensocket(int family, int stype, int proto, const char
 			case SOCK_STREAM:
 			case SOCK_SEQPACKET:
 				listen(sock->sock, backlog);
+				/* no break */
 			default:
 				break;
 		}

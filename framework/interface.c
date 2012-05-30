@@ -442,7 +442,7 @@ extern int get_ip6_addrprefix(const char *iface, unsigned char *prefix) {
 	prefix[0] = 0xFD; /*0xFC | 0x01 FC00/7 with local bit set [8th bit]*/
 	memcpy(prefix + 1, sha1+15, 5); /*LSD 40 bits of the SHA hash*/
 
-	return 0;
+	return (0);
 }
 
 /*
