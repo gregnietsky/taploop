@@ -46,15 +46,13 @@ struct thread_pvt {
 	enum                    threadopt flags;
 };
 
-struct threadcontainer {
-	struct bucket_list	*list;
-	struct thread_pvt	*manager;
-};
-
 /*
  * Global threads list
  */
-static struct threadcontainer *threads = NULL;
+struct threadcontainer {
+	struct bucket_list	*list;
+	struct thread_pvt	*manager;
+} *threads = NULL;
 
 static int hash_thread(const void *data, int key) {
         const struct thread_pvt *thread = data;
@@ -63,6 +61,13 @@ static int hash_thread(const void *data, int key) {
 
 	ret = jenhash(hashkey, sizeof(pthread_t), 0);
 	return (ret);
+}
+
+static void close_threads(void *data) {
+	if (threads && threads->list) {
+		objunref(threads->list);
+	}
+	threads = NULL;
 }
 
 /*
@@ -86,6 +91,15 @@ static void *threadwrap(void *data) {
 		setflag(thread, TL_THREAD_RUN);
 		ret = thread->func(&thread->data);
 		setflag(thread, TL_THREAD_DONE);
+	}
+
+	/* this thread was called without thread management*/
+	if (!threads || !threads->manager) {
+		if (thread->cleanup) {
+				thread->cleanup(thread->data);
+		}
+		objunref(thread->data);
+		objunref(thread);
 	}
 
 	return (ret);
@@ -202,10 +216,21 @@ static void *managethread(void **data) {
  * start manager thread
  */
 extern int startthreads(void) {
-	threads = objalloc(sizeof(*threads), NULL);
-	threads->list = create_bucketlist(4, hash_thread);
-	threads->manager = framework_mkthread(managethread, NULL, manager_sig, NULL);
-	return (threads && threads->list && threads->manager);
+	if (!(threads = objalloc(sizeof(*threads), close_threads))) {
+		return (0);
+	}
+
+	if (!(threads->list = create_bucketlist(4, hash_thread))) {
+		objunref(threads);
+		return (0);
+	}
+
+	if (!(threads->manager = framework_mkthread(managethread, NULL, manager_sig, NULL))) {
+		objunref(threads);
+		return (0);
+	}
+
+	return (1);
 }
 
 extern void stopthreads(void) {
