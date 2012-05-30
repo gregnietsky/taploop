@@ -182,6 +182,7 @@ extern char *rtrim(const char *str);
 extern char *trim(const char *str);
 extern uint64_t tvtontp64(struct timeval *tv);
 extern uint16_t checksum(void *data, int len);
+extern uint16_t checksum_add(const uint16_t checksum, const void *data, int len);
 extern uint16_t verifysum(const void *data, int len, const uint16_t check);
 
 /*IP Utilities*/
@@ -197,8 +198,15 @@ extern void closesocket(struct fwsocket *sock);
 extern void socketclient(struct fwsocket *sock, void *data, socketrecv read, threadcleanup cleanup);
 extern void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketrecv acceptfunc, threadcleanup cleanup, void *data);
 
-/*IPv6 Utilities*/
-int checkipv6mask(const char *ipaddr, const char *network, uint8_t bits);
+/*IP Utilities*/
+extern int checkipv6mask(const char *ipaddr, const char *network, uint8_t bits);
+extern void ipv4tcpchecksum(uint8_t *pkt);
+extern void ipv4udpchecksum(uint8_t *pkt);
+extern void icmpchecksum(uint8_t *pkt);
+extern void ipv4checksum(uint8_t *pkt);
+extern int packetchecksumv4(uint8_t *pkt);
+extern int packetchecksumv6(uint8_t *pkt);
+extern int packetchecksum(uint8_t *pkt);
 
 /*netfilter queue*/
 extern struct nfq_queue *nfqueue_attach(uint16_t pf, uint16_t num, uint8_t mode, uint32_t range, nfqueue_cb cb, void *data);

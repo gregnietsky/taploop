@@ -273,6 +273,10 @@ extern uint16_t checksum(const void *data, int len) {
 	return (_checksum(data, len, 0));
 }
 
+extern uint16_t checksum_add(const uint16_t checksum, const void *data, int len) {
+	return (_checksum(data, len, ~checksum));
+}
+
 extern uint16_t verifysum(const void *data, int len, const uint16_t check) {
 	return (_checksum(data, len, check));
 }
