@@ -72,6 +72,9 @@ struct config_entry {
 };
 
 typedef struct radius_packet radius_packet;
+typedef struct nfq_queue nfq_queue;
+typedef struct nfq_data nfq_data;
+typedef struct nfqnl_msg_packet_hdr nfqnl_msg_packet_hdr;
 
 /*callback function type def's*/
 typedef void	(*radius_cb)(struct radius_packet*, void*);
@@ -87,6 +90,7 @@ typedef void	(*blist_cb)(void*, void*);
 typedef void	(*config_filecb)(struct bucket_list*, const char*, const char*);
 typedef void	(*config_catcb)(struct bucket_list*, const char*);
 typedef void	(*config_entrycb)(const char*, const char*);
+typedef uint32_t (*nfqueue_cb)(struct nfq_data*, struct nfqnl_msg_packet_hdr*, char*, uint32_t, void*, uint32_t*, void**);
 
 /*these can be set int the application */
 struct framework_core {
@@ -197,9 +201,6 @@ extern void socketserver(struct fwsocket *sock, socketrecv connectfunc, socketre
 int checkipv6mask(const char *ipaddr, const char *network, uint8_t bits);
 
 /*netfilter queue*/
-typedef struct nfq_queue nfq_queue;
-typedef struct nfq_data nfq_data;
-typedef uint32_t (*nfqueue_cb)(struct nfq_data*, char*, uint32_t, void*, uint32_t*, void**);
 extern struct nfq_queue *nfqueue_attach(uint16_t pf, uint16_t num, uint8_t mode, uint32_t range, nfqueue_cb cb, void *data);
 
 /*interface functions*/

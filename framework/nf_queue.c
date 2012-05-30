@@ -19,17 +19,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <linux/types.h>
 #include <linux/netfilter.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
+
 #include <framework.h>
+
+enum NF_QUEUE_FLAGS {
+	NFQUEUE_DONE	= 1 << 0
+};
 
 struct nfq_struct {
 	struct nfq_handle *h;
 	uint16_t pf;
 	int fd;
+	int flags;
 };
 
 struct nfq_queue {
@@ -52,11 +61,20 @@ static int nfqueue_hash(const void *data, int key) {
 	return (*hashkey);
 }
 
+static void nfqueues_close(void *data) {
+
+	if (nfqueues->queues) {
+		objunref(nfqueues->queues);
+	}
+	nfqueues = NULL;
+}
+
 static void nfqueue_close(void *data) {
 	struct nfq_struct *nfq = data;
 
 	nfq_unbind_pf(nfq->h, nfq->pf);
 	nfq_close(nfq->h);
+	objunref(nfqueues);
 }
 
 static void nfqueue_close_q(void *data) {
@@ -65,33 +83,40 @@ static void nfqueue_close_q(void *data) {
 	if (nfq_q->qh) {
 		nfq_destroy_queue(nfq_q->qh);
 	}
-	objunref(nfq_q->nfq);
 
-	if (nfqueues) {
-		objlock(nfqueues);
-		if (objcnt(nfq_q->nfq) == 1) {
-			remove_bucket_item(nfqueues->queues, nfq_q->nfq);
-		}
-		objunlock(nfqueues);
+	/*im here in the list and running thread*/
+	objlock(nfqueues);
+	if (objcnt(nfq_q->nfq) <= 3) {
+		setflag(nfq_q->nfq, NFQUEUE_DONE);
+		remove_bucket_item(nfqueues->queues, nfq_q->nfq);
 	}
+	objunlock(nfqueues);
+	objunref(nfq_q->nfq);
 }
 
 static void *nfqueue_thread(void **data) {
         struct nfq_struct *nfq = *data;
 	fd_set  rd_set, act_set;
 	struct timeval tv;
-	int len, selfd;
+	int len, selfd, fd;
 	char buf[4096];
+	int opt = 1;
+
+	objlock(nfq);
+	fd = nfq->fd;
+	objunlock(nfq);
 
 	FD_ZERO(&rd_set);
-	FD_SET(nfq->fd, &rd_set);
+	FD_SET(fd, &rd_set);
+	fcntl(fd, F_SETFD, O_NONBLOCK);
+	ioctl(fd, FIONBIO, &opt);
 
-	while (framework_threadok(data)) {
+	while (!testflag(nfq, NFQUEUE_DONE) && framework_threadok(data)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
 
-		selfd = select(nfq->fd + 1, &act_set, NULL, NULL, &tv);
+		selfd = select(fd + 1, &act_set, NULL, NULL, &tv);
 
 		/*returned due to interupt continue or timed out*/
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
@@ -100,25 +125,15 @@ static void *nfqueue_thread(void **data) {
 			break;
 		}
 
-		if ((FD_ISSET(nfq->fd, &act_set)) &&
-		    ((len = recv(nfq->fd, buf, sizeof(buf), 0)) >= 0)) {
+		if ((FD_ISSET(fd, &act_set)) &&
+		    ((len = recv(fd, buf, sizeof(buf), 0)) >= 0)) {
+			objlock(nfq);
 			nfq_handle_packet(nfq->h, buf, len);
+			objunlock(nfq);
 		}
 	}
 
 	return (NULL);
-}
-
-static void nfqueue_addlist(struct nfq_struct *nfq) {
-	if (!nfqueues && !(nfqueues = objalloc(sizeof(*nfqueues), NULL))) {
-		return;
-	}
-
-	objlock(nfqueues);
-	if (nfqueues->queues || (nfqueues->queues = create_bucketlist(0, nfqueue_hash))) {
-		addtobucket(nfqueues->queues, nfq);
-	}
-	objunlock(nfqueues);
 }
 
 static struct nfq_struct *nfqueue_init(uint16_t pf) {
@@ -144,8 +159,24 @@ static struct nfq_struct *nfqueue_init(uint16_t pf) {
 		return (NULL);
 	}
 
+	if (nfqueues) {
+		objref(nfqueues);
+	} else if (!(nfqueues = objalloc(sizeof(*nfqueues), nfqueues_close))) {
+		objunref(nfq);
+		return (NULL);
+	}
+
+	objlock(nfqueues);
+	if ((nfqueues->queues || (nfqueues->queues = create_bucketlist(0, nfqueue_hash))) &&
+	    !addtobucket(nfqueues->queues, nfq)) {
+		objunref(nfqueues);
+		objunref(nfq);
+		return (NULL);
+	}
+	objunlock(nfqueues);
+
 	nfq->fd = nfq_fd(nfq->h);
-	nfqueue_addlist(nfq);
+
 	framework_mkthread(nfqueue_thread, NULL, NULL, nfq);
 
 	return (nfq);
@@ -171,7 +202,7 @@ static int nfqueue_callback(struct nfq_q_handle *qh, struct nfgenmsg *msg, struc
 	}
 
 	if (nfq_q->cb) {
-		verdict = nfq_q->cb(nfad, pkt, len, nfq_q->data, &mark, &mangle);
+		verdict = nfq_q->cb(nfad, ph, pkt, len, nfq_q->data, &mark, &mangle);
 	}
 
 	mark = htonl(mark);
@@ -197,7 +228,8 @@ extern struct nfq_queue *nfqueue_attach(uint16_t pf, uint16_t num, uint8_t mode,
 	}
 
 	objlock(nfqueues);
-	if (!(nfqueues && (nfq_q->nfq = bucket_list_find_key(nfqueues->queues, &pf))) && !(nfq_q->nfq = nfqueue_init(pf))) {
+	if (!(nfqueues && (nfq_q->nfq = bucket_list_find_key(nfqueues->queues, &pf))) &&
+	    !(nfq_q->nfq || (nfq_q->nfq = nfqueue_init(pf)))) {
 		objunlock(nfqueues);
 		objunref(nfq_q);
 		return (NULL);
