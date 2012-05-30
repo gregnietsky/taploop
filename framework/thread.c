@@ -67,6 +67,10 @@ static void close_threads(void *data) {
 	if (threads && threads->list) {
 		objunref(threads->list);
 	}
+
+	if (threads && threads->manager) {
+		objunref(threads->manager);
+	}
 	threads = NULL;
 }
 
@@ -82,70 +86,6 @@ extern int framework_threadok(void *data) {
 	}
 	return (0);
 }
-
-static void *threadwrap(void *data) {
-	struct thread_pvt *thread = data;
-	void *ret = NULL;
-
-	if (thread && thread->func) {
-		setflag(thread, TL_THREAD_RUN);
-		ret = thread->func(&thread->data);
-		setflag(thread, TL_THREAD_DONE);
-	}
-
-	/* this thread was called without thread management*/
-	if (!threads || !threads->manager) {
-		if (thread->cleanup) {
-				thread->cleanup(thread->data);
-		}
-		objunref(thread->data);
-		objunref(thread);
-	}
-
-	return (ret);
-}
-
-/*
- * create a thread
- */
-extern struct thread_pvt *framework_mkthread(threadfunc func, threadcleanup cleanup, threadsighandler sig_handler, void *data) {
-	struct thread_pvt *thread;
-
-	if (!(thread = objalloc(sizeof(*thread), NULL))) {
-		return NULL;
-	}
-
-	thread->data = data;
-	thread->flags = 0;
-	thread->cleanup = cleanup;
-	thread->sighandler = sig_handler;
-	thread->func = func;
-	thread->magic = THREAD_MAGIC;
-
-	/* grab a ref to data for thread to make sure it does not go away*/
-	objref(thread->data);
-	if (pthread_create(&thread->thr, NULL, threadwrap, thread)) {
-		objunref(thread);
-		objunref(thread->data);
-		return NULL;
-	}
-
-	/* am i up and running move ref to list*/
-	if (!pthread_kill(thread->thr, 0)) {
-		if (threads) {
-			objlock(threads);
-			addtobucket(threads->list, thread);
-			objunlock(threads);
-		}
-		return (thread);
-	} else {
-		objunref(thread->data);
-		objunref(thread);
-	}
-
-	return NULL;
-}
-
 
 /*
  * close all threads when we get SIGHUP
@@ -207,6 +147,7 @@ static void *managethread(void **data) {
 		stop_bucket_loop(bloop);
 		sleep(1);
 	}
+	objunref(threads);
 
 	return NULL;
 }
@@ -216,16 +157,16 @@ static void *managethread(void **data) {
  * start manager thread
  */
 extern int startthreads(void) {
-	if (!(threads = objalloc(sizeof(*threads), close_threads))) {
+	if (!threads && !(threads = objalloc(sizeof(*threads), close_threads))) {
 		return (0);
 	}
 
-	if (!(threads->list = create_bucketlist(4, hash_thread))) {
+	if (!threads->list && !(threads->list = create_bucketlist(4, hash_thread))) {
 		objunref(threads);
 		return (0);
 	}
 
-	if (!(threads->manager = framework_mkthread(managethread, NULL, manager_sig, NULL))) {
+	if (!threads->manager && !(threads->manager = framework_mkthread(managethread, NULL, manager_sig, NULL))) {
 		objunref(threads);
 		return (0);
 	}
@@ -234,9 +175,71 @@ extern int startthreads(void) {
 }
 
 extern void stopthreads(void) {
-	if (threads->manager) {
+	if (threads) {
 		clearflag(threads->manager, TL_THREAD_RUN);
 	}
+}
+
+static void *threadwrap(void *data) {
+	struct thread_pvt *thread = data;
+	void *ret = NULL;
+
+	if (thread && thread->func) {
+		setflag(thread, TL_THREAD_RUN);
+		ret = thread->func(&thread->data);
+		setflag(thread, TL_THREAD_DONE);
+	}
+
+	if (!threads || !threads->manager) {
+		if (thread->cleanup) {
+				thread->cleanup(thread->data);
+		}
+		objunref(thread->data);
+		objunref(thread);
+	}
+
+	return (ret);
+}
+
+/*
+ * create a thread
+ */
+extern struct thread_pvt *framework_mkthread(threadfunc func, threadcleanup cleanup, threadsighandler sig_handler, void *data) {
+	struct thread_pvt *thread;
+
+	if (!(thread = objalloc(sizeof(*thread), NULL))) {
+		return NULL;
+	}
+
+	thread->data = data;
+	thread->flags = 0;
+	thread->cleanup = cleanup;
+	thread->sighandler = sig_handler;
+	thread->func = func;
+	thread->magic = THREAD_MAGIC;
+
+	/* grab a ref to data for thread to make sure it does not go away*/
+	objref(thread->data);
+	if (pthread_create(&thread->thr, NULL, threadwrap, thread)) {
+		objunref(thread);
+		objunref(thread->data);
+		return NULL;
+	}
+
+	/* am i up and running move ref to list*/
+	if (!pthread_kill(thread->thr, 0)) {
+		if ((threads && threads->list) || startthreads()) {
+			objlock(threads);
+			addtobucket(threads->list, thread);
+			objunlock(threads);
+		}
+		return (thread);
+	} else {
+		objunref(thread->data);
+		objunref(thread);
+	}
+
+	return NULL;
 }
 
 /*
@@ -251,7 +254,9 @@ extern void framework_shutdown(void) {
  * Join threads
  */
 extern void jointhreads(void) {
-	pthread_join(threads->manager->thr, NULL);
+	if ((threads && threads->manager) || startthreads()) {
+		pthread_join(threads->manager->thr, NULL);
+	}
 }
 
 /*
