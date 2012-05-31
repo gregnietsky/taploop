@@ -47,7 +47,6 @@ struct nfq_queue {
 	nfqueue_cb cb;
 	void *data;
 	uint16_t num;
-	int fd;
 };
 
 struct nfq_list {
@@ -98,25 +97,21 @@ static void *nfqueue_thread(void **data) {
         struct nfq_struct *nfq = *data;
 	fd_set  rd_set, act_set;
 	struct timeval tv;
-	int len, selfd, fd;
+	int len, selfd;
 	char buf[4096];
 	int opt = 1;
 
-	objlock(nfq);
-	fd = nfq->fd;
-	objunlock(nfq);
-
 	FD_ZERO(&rd_set);
-	FD_SET(fd, &rd_set);
-	fcntl(fd, F_SETFD, O_NONBLOCK);
-	ioctl(fd, FIONBIO, &opt);
+	FD_SET(nfq->fd, &rd_set);
+	fcntl(nfq->fd, F_SETFD, O_NONBLOCK);
+	ioctl(nfq->fd, FIONBIO, &opt);
 
 	while (!testflag(nfq, NFQUEUE_DONE) && framework_threadok(data)) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 20000;
 
-		selfd = select(fd + 1, &act_set, NULL, NULL, &tv);
+		selfd = select(nfq->fd + 1, &act_set, NULL, NULL, &tv);
 
 		/*returned due to interupt continue or timed out*/
 		if ((selfd < 0 && errno == EINTR) || (!selfd)) {
@@ -125,8 +120,8 @@ static void *nfqueue_thread(void **data) {
 			break;
 		}
 
-		if ((FD_ISSET(fd, &act_set)) &&
-		    ((len = recv(fd, buf, sizeof(buf), 0)) >= 0)) {
+		if ((FD_ISSET(nfq->fd, &act_set)) &&
+		    ((len = recv(nfq->fd, buf, sizeof(buf), 0)) >= 0)) {
 			objlock(nfq);
 			nfq_handle_packet(nfq->h, buf, len);
 			objunlock(nfq);
@@ -159,6 +154,11 @@ static struct nfq_struct *nfqueue_init(uint16_t pf) {
 		return (NULL);
 	}
 
+	if ((nfq->fd = nfq_fd(nfq->h)) < 0) {
+		objunref(nfq);
+		return (NULL);
+	}
+
 	if (nfqueues) {
 		objref(nfqueues);
 	} else if (!(nfqueues = objalloc(sizeof(*nfqueues), nfqueues_close))) {
@@ -174,8 +174,6 @@ static struct nfq_struct *nfqueue_init(uint16_t pf) {
 		return (NULL);
 	}
 	objunlock(nfqueues);
-
-	nfq->fd = nfq_fd(nfq->h);
 
 	framework_mkthread(nfqueue_thread, NULL, NULL, nfq);
 

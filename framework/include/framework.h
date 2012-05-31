@@ -74,6 +74,7 @@ struct config_entry {
 typedef struct radius_packet radius_packet;
 typedef struct nfq_queue nfq_queue;
 typedef struct nfq_data nfq_data;
+typedef struct nfct_struct nfct_struct;
 typedef struct nfqnl_msg_packet_hdr nfqnl_msg_packet_hdr;
 
 /*callback function type def's*/
@@ -210,6 +211,12 @@ extern int packetchecksum(uint8_t *pkt);
 
 /*netfilter queue*/
 extern struct nfq_queue *nfqueue_attach(uint16_t pf, uint16_t num, uint8_t mode, uint32_t range, nfqueue_cb cb, void *data);
+extern uint8_t nf_ctrack_nat(uint8_t *pkt, uint32_t addr, uint16_t port, uint8_t dnat);
+extern void nf_ctrack_dump(void);
+extern struct nfct_struct *nf_ctrack_trace(void);
+extern void nf_ctrack_endtrace(struct nfct_struct *nfct);
+extern uint8_t nf_ctrack_init(void);
+extern void nf_ctrack_close(void);
 
 /*interface functions*/
 extern int delete_kernvlan(char *ifname, int vid);
