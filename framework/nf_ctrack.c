@@ -89,7 +89,7 @@ static struct nfct_struct *nf_ctrack_alloc(uint8_t subsys_id, unsigned subscript
 }
 
 extern uint8_t nf_ctrack_init(void) {
-	if (!(ctrack = nf_ctrack_alloc(0, 0))) {
+	if (!(ctrack = nf_ctrack_alloc(CONNTRACK, 0))) {
 		return (-1);
 	}
 	return (0);
@@ -98,29 +98,50 @@ extern uint8_t nf_ctrack_init(void) {
 static struct nf_conntrack *build_ct(uint8_t *pkt) {
 	struct nf_conntrack *ct;
 	struct iphdr *ip = (struct iphdr*)pkt;
-	union l4hdr *l4 = (union l4hdr*)(ip + ip->ihl*4);
+	union l4hdr *l4 = (union l4hdr*)(pkt + (ip->ihl * 4));
 
 	if (!(ct = nfct_new())) {
 		return (NULL);
-	}
+	};
 
-	nfct_set_attr_u8(ct, ATTR_ORIG_L3PROTO, PF_INET);
-	nfct_set_attr_u8(ct, ATTR_ORIG_L4PROTO, ip->protocol);
-	nfct_set_attr_u32(ct, ATTR_ORIG_IPV4_SRC, ip->saddr);
-	nfct_set_attr_u32(ct, ATTR_ORIG_IPV4_DST, ip->daddr);
-
+	/*Build tupples*/
+	nfct_set_attr_u8(ct, ATTR_L3PROTO, PF_INET);
+	nfct_set_attr_u32(ct, ATTR_IPV4_SRC, ip->saddr);
+	nfct_set_attr_u32(ct, ATTR_IPV4_DST, ip->daddr);
+	nfct_set_attr_u8(ct, ATTR_L4PROTO, ip->protocol);
 	switch(ip->protocol) {
 		case IPPROTO_TCP:
-			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_SRC, l4->tcp.source);
-			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_SRC, l4->tcp.dest);
+			nfct_set_attr_u16(ct, ATTR_PORT_SRC, l4->tcp.source);
+			nfct_set_attr_u16(ct, ATTR_PORT_DST, l4->tcp.dest);
 			break;
 		case IPPROTO_UDP:
-			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_SRC, l4->udp.source);
-			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_SRC, l4->udp.dest);
+			nfct_set_attr_u16(ct, ATTR_PORT_SRC, l4->udp.source);
+			nfct_set_attr_u16(ct, ATTR_PORT_DST, l4->udp.dest);
 			break;
+		case IPPROTO_ICMP:
+			nfct_set_attr_u8(ct, ATTR_ICMP_TYPE, l4->icmp.type);
+			nfct_set_attr_u8(ct, ATTR_ICMP_CODE, l4->icmp.code);
+			nfct_set_attr_u16(ct, ATTR_ICMP_ID, l4->icmp.un.echo.id);
 		default:
 			break;
 	};
+
+/*	nfct_set_attr_u8(ct, ATTR_ORIG_L3PROTO, PF_INET);
+	nfct_set_attr_u32(ct, ATTR_ORIG_IPV4_SRC, ip->saddr);
+	nfct_set_attr_u32(ct, ATTR_ORIG_IPV4_DST, ip->daddr);
+	nfct_set_attr_u8(ct, ATTR_ORIG_L4PROTO, ip->protocol);
+	switch(ip->protocol) {
+		case IPPROTO_TCP:
+			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_SRC, l4->tcp.source);
+			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_DST, l4->tcp.dest);
+			break;
+		case IPPROTO_UDP:
+			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_SRC, l4->udp.source);
+			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_DST, l4->udp.dest);
+			break;
+		default:
+			break;
+	};*/
 
 	nfct_setobjopt(ct, NFCT_SOPT_SETUP_REPLY);
 /*	nfct_set_attr_u32(ct, ATTR_REPL_IPV4_SRC, ip->saddr);
