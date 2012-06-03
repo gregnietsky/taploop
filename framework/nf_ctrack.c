@@ -173,11 +173,11 @@ extern uint8_t nf_ctrack_nat(uint8_t *pkt, uint32_t addr, uint16_t port, uint8_t
 	nfct_setobjopt(ct, NFCT_SOPT_SETUP_REPLY);
 
 	nfct_set_attr_u32(ct, ATTR_TIMEOUT, 120);
-	nfct_set_attr_u8(ct, ATTR_TCP_STATE, TCP_CONNTRACK_ESTABLISHED);
 	nfct_set_attr_u32(ct, (dnat) ? ATTR_DNAT_IPV4 : ATTR_SNAT_IPV4, addr);
 
 	switch(ip->protocol) {
 		case IPPROTO_TCP:
+			nfct_set_attr_u8(ct, ATTR_TCP_STATE, TCP_CONNTRACK_ESTABLISHED);
 		case IPPROTO_UDP:
 			if (port) {
 				nfct_set_attr_u16(ct, (dnat) ? ATTR_DNAT_PORT : ATTR_SNAT_PORT, port);
