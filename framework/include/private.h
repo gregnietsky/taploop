@@ -19,6 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _TW_PRIVATE_H
 #define _FW_PRIVATE_H
 
+#include <linux/ip.h>
+#include <linux/icmp.h>
+#include <linux/tcp.h>
+#include <linux/udp.h>
+
 /*from sslutils iputil is the only consumer*/
 void dtsl_serveropts(struct fwsocket *sock);
 void dtlshandltimeout(struct fwsocket *sock);
@@ -27,5 +32,11 @@ void dtlshandltimeout(struct fwsocket *sock);
 int startthreads(void);
 void jointhreads(void);
 int thread_signal(int sig);
+
+union l4hdr {
+	struct tcphdr tcp;
+	struct udphdr udp;
+	struct icmphdr icmp;
+};
 
 #endif

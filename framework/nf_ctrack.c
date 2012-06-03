@@ -29,21 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
 
-#include <linux/ip.h>
-#include <linux/tcp.h>
-#include <linux/udp.h>
-#include <linux/icmp.h>
-
-#include <framework.h>
+#include "framework.h"
+#include "private.h"
 
 enum NF_CTRACK_FLAGS {
 	NFCTRACK_DONE    = 1 << 0
-};
-
-union l4hdr {
-	struct tcphdr tcp;
-	struct udphdr udp;
-	struct icmphdr icmp;
 };
 
 struct nfct_struct {

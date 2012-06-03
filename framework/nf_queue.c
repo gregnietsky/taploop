@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -28,7 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <linux/netfilter.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
 
-#include <framework.h>
+#include "framework.h"
+#include "private.h"
 
 enum NF_QUEUE_FLAGS {
 	NFQUEUE_DONE	= 1 << 0
@@ -250,4 +252,71 @@ extern struct nfq_queue *nfqueue_attach(uint16_t pf, uint16_t num, uint8_t mode,
 	nfq_set_mode(nfq_q->qh, mode, range);
 
 	return (nfq_q);
+}
+
+extern uint16_t snprintf_pkt(struct nfq_data *tb, struct nfqnl_msg_packet_hdr *ph, uint8_t *pkt, char *buff, uint16_t len) {
+	struct iphdr *ip = (struct iphdr*)pkt;
+	char *tmp = buff;
+	uint32_t id, mark, ifi;
+	uint16_t tlen, left = len;
+	char saddr[INET_ADDRSTRLEN], daddr[INET_ADDRSTRLEN];
+
+	if (ph) {
+		id = ntohl(ph->packet_id);
+		snprintf(tmp, left, "hw_protocol=0x%04x hook=%u id=%u ",
+			ntohs(ph->hw_protocol), ph->hook, id);
+		tlen = strlen(tmp);
+		tmp += tlen;
+		left -= tlen;
+	}
+
+	if ((mark = nfq_get_nfmark(tb))) {
+		snprintf(tmp, left, "mark=%u ", mark);
+		tlen = strlen(tmp);
+		tmp += tlen;
+		left -= tlen;
+	}
+
+	if ((ifi = nfq_get_indev(tb))) {
+		snprintf(tmp, left, "indev=%u ", ifi);
+		tlen = strlen(tmp);
+		tmp += tlen;
+		left -= tlen;
+	}
+
+	if ((ifi = nfq_get_outdev(tb))) {
+		snprintf(tmp, left, "outdev=%u ", ifi);
+		tlen = strlen(tmp);
+		tmp += tlen;
+		left -= tlen;
+	}
+
+	if (pkt && (ip->version == 4)) {
+		union l4hdr *l4 = (union l4hdr*)(pkt + (ip->ihl*4));
+
+		inet_ntop(AF_INET, &ip->saddr, saddr, INET_ADDRSTRLEN);
+		inet_ntop(AF_INET, &ip->daddr, daddr, INET_ADDRSTRLEN);
+
+		snprintf(tmp, left, "src=%s dst=%s proto=%i ", saddr, daddr, ip->protocol);
+		tlen = strlen(tmp);
+		tmp += tlen;
+		left -= tlen;
+
+		switch(ip->protocol) {
+			case IPPROTO_TCP:
+				snprintf(tmp, left, "sport=%i dport=%i ", ntohs(l4->tcp.source), ntohs(l4->tcp.dest));
+				break;
+			case IPPROTO_UDP:
+				snprintf(tmp, left, "sport=%i dport=%i ", ntohs(l4->udp.source), ntohs(l4->udp.dest));
+				break;
+			case IPPROTO_ICMP:
+				snprintf(tmp, left, "type=%i code=%i id=%i ", l4->icmp.type, l4->icmp.code, ntohs(l4->icmp.un.echo.id));
+				break;
+		}
+		tlen = strlen(tmp);
+		tmp += tlen;
+		left -= tlen;
+	}
+
+	return (len - left);
 }

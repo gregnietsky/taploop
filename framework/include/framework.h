@@ -211,6 +211,7 @@ extern int packetchecksum(uint8_t *pkt);
 
 /*netfilter queue*/
 extern struct nfq_queue *nfqueue_attach(uint16_t pf, uint16_t num, uint8_t mode, uint32_t range, nfqueue_cb cb, void *data);
+extern uint16_t snprintf_pkt(struct nfq_data *tb, struct nfqnl_msg_packet_hdr *ph, uint8_t *pkt, char *buff, uint16_t len);
 extern struct nf_conntrack *nf_ctrack_buildct(uint8_t *pkt);
 extern uint8_t nf_ctrack_delete(uint8_t *pkt);
 extern uint8_t nf_ctrack_nat(uint8_t *pkt, uint32_t addr, uint16_t port, uint8_t dnat);
