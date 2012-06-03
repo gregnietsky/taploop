@@ -189,7 +189,7 @@ static void framework_free(struct framework_core *ci) {
 }
 
 /*
- * daemonise and start socket
+ * daemonise and start thread manager
  */
 extern int framework_init(int argc, char *argv[], frameworkfunc callback, struct framework_core *core_info) {
 	int ret = 0;
