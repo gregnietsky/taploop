@@ -71,6 +71,12 @@ struct config_entry {
         const char *value;
 };
 
+struct zobj {
+	uint8_t *buff;
+	uint16_t olen;
+	uint16_t zlen;
+};
+
 typedef struct radius_packet radius_packet;
 typedef struct nfq_queue nfq_queue;
 typedef struct nfq_data nfq_data;
@@ -185,6 +191,8 @@ extern uint64_t tvtontp64(struct timeval *tv);
 extern uint16_t checksum(void *data, int len);
 extern uint16_t checksum_add(const uint16_t checksum, const void *data, int len);
 extern uint16_t verifysum(const void *data, int len, const uint16_t check);
+extern struct zobj *zcompress(uint8_t *buff, uint16_t len, uint8_t level);
+extern void zuncompress(struct zobj *buff, uint8_t *obuff);
 
 /*IP Utilities*/
 extern struct fwsocket *make_socket(int family, int type, int proto, void *ssl);
