@@ -89,13 +89,13 @@ static struct nfct_struct *nf_ctrack_alloc(uint8_t subsys_id, unsigned subscript
 }
 
 extern uint8_t nf_ctrack_init(void) {
-	if (!(ctrack = nf_ctrack_alloc(CONNTRACK, 0))) {
+	if (!ctrack && !(ctrack = nf_ctrack_alloc(CONNTRACK, 0))) {
 		return (-1);
 	}
 	return (0);
 }
 
-static struct nf_conntrack *build_ct(uint8_t *pkt) {
+extern struct nf_conntrack *nf_ctrack_buildct(uint8_t *pkt) {
 	struct nf_conntrack *ct;
 	struct iphdr *ip = (struct iphdr*)pkt;
 	union l4hdr *l4 = (union l4hdr*)(pkt + (ip->ihl * 4));
@@ -104,7 +104,7 @@ static struct nf_conntrack *build_ct(uint8_t *pkt) {
 		return (NULL);
 	};
 
-	/*Build tupples*/
+	/*Build tuple*/
 	nfct_set_attr_u8(ct, ATTR_L3PROTO, PF_INET);
 	nfct_set_attr_u32(ct, ATTR_IPV4_SRC, ip->saddr);
 	nfct_set_attr_u32(ct, ATTR_IPV4_DST, ip->daddr);
@@ -126,36 +126,10 @@ static struct nf_conntrack *build_ct(uint8_t *pkt) {
 			break;
 	};
 
-/*	nfct_set_attr_u8(ct, ATTR_ORIG_L3PROTO, PF_INET);
-	nfct_set_attr_u32(ct, ATTR_ORIG_IPV4_SRC, ip->saddr);
-	nfct_set_attr_u32(ct, ATTR_ORIG_IPV4_DST, ip->daddr);
-	nfct_set_attr_u8(ct, ATTR_ORIG_L4PROTO, ip->protocol);
-	switch(ip->protocol) {
-		case IPPROTO_TCP:
-			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_SRC, l4->tcp.source);
-			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_DST, l4->tcp.dest);
-			break;
-		case IPPROTO_UDP:
-			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_SRC, l4->udp.source);
-			nfct_set_attr_u16(ct, ATTR_ORIG_PORT_DST, l4->udp.dest);
-			break;
-		default:
-			break;
-	};*/
-
-	nfct_setobjopt(ct, NFCT_SOPT_SETUP_REPLY);
-/*	nfct_set_attr_u32(ct, ATTR_REPL_IPV4_SRC, ip->saddr);
-	nfct_set_attr_u16(ct, ATTR_REPL_PORT_SRC, ip->daddr);*/
-
-	if (ip->protocol == IPPROTO_TCP) {
-		nfct_set_attr_u8(ct, ATTR_TCP_STATE, TCP_CONNTRACK_SYN_SENT);
-	}
-	nfct_set_attr_u32(ct, ATTR_TIMEOUT, 120);
-
 	return (ct);
 }
 
-extern uint8_t nf_ctrack_nat(uint8_t *pkt, uint32_t addr, uint16_t port, uint8_t dnat) {
+extern uint8_t nf_ctrack_delete(uint8_t *pkt) {
 	struct nf_conntrack *ct;
 	uint8_t unref = 0;
 	uint8_t ret = 0;
@@ -167,11 +141,48 @@ extern uint8_t nf_ctrack_nat(uint8_t *pkt, uint32_t addr, uint16_t port, uint8_t
 		unref = 1;
 	}
 
-	ct = build_ct(pkt);
+	ct = nf_ctrack_buildct(pkt);
+	objlock(ctrack);
+	if (nfct_query(ctrack->nfct, NFCT_Q_DESTROY, ct) < 0) {
+		ret = -1;
+	}
+	objunlock(ctrack);
+	nfct_destroy(ct);
 
+	if (unref) {
+		nf_ctrack_close();
+	}
+
+	return (ret);
+}
+
+extern uint8_t nf_ctrack_nat(uint8_t *pkt, uint32_t addr, uint16_t port, uint8_t dnat) {
+	struct iphdr *ip = (struct iphdr*)pkt;
+	struct nf_conntrack *ct;
+	uint8_t unref = 0;
+	uint8_t ret = 0;
+
+	if (!ctrack) {
+		if (nf_ctrack_init()) {
+			return (-1);
+		}
+		unref = 1;
+	}
+
+	ct = nf_ctrack_buildct(pkt);
+	nfct_setobjopt(ct, NFCT_SOPT_SETUP_REPLY);
+
+	nfct_set_attr_u32(ct, ATTR_TIMEOUT, 120);
+	nfct_set_attr_u8(ct, ATTR_TCP_STATE, TCP_CONNTRACK_ESTABLISHED);
 	nfct_set_attr_u32(ct, (dnat) ? ATTR_DNAT_IPV4 : ATTR_SNAT_IPV4, addr);
-	if (port) {
-		nfct_set_attr_u16(ct, (dnat) ? ATTR_DNAT_PORT : ATTR_SNAT_PORT, port);
+
+	switch(ip->protocol) {
+		case IPPROTO_TCP:
+		case IPPROTO_UDP:
+			if (port) {
+				nfct_set_attr_u16(ct, (dnat) ? ATTR_DNAT_PORT : ATTR_SNAT_PORT, port);
+			}
+			break;
 	}
 
 	objlock(ctrack);
