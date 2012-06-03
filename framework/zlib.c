@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <zlib.h>
 
-#include <framework.h>
+#include "include/framework.h"
 
 static void zobj_free(void *data) {
 	struct zobj *zdata = data;

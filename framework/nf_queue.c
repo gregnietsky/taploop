@@ -29,8 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <linux/netfilter.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
 
-#include "framework.h"
-#include "private.h"
+#include "include/framework.h"
+#include "include/private.h"
 
 enum NF_QUEUE_FLAGS {
 	NFQUEUE_DONE	= 1 << 0

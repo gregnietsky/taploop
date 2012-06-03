@@ -29,8 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
 
-#include "framework.h"
-#include "private.h"
+#include "include/framework.h"
+#include "include/private.h"
 
 enum NF_CTRACK_FLAGS {
 	NFCTRACK_DONE    = 1 << 0
@@ -54,7 +54,7 @@ static int nfct_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, voi
 	nfct_snprintf(buf, sizeof(buf), ct, NFCT_T_UNKNOWN, NFCT_O_DEFAULT, NFCT_OF_SHOW_LAYER3 | NFCT_OF_TIME | NFCT_OF_TIMESTAMP);
 	printf("%s\n", buf);
 
-	return NFCT_CB_CONTINUE;
+	return (NFCT_CB_CONTINUE);
 }
 
 static struct nfct_struct *nf_ctrack_alloc(uint8_t subsys_id, unsigned subscriptions) {
@@ -112,6 +112,7 @@ extern struct nf_conntrack *nf_ctrack_buildct(uint8_t *pkt) {
 			nfct_set_attr_u8(ct, ATTR_ICMP_TYPE, l4->icmp.type);
 			nfct_set_attr_u8(ct, ATTR_ICMP_CODE, l4->icmp.code);
 			nfct_set_attr_u16(ct, ATTR_ICMP_ID, l4->icmp.un.echo.id);
+			/* no break */
 		default:
 			break;
 	};
@@ -168,6 +169,7 @@ extern uint8_t nf_ctrack_nat(uint8_t *pkt, uint32_t addr, uint16_t port, uint8_t
 	switch(ip->protocol) {
 		case IPPROTO_TCP:
 			nfct_set_attr_u8(ct, ATTR_TCP_STATE, TCP_CONNTRACK_ESTABLISHED);
+			/* no break */
 		case IPPROTO_UDP:
 			if (port) {
 				nfct_set_attr_u16(ct, (dnat) ? ATTR_DNAT_PORT : ATTR_SNAT_PORT, port);
