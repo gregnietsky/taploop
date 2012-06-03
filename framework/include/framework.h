@@ -77,6 +77,7 @@ struct zobj {
 	uint16_t zlen;
 };
 
+typedef struct natmap natmap;
 typedef struct radius_packet radius_packet;
 typedef struct nfq_queue nfq_queue;
 typedef struct nfq_data nfq_data;
@@ -216,6 +217,8 @@ extern void ipv4checksum(uint8_t *pkt);
 extern int packetchecksumv4(uint8_t *pkt);
 extern int packetchecksumv6(uint8_t *pkt);
 extern int packetchecksum(uint8_t *pkt);
+extern void rfc6296_map(struct natmap *map, struct in6_addr *ipaddr, int out);
+extern int rfc6296_map_add(char *intaddr, char *extaddr);
 
 /*netfilter queue*/
 extern struct nfq_queue *nfqueue_attach(uint16_t pf, uint16_t num, uint8_t mode, uint32_t range, nfqueue_cb cb, void *data);

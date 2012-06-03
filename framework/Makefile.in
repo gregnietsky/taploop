@@ -87,7 +87,8 @@ am_libframework_la_OBJECTS = libframework_la-refobj.lo \
 	libframework_la-socket.lo libframework_la-sslutil.lo \
 	libframework_la-interface.lo libframework_la-config.lo \
 	libframework_la-iputil.lo libframework_la-nf_queue.lo \
-	libframework_la-nf_ctrack.lo libframework_la-zlib.lo
+	libframework_la-nf_ctrack.lo libframework_la-zlib.lo \
+	libframework_la-rfc6296.lo
 libframework_la_OBJECTS = $(am_libframework_la_OBJECTS)
 libframework_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libframework_la_CFLAGS) \
@@ -292,7 +293,7 @@ SUBDIRS = libnetlink
 @FRAMEWORK_INSTALL_TRUE@includeinst_DATA = include/framework.h
 @FRAMEWORK_INSTALL_FALSE@noinst_LTLIBRARIES = libframework.la
 libframework_la_SOURCES = refobj.c lookup3.c thread.c main.c unixsock.c util.c radius.c socket.c sslutil.c interface.c config.c \
-                          iputil.c nf_queue.c nf_ctrack.c zlib.c
+                          iputil.c nf_queue.c nf_ctrack.c zlib.c rfc6296.c
 
 libframework_la_LIBADD = ./libnetlink/libnetlink.la
 libframework_la_CFLAGS = -I./include -I./libnetlink/include $(DEVELOPER_CFLAGS)
@@ -393,6 +394,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-nf_queue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-radius.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-refobj.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-rfc6296.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-socket.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-sslutil.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-thread.Plo@am__quote@
@@ -525,6 +527,13 @@ libframework_la-zlib.lo: zlib.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='zlib.c' object='libframework_la-zlib.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-zlib.lo `test -f 'zlib.c' || echo '$(srcdir)/'`zlib.c
+
+libframework_la-rfc6296.lo: rfc6296.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-rfc6296.lo -MD -MP -MF $(DEPDIR)/libframework_la-rfc6296.Tpo -c -o libframework_la-rfc6296.lo `test -f 'rfc6296.c' || echo '$(srcdir)/'`rfc6296.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libframework_la-rfc6296.Tpo $(DEPDIR)/libframework_la-rfc6296.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='rfc6296.c' object='libframework_la-rfc6296.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-rfc6296.lo `test -f 'rfc6296.c' || echo '$(srcdir)/'`rfc6296.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
