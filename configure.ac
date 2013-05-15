@@ -53,7 +53,7 @@ AS_IF([test "x$enable_framework_install" != "xyes"],
 if (test "x$ac_cv_lib_framework_framework_mkthread" = "xyes") && (test "$have_libframework" = "xyes") ; then
    FRAMEWORK_INCL="$LIBFRAMEWORK_CFLAGS"
   else
-   FRAMEWORK_INCL="-I../framework/include"
+   FRAMEWORK_INCL="-I\$(srcdir)/../framework/include"
    FRAMEWORK_LIBS="../framework/libframework.la"
 fi;
 

@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
-AM_CFLAGS = -I./include $(FRAMEWORK_INCL) $(DEVELOPER_CFLAGS)
+AM_CFLAGS = -I$(srcdir)/include $(FRAMEWORK_INCL) $(DEVELOPER_CFLAGS)
 EXTRA_DIST = include
 
 bin_PROGRAMS = taploop
