@@ -126,7 +126,7 @@ extern void framework_shutdown(void);
 extern void framework_unixsocket(char *sock, int protocol, int mask, threadfunc connectfunc, threadcleanup cleanup);
 /* Test if the thread is running when passed data from thread */
 extern int framework_threadok(void *data);
-extern int starthreads(void);
+extern int startthreads(void);
 extern void stopthreads(void);
 
 /*
