@@ -184,7 +184,7 @@ static struct nfq_struct *nfqueue_init(uint16_t pf) {
 
 static int nfqueue_callback(struct nfq_q_handle *qh, struct nfgenmsg *msg, struct nfq_data *nfad, void *data) {
 	struct nfq_queue *nfq_q = data;
-	char *pkt;
+	unsigned char *pkt;
 	struct nfqnl_msg_packet_hdr *ph;
 	void *mangle = NULL;
 	uint32_t ret, mark;
@@ -202,17 +202,15 @@ static int nfqueue_callback(struct nfq_q_handle *qh, struct nfgenmsg *msg, struc
 	}
 
 	if (nfq_q->cb) {
-		verdict = nfq_q->cb(nfad, ph, pkt, len, nfq_q->data, &mark, &mangle);
+		verdict = nfq_q->cb(nfad, ph, (char *)pkt, len, nfq_q->data, &mark, &mangle);
 	}
-
-	mark = htonl(mark);
 
 	if (mangle && !(len = objsize(mangle))) {
 		objunref(mangle);
 		mangle = NULL;
 	}
 
-	ret = nfq_set_verdict_mark(qh, id, verdict, mark, len, (mangle) ? mangle : pkt);
+	ret = nfq_set_verdict2(qh, id, verdict, mark, len, (mangle) ? mangle : pkt);
 	if (mangle) {
 		objunref(mangle);
 	}
