@@ -36,6 +36,9 @@
 /* Define to 1 if you have the `framework' library (-lframework). */
 #undef HAVE_LIBFRAMEWORK
 
+/* Define to 1 if you have the `m' library (-lm). */
+#undef HAVE_LIBM
+
 /* Define to 1 if you have the `netfilter_conntrack' library
    (-lnetfilter_conntrack). */
 #undef HAVE_LIBNETFILTER_CONNTRACK

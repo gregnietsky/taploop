@@ -95,7 +95,10 @@ am__uninstall_files_from_dir = { \
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includeinstdir)" \
 	"$(DESTDIR)$(pkgconfigdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
-libframework_la_DEPENDENCIES = ./libnetlink/libnetlink.la
+am__DEPENDENCIES_1 =
+libframework_la_DEPENDENCIES = ./libnetlink/libnetlink.la \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libframework_la_OBJECTS = libframework_la-refobj.lo \
 	libframework_la-lookup3.lo libframework_la-thread.lo \
 	libframework_la-main.lo libframework_la-unixsock.lo \
@@ -104,7 +107,8 @@ am_libframework_la_OBJECTS = libframework_la-refobj.lo \
 	libframework_la-interface.lo libframework_la-config.lo \
 	libframework_la-iputil.lo libframework_la-nf_queue.lo \
 	libframework_la-nf_ctrack.lo libframework_la-zlib.lo \
-	libframework_la-rfc6296.lo
+	libframework_la-rfc6296.lo libframework_la-libxml2.lo \
+	libframework_la-libxslt.lo libframework_la-openldap.lo
 libframework_la_OBJECTS = $(am_libframework_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -260,6 +264,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
+LDAP_LIBS = @LDAP_LIBS@
 LDFLAGS = @LDFLAGS@
 LIBFRAMEWORK_CFLAGS = @LIBFRAMEWORK_CFLAGS@
 LIBFRAMEWORK_LIBS = @LIBFRAMEWORK_LIBS@
@@ -300,6 +305,10 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
+XML_CFLAGS = @XML_CFLAGS@
+XML_LIBS = @XML_LIBS@
+XSLT_CFLAGS = @XSLT_CFLAGS@
+XSLT_LIBS = @XSLT_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -362,10 +371,10 @@ SUBDIRS = libnetlink
 @FRAMEWORK_INSTALL_TRUE@includeinst_DATA = include/framework.h
 @FRAMEWORK_INSTALL_FALSE@noinst_LTLIBRARIES = libframework.la
 libframework_la_SOURCES = refobj.c lookup3.c thread.c main.c unixsock.c util.c radius.c socket.c sslutil.c interface.c config.c \
-                          iputil.c nf_queue.c nf_ctrack.c zlib.c rfc6296.c
+                          iputil.c nf_queue.c nf_ctrack.c zlib.c rfc6296.c libxml2.c libxslt.c openldap.c
 
-libframework_la_LIBADD = ./libnetlink/libnetlink.la
-libframework_la_CFLAGS = -I./include -I./libnetlink/include $(DEVELOPER_CFLAGS)
+libframework_la_LIBADD = ./libnetlink/libnetlink.la $(XSLT_LIBS) $(XML_LIBS) $(LDAP_LIBS) $(LIBS)
+libframework_la_CFLAGS = -I./include -I./libnetlink/include $(DEVELOPER_CFLAGS) $(XSLT_CFLAGS) $(XML_CFLAGS)
 libframework_la_LDFLAGS = -version-info 1:0:1
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = framework.pc
@@ -463,10 +472,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-config.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-interface.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-iputil.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-libxml2.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-libxslt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-lookup3.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-main.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-nf_ctrack.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-nf_queue.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-openldap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-radius.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-refobj.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libframework_la-rfc6296.Plo@am__quote@
@@ -609,6 +621,27 @@ libframework_la-rfc6296.lo: rfc6296.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='rfc6296.c' object='libframework_la-rfc6296.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-rfc6296.lo `test -f 'rfc6296.c' || echo '$(srcdir)/'`rfc6296.c
+
+libframework_la-libxml2.lo: libxml2.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-libxml2.lo -MD -MP -MF $(DEPDIR)/libframework_la-libxml2.Tpo -c -o libframework_la-libxml2.lo `test -f 'libxml2.c' || echo '$(srcdir)/'`libxml2.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libframework_la-libxml2.Tpo $(DEPDIR)/libframework_la-libxml2.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libxml2.c' object='libframework_la-libxml2.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-libxml2.lo `test -f 'libxml2.c' || echo '$(srcdir)/'`libxml2.c
+
+libframework_la-libxslt.lo: libxslt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-libxslt.lo -MD -MP -MF $(DEPDIR)/libframework_la-libxslt.Tpo -c -o libframework_la-libxslt.lo `test -f 'libxslt.c' || echo '$(srcdir)/'`libxslt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libframework_la-libxslt.Tpo $(DEPDIR)/libframework_la-libxslt.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libxslt.c' object='libframework_la-libxslt.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-libxslt.lo `test -f 'libxslt.c' || echo '$(srcdir)/'`libxslt.c
+
+libframework_la-openldap.lo: openldap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -MT libframework_la-openldap.lo -MD -MP -MF $(DEPDIR)/libframework_la-openldap.Tpo -c -o libframework_la-openldap.lo `test -f 'openldap.c' || echo '$(srcdir)/'`openldap.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libframework_la-openldap.Tpo $(DEPDIR)/libframework_la-openldap.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='openldap.c' object='libframework_la-openldap.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libframework_la_CFLAGS) $(CFLAGS) -c -o libframework_la-openldap.lo `test -f 'openldap.c' || echo '$(srcdir)/'`openldap.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

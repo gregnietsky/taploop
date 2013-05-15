@@ -61,6 +61,14 @@ if test "x$enable_dev_mode" = "xyes" ; then
  DEVELOPER_CFLAGS="-g -Wall -Werror -pedantic-errors"
 fi;
 
+AC_CHECK_LIB([m], [pow], [], [AC_MSG_ERROR([Requires Math Lib -lm])])
+AC_CHECK_LIB([lber], [ber_free], [LDAP_LIBS="-llber"], [AC_MSG_ERROR([Requires LDAP/BER/SASL Lib -llber -lldap -lsasl2])])
+AC_CHECK_LIB([sasl2], [sasl_client_init], [LDAP_LIBS="${LDAP_LIBS} -lsasl2"], [AC_MSG_ERROR([Requires LDAP/BER/SASL Lib -llber -lldap -lsasl2])])
+AC_CHECK_LIB([ldap], [ldap_initialize], [LDAP_LIBS="${LDAP_LIBS} -lldap"], [AC_MSG_ERROR([Requires LDAP/BER/SASL Lib -llber -lldap -lsasl2])])
+AC_SUBST(LDAP_LIBS)
+PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.9)
+PKG_CHECK_MODULES(XSLT, libxslt >= 1.1)
+
 AC_SUBST(FRAMEWORK_LIBS)
 AC_SUBST(FRAMEWORK_INCL)
 AC_SUBST(FRAMEWORK_SOURCES)

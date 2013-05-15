@@ -16,27 +16,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _FW_PRIVATE_H
-#define _FW_PRIVATE_H
+#ifndef _FW_PRIVATE_XML_H
+#define _FW_PRIVATE_XML_H
 
-#include <linux/ip.h>
-#include <linux/icmp.h>
-#include <linux/tcp.h>
-#include <linux/udp.h>
-
-/*from sslutils iputil is the only consumer*/
-void dtsl_serveropts(struct fwsocket *sock);
-void dtlshandltimeout(struct fwsocket *sock);
-
-/*for main.c*/
-int startthreads(void);
-void jointhreads(void);
-int thread_signal(int sig);
-
-union l4hdr {
-	struct tcphdr tcp;
-	struct udphdr udp;
-	struct icmphdr icmp;
+struct xml_doc {
+	xmlDocPtr doc;
+	xmlNodePtr root;
+	xmlXPathContextPtr xpathCtx;
+	xmlValidCtxtPtr ValidCtxt;
 };
 
 #endif
