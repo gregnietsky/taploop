@@ -161,14 +161,14 @@ static struct tl_socket *phyopen(struct taploop *tap) {
 /*
  * close and free a tap loop
  */
-static void *stoptap(void *data) {
+static void stoptap(void *data) {
 	struct taploop	 *tap = data;
 	struct tl_socket *phy = NULL, *virt = NULL, *socket;
 	struct bucket_loop *bloop;
 	int ifindex;
 
 	if (!tap) {
-		return NULL;
+		return;
 	}
 
 	/* get physical socket to reconfigure it and drop it*/
@@ -215,7 +215,6 @@ static void *stoptap(void *data) {
 	}
 
 	objunref(data);
-	return NULL;
 }
 
 /*
@@ -254,8 +253,8 @@ static void rbuffread(struct taploop *tap) {
 /*
  * pass data between physical and tap
  */
-static void *mainloop(void **data) {
-	struct taploop	*tap = *data;
+static void *mainloop(void *data) {
+	struct taploop	*tap = data;
 	/* accomodate 802.1Q [4]*/
 	fd_set	rd_set, act_set;
 	char	buffer[ETH_FRAME_LEN+4];
@@ -290,7 +289,7 @@ static void *mainloop(void **data) {
 
 	/* initialise tap device*/
 	maxfd++;
-	while (framework_threadok(data) && !tap->stop) {
+	while (framework_threadok() && !tap->stop) {
 		act_set = rd_set;
 		tv.tv_sec = 0;
 		tv.tv_usec = 2000;
@@ -345,6 +344,7 @@ static void *mainloop(void **data) {
  */
 extern int add_taploop(char *dev, char *name) {
 	struct taploop		*tap = NULL;
+	void			*new_thread;
 
 	if (!taplist && !(taplist = inittaplist())) {
 		return (-1);
@@ -369,7 +369,11 @@ extern int add_taploop(char *dev, char *name) {
 	addtobucket(taplist, tap);
 
 	/* Start thread*/
-	return ((framework_mkthread(mainloop, stoptap, NULL, tap)) ? 0 : -1);
+	if ((new_thread = framework_mkthread(mainloop, stoptap, NULL, tap, THREAD_OPTION_RETURN))) {
+		objunref(new_thread);
+		return 0;
+	}
+	return -1;
 }
 
 /*

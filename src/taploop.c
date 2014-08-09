@@ -32,6 +32,7 @@ FRAMEWORK_MAIN("Taploop Network Stack",
 		"http://www.distrotech.co.za",
 		2012,
 		"/var/run/taploopd",
+		FRAMEWORK_FLAG_DAEMON,
 		sig_handler) {
 
 	/* start up and listen for client connections from taploop*/
