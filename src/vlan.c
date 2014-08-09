@@ -56,7 +56,7 @@ extern int add_kernvlan(char *iface, int vid) {
 		objunref(tap);
 		tap = NULL;
 	}
-	stop_bucket_loop(bloop);
+	remove_bucket_loop(bloop);
 
 	if ((create_kernvlan(iface, vid))) {
 		objunref(tap);
