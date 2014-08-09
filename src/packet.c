@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <unistd.h>
 
-#include <framework.h>
+#include <dtsapp.h>
 
 #include "include/taploop.h"
 #include "include/tlsock.h"

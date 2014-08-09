@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.68])
 AC_INIT([taploop],[0.1],[gregory@distrotech.co.za])
-AC_CONFIG_SRCDIR([framework/thread.c])
+AC_CONFIG_SRCDIR([src/taploop.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
@@ -22,7 +22,6 @@ AC_HEADER_RESOLV
 AC_TYPE_SSIZE_T
 
 # Checks for libraries.
-#Framework changes
 AM_INIT_AUTOMAKE
 AC_CONFIG_MACRO_DIR([m4])
 LT_INIT()
@@ -30,10 +29,8 @@ AM_PROG_CC_C_O
 
 AC_CHECK_LIB([pthread], [pthread_create])
 
-AC_ARG_ENABLE([framework-install], AS_HELP_STRING([--enable-framework-install], [Install the framework library please note this superseeds the --with-system-framewok option.]))
 AC_ARG_ENABLE([dev-mode], AS_HELP_STRING([--enable-dev-mode], [Developer mode -g -Wall -Werror -pedantic-errors]))
 AC_ARG_ENABLE([world-peace], AS_HELP_STRING([--enable-world-peace], [Yeah right .....]))
-AC_ARG_WITH([system-framework], AS_HELP_STRING([--with-system-framework], [Use the system framework not the packaged version]))
 
 AC_CHECK_LIB([z], [compress])
 
@@ -44,18 +41,6 @@ AS_IF([test "x$have_libnfqueue" = "xyes"],
 PKG_CHECK_MODULES(LIBNFCT, libnetfilter_conntrack >= 0, [have_libnfctrack=yes], [have_libnfctrack=no])
 AS_IF([test "x$have_libnfctrack" = "xyes"],
 	[AC_CHECK_LIB([netfilter_conntrack], [nfct_open])])
-
-PKG_CHECK_MODULES(LIBFRAMEWORK, framework >= 0, [have_libframework=yes], [have_libframework=no])
-AS_IF([test "x$enable_framework_install" != "xyes"],
-	AS_IF([test "x$with_system_framework" = "xyes"],
-		[AC_CHECK_LIB([framework], [framework_mkthread])]))
-
-if (test "x$ac_cv_lib_framework_framework_mkthread" = "xyes") && (test "$have_libframework" = "xyes") ; then
-   FRAMEWORK_INCL="$LIBFRAMEWORK_CFLAGS"
-  else
-   FRAMEWORK_INCL="-I\$(srcdir)/../framework/include"
-   FRAMEWORK_LIBS="../framework/libframework.la"
-fi;
 
 if test "x$enable_dev_mode" = "xyes" ; then
  DEVELOPER_CFLAGS="-g -Wall -Werror -pedantic-errors"
@@ -68,14 +53,9 @@ AC_CHECK_LIB([ldap], [ldap_initialize], [LDAP_LIBS="${LDAP_LIBS} -lldap"], [AC_M
 AC_SUBST(LDAP_LIBS)
 PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.9)
 PKG_CHECK_MODULES(XSLT, libxslt >= 1.1)
+PKG_CHECK_MODULES(DTSAPPLIB, libdtsapp >= 0.2)
 
-AC_SUBST(FRAMEWORK_LIBS)
-AC_SUBST(FRAMEWORK_INCL)
-AC_SUBST(FRAMEWORK_SOURCES)
 AC_SUBST(DEVELOPER_CFLAGS)
-
-AM_CONDITIONAL([FRAMEWORK_INSTALL], [test "x$enable_framework_install" = xyes])
-AM_CONDITIONAL([FRAMEWORK_SYSTEM], [test "x$ac_cv_lib_framework_framework_mkthread" != "xyes"])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h unistd.h syslog.h sys/time.h netdb.h arpa/inet.h])
@@ -111,8 +91,5 @@ AC_FUNC_MMAP
 AC_CHECK_FUNCS([memset munmap select socket])
 
 AC_CONFIG_FILES([Makefile
-                 framework/Makefile
-                 framework/libnetlink/Makefile
-                 framework/framework.pc
                  src/Makefile])
 AC_OUTPUT

@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <linux/if.h>
 
-#include <framework.h>
+#include <dtsapp.h>
 
 #include "include/taploop.h"
 #include "include/tlsock.h"

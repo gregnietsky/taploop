@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <sys/stat.h>
-#include <framework.h>
+#include <dtsapp.h>
 
 #include "include/clientserv.h"
 #include "include/taploop.h"

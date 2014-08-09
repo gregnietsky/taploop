@@ -595,7 +595,7 @@ PACKAGE_STRING='taploop 0.1'
 PACKAGE_BUGREPORT='gregory@distrotech.co.za'
 PACKAGE_URL=''
 
-ac_unique_file="framework/thread.c"
+ac_unique_file="src/taploop.c"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -636,21 +636,14 @@ ac_header_list=
 ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
-FRAMEWORK_SYSTEM_FALSE
-FRAMEWORK_SYSTEM_TRUE
-FRAMEWORK_INSTALL_FALSE
-FRAMEWORK_INSTALL_TRUE
 DEVELOPER_CFLAGS
-FRAMEWORK_SOURCES
-FRAMEWORK_INCL
-FRAMEWORK_LIBS
+DTSAPPLIB_LIBS
+DTSAPPLIB_CFLAGS
 XSLT_LIBS
 XSLT_CFLAGS
 XML_LIBS
 XML_CFLAGS
 LDAP_LIBS
-LIBFRAMEWORK_LIBS
-LIBFRAMEWORK_CFLAGS
 LIBNFCT_LIBS
 LIBNFCT_CFLAGS
 LIBNFQUEUE_LIBS
@@ -791,10 +784,8 @@ enable_fast_install
 with_gnu_ld
 with_sysroot
 enable_libtool_lock
-enable_framework_install
 enable_dev_mode
 enable_world_peace
-with_system_framework
 '
       ac_precious_vars='build_alias
 host_alias
@@ -816,12 +807,12 @@ LIBNFQUEUE_CFLAGS
 LIBNFQUEUE_LIBS
 LIBNFCT_CFLAGS
 LIBNFCT_LIBS
-LIBFRAMEWORK_CFLAGS
-LIBFRAMEWORK_LIBS
 XML_CFLAGS
 XML_LIBS
 XSLT_CFLAGS
-XSLT_LIBS'
+XSLT_LIBS
+DTSAPPLIB_CFLAGS
+DTSAPPLIB_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1451,9 +1442,6 @@ Optional Features:
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
-  --enable-framework-install
-                          Install the framework library please note this
-                          superseeds the --with-system-framewok option.
   --enable-dev-mode       Developer mode -g -Wall -Werror -pedantic-errors
   --enable-world-peace    Yeah right .....
 
@@ -1465,7 +1453,6 @@ Optional Packages:
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-sysroot=DIR Search for dependent libraries within DIR
                         (or the compiler's sysroot if not specified).
-  --with-system-framework Use the system framework not the packaged version
 
 Some influential environment variables:
   CXX         C++ compiler command
@@ -1492,14 +1479,14 @@ Some influential environment variables:
               C compiler flags for LIBNFCT, overriding pkg-config
   LIBNFCT_LIBS
               linker flags for LIBNFCT, overriding pkg-config
-  LIBFRAMEWORK_CFLAGS
-              C compiler flags for LIBFRAMEWORK, overriding pkg-config
-  LIBFRAMEWORK_LIBS
-              linker flags for LIBFRAMEWORK, overriding pkg-config
   XML_CFLAGS  C compiler flags for XML, overriding pkg-config
   XML_LIBS    linker flags for XML, overriding pkg-config
   XSLT_CFLAGS C compiler flags for XSLT, overriding pkg-config
   XSLT_LIBS   linker flags for XSLT, overriding pkg-config
+  DTSAPPLIB_CFLAGS
+              C compiler flags for DTSAPPLIB, overriding pkg-config
+  DTSAPPLIB_LIBS
+              linker flags for DTSAPPLIB, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -3609,6 +3596,68 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+# expand $ac_aux_dir to an absolute path
+am_aux_dir=`cd $ac_aux_dir && pwd`
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC understands -c and -o together" >&5
+$as_echo_n "checking whether $CC understands -c and -o together... " >&6; }
+if ${am_cv_prog_cc_c_o+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+  # Make sure it works both with $CC and with simple cc.
+  # Following AC_PROG_CC_C_O, we do the test twice because some
+  # compilers refuse to overwrite an existing .o file with -o,
+  # though they will create one.
+  am_cv_prog_cc_c_o=yes
+  for am_i in 1 2; do
+    if { echo "$as_me:$LINENO: $CC -c conftest.$ac_ext -o conftest2.$ac_objext" >&5
+   ($CC -c conftest.$ac_ext -o conftest2.$ac_objext) >&5 2>&5
+   ac_status=$?
+   echo "$as_me:$LINENO: \$? = $ac_status" >&5
+   (exit $ac_status); } \
+         && test -f conftest2.$ac_objext; then
+      : OK
+    else
+      am_cv_prog_cc_c_o=no
+      break
+    fi
+  done
+  rm -f core conftest*
+  unset am_i
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $am_cv_prog_cc_c_o" >&5
+$as_echo "$am_cv_prog_cc_c_o" >&6; }
+if test "$am_cv_prog_cc_c_o" != yes; then
+   # Losing compiler, so override with the script.
+   # FIXME: It is wrong to rewrite CC.
+   # But if we don't then we get into trouble of one sort or another.
+   # A longer-term fix would be to have automake use am__CC in this case,
+   # and then we could set am__CC="\$(top_srcdir)/compile \$(CC)"
+   CC="$am_aux_dir/compile $CC"
+fi
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -4474,8 +4523,7 @@ fi
 
 
 # Checks for libraries.
-#Framework changes
-am__api_version='1.13'
+am__api_version='1.14'
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether build environment is sane" >&5
 $as_echo_n "checking whether build environment is sane... " >&6; }
@@ -4553,9 +4601,6 @@ test "$program_suffix" != NONE &&
 # By default was `s,x,x', remove it if useless.
 ac_script='s/[\\$]/&&/g;s/;s,x,x,$//'
 program_transform_name=`$as_echo "$program_transform_name" | sed "$ac_script"`
-
-# expand $ac_aux_dir to an absolute path
-am_aux_dir=`cd $ac_aux_dir && pwd`
 
 if test x"${MISSING+set}" != xset; then
   case $am_aux_dir in
@@ -4856,7 +4901,12 @@ mkdir_p='$(MKDIR_P)'
 # in the wild :-(  We should find a proper way to deprecate it ...
 AMTAR='$${TAR-tar}'
 
+
+# We'll loop over all known methods to create a tar archive until one works.
+_am_tools='gnutar  pax cpio none'
+
 am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'
+
 
 
 
@@ -5118,6 +5168,47 @@ fi
 
 
 
+# POSIX will say in a future version that running "rm -f" with no argument
+# is OK; and we want to be able to make that assumption in our Makefile
+# recipes.  So use an aggressive probe to check that the usage we want is
+# actually supported "in the wild" to an acceptable degree.
+# See automake bug#10828.
+# To make any issue more visible, cause the running configure to be aborted
+# by default if the 'rm' program in use doesn't match our expectations; the
+# user can still override this though.
+if rm -f && rm -fr && rm -rf; then : OK; else
+  cat >&2 <<'END'
+Oops!
+
+Your 'rm' program seems unable to run without file operands specified
+on the command line, even when the '-f' option is present.  This is contrary
+to the behaviour of most rm programs out there, and not conforming with
+the upcoming POSIX standard: <http://austingroupbugs.net/view.php?id=542>
+
+Please tell bug-automake@gnu.org about your system, including the value
+of your $PATH and any error possibly output before this message.  This
+can help us improve future automake versions.
+
+END
+  if test x"$ACCEPT_INFERIOR_RM_PROGRAM" = x"yes"; then
+    echo 'Configuration will proceed anyway, since you have set the' >&2
+    echo 'ACCEPT_INFERIOR_RM_PROGRAM variable to "yes"' >&2
+    echo >&2
+  else
+    cat >&2 <<'END'
+Aborting the configuration process, to ensure you take notice of the issue.
+
+You can download and install GNU coreutils to get an 'rm' implementation
+that behaves properly: <http://www.gnu.org/software/coreutils/>.
+
+If you want to complete the configuration process using your problematic
+'rm' anyway, export the environment variable ACCEPT_INFERIOR_RM_PROGRAM
+to "yes", and re-run configure.
+
+END
+    as_fn_error $? "Your 'rm' program is bad, sorry." "$LINENO" 5
+  fi
+fi
 
 case `pwd` in
   *\ * | *\	*)
@@ -6310,7 +6401,7 @@ linux* | k*bsd*-gnu | kopensolaris*-gnu)
   lt_cv_deplibs_check_method=pass_all
   ;;
 
-netbsd* | netbsdelf*-gnu)
+netbsd*)
   if echo __ELF__ | $CC -E - | $GREP __ELF__ > /dev/null; then
     lt_cv_deplibs_check_method='match_pattern /lib[^/]+(\.so\.[0-9]+\.[0-9]+|_pic\.a)$'
   else
@@ -9454,9 +9545,6 @@ $as_echo_n "checking whether the $compiler linker ($LD) supports shared librarie
   openbsd*)
     with_gnu_ld=no
     ;;
-  linux* | k*bsd*-gnu | gnu*)
-    link_all_deplibs=no
-    ;;
   esac
 
   ld_shlibs=yes
@@ -9678,7 +9766,7 @@ _LT_EOF
       fi
       ;;
 
-    netbsd* | netbsdelf*-gnu)
+    netbsd*)
       if echo __ELF__ | $CC -E - | $GREP __ELF__ >/dev/null; then
 	archive_cmds='$LD -Bshareable $libobjs $deplibs $linker_flags -o $lib'
 	wlarc=
@@ -9855,7 +9943,6 @@ _LT_EOF
 	if test "$aix_use_runtimelinking" = yes; then
 	  shared_flag="$shared_flag "'${wl}-G'
 	fi
-	link_all_deplibs=no
       else
 	# not using gcc
 	if test "$host_cpu" = ia64; then
@@ -10309,7 +10396,7 @@ $as_echo "$lt_cv_irix_exported_symbol" >&6; }
       link_all_deplibs=yes
       ;;
 
-    netbsd* | netbsdelf*-gnu)
+    netbsd*)
       if echo __ELF__ | $CC -E - | $GREP __ELF__ >/dev/null; then
 	archive_cmds='$LD -Bshareable -o $lib $libobjs $deplibs $linker_flags'  # a.out
       else
@@ -11335,18 +11422,6 @@ fi
   # people can always --disable-shared, the test was removed, and we
   # assume the GNU/Linux dynamic linker is in use.
   dynamic_linker='GNU/Linux ld.so'
-  ;;
-
-netbsdelf*-gnu)
-  version_type=linux
-  need_lib_prefix=no
-  need_version=no
-  library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}$major ${libname}${shared_ext}'
-  soname_spec='${libname}${release}${shared_ext}$major'
-  shlibpath_var=LD_LIBRARY_PATH
-  shlibpath_overrides_runpath=no
-  hardcode_into_libs=yes
-  dynamic_linker='NetBSD ld.elf_so'
   ;;
 
 netbsd*)
@@ -14184,7 +14259,7 @@ lt_prog_compiler_static_CXX=
 	    ;;
 	esac
 	;;
-      netbsd* | netbsdelf*-gnu)
+      netbsd*)
 	;;
       *qnx* | *nto*)
         # QNX uses GNU C++, but need to define -shared option too, otherwise
@@ -14554,9 +14629,6 @@ $as_echo_n "checking whether the $compiler linker ($LD) supports shared librarie
       exclude_expsyms_CXX='[_]+GLOBAL_OFFSET_TABLE_|[_]+GLOBAL__[FID]_.*|[_]+head_[A-Za-z0-9_]+_dll|[A-Za-z0-9_]+_dll_iname'
       ;;
     esac
-    ;;
-  linux* | k*bsd*-gnu | gnu*)
-    link_all_deplibs_CXX=no
     ;;
   *)
     export_symbols_cmds_CXX='$NM $libobjs $convenience | $global_symbol_pipe | $SED '\''s/.* //'\'' | sort | uniq > $export_symbols'
@@ -15183,18 +15255,6 @@ fi
   dynamic_linker='GNU/Linux ld.so'
   ;;
 
-netbsdelf*-gnu)
-  version_type=linux
-  need_lib_prefix=no
-  need_version=no
-  library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}$major ${libname}${shared_ext}'
-  soname_spec='${libname}${release}${shared_ext}$major'
-  shlibpath_var=LD_LIBRARY_PATH
-  shlibpath_overrides_runpath=no
-  hardcode_into_libs=yes
-  dynamic_linker='NetBSD ld.elf_so'
-  ;;
-
 netbsd*)
   version_type=sunos
   need_lib_prefix=no
@@ -15522,131 +15582,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 # Only expand once:
 
 
-if test "x$CC" != xcc; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC and cc understand -c and -o together" >&5
-$as_echo_n "checking whether $CC and cc understand -c and -o together... " >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether cc understands -c and -o together" >&5
-$as_echo_n "checking whether cc understands -c and -o together... " >&6; }
-fi
-set dummy $CC; ac_cc=`$as_echo "$2" |
-		      sed 's/[^a-zA-Z0-9_]/_/g;s/^[0-9]/_/'`
-if eval \${ac_cv_prog_cc_${ac_cc}_c_o+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-# Make sure it works both with $CC and with simple cc.
-# We do the test twice because some compilers refuse to overwrite an
-# existing .o file with -o, though they will create one.
-ac_try='$CC -c conftest.$ac_ext -o conftest2.$ac_objext >&5'
-rm -f conftest2.*
-if { { case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; } &&
-   test -f conftest2.$ac_objext && { { case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; };
-then
-  eval ac_cv_prog_cc_${ac_cc}_c_o=yes
-  if test "x$CC" != xcc; then
-    # Test first that cc exists at all.
-    if { ac_try='cc -c conftest.$ac_ext >&5'
-  { { case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; }; then
-      ac_try='cc -c conftest.$ac_ext -o conftest2.$ac_objext >&5'
-      rm -f conftest2.*
-      if { { case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; } &&
-	 test -f conftest2.$ac_objext && { { case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; };
-      then
-	# cc works too.
-	:
-      else
-	# cc exists but doesn't like -o.
-	eval ac_cv_prog_cc_${ac_cc}_c_o=no
-      fi
-    fi
-  fi
-else
-  eval ac_cv_prog_cc_${ac_cc}_c_o=no
-fi
-rm -f core conftest*
-
-fi
-if eval test \$ac_cv_prog_cc_${ac_cc}_c_o = yes; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-$as_echo "#define NO_MINUS_C_MINUS_O 1" >>confdefs.h
-
-fi
-
-# FIXME: we rely on the cache variable name because
-# there is no other way.
-set dummy $CC
-am_cc=`echo $2 | sed 's/[^a-zA-Z0-9_]/_/g;s/^[0-9]/_/'`
-eval am_t=\$ac_cv_prog_cc_${am_cc}_c_o
-if test "$am_t" != yes; then
-   # Losing compiler, so override with the script.
-   # FIXME: It is wrong to rewrite CC.
-   # But if we don't then we get into trouble of one sort or another.
-   # A longer-term fix would be to have automake use am__CC in this case,
-   # and then we could set am__CC="\$(top_srcdir)/compile \$(CC)"
-   CC="$am_aux_dir/compile $CC"
-fi
-
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
@@ -15695,11 +15630,6 @@ _ACEOF
 fi
 
 
-# Check whether --enable-framework-install was given.
-if test "${enable_framework_install+set}" = set; then :
-  enableval=$enable_framework_install;
-fi
-
 # Check whether --enable-dev-mode was given.
 if test "${enable_dev_mode+set}" = set; then :
   enableval=$enable_dev_mode;
@@ -15708,12 +15638,6 @@ fi
 # Check whether --enable-world-peace was given.
 if test "${enable_world_peace+set}" = set; then :
   enableval=$enable_world_peace;
-fi
-
-
-# Check whether --with-system-framework was given.
-if test "${with_system_framework+set}" = set; then :
-  withval=$with_system_framework;
 fi
 
 
@@ -16121,134 +16045,6 @@ fi
 
 fi
 
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBFRAMEWORK" >&5
-$as_echo_n "checking for LIBFRAMEWORK... " >&6; }
-
-if test -n "$LIBFRAMEWORK_CFLAGS"; then
-    pkg_cv_LIBFRAMEWORK_CFLAGS="$LIBFRAMEWORK_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"framework >= 0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "framework >= 0") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBFRAMEWORK_CFLAGS=`$PKG_CONFIG --cflags "framework >= 0" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LIBFRAMEWORK_LIBS"; then
-    pkg_cv_LIBFRAMEWORK_LIBS="$LIBFRAMEWORK_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"framework >= 0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "framework >= 0") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBFRAMEWORK_LIBS=`$PKG_CONFIG --libs "framework >= 0" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        LIBFRAMEWORK_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "framework >= 0" 2>&1`
-        else
-	        LIBFRAMEWORK_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "framework >= 0" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$LIBFRAMEWORK_PKG_ERRORS" >&5
-
-	have_libframework=no
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	have_libframework=no
-else
-	LIBFRAMEWORK_CFLAGS=$pkg_cv_LIBFRAMEWORK_CFLAGS
-	LIBFRAMEWORK_LIBS=$pkg_cv_LIBFRAMEWORK_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	have_libframework=yes
-fi
-if test "x$enable_framework_install" != "xyes"; then :
-  if test "x$with_system_framework" = "xyes"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for framework_mkthread in -lframework" >&5
-$as_echo_n "checking for framework_mkthread in -lframework... " >&6; }
-if ${ac_cv_lib_framework_framework_mkthread+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lframework  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char framework_mkthread ();
-int
-main ()
-{
-return framework_mkthread ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_framework_framework_mkthread=yes
-else
-  ac_cv_lib_framework_framework_mkthread=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_framework_framework_mkthread" >&5
-$as_echo "$ac_cv_lib_framework_framework_mkthread" >&6; }
-if test "x$ac_cv_lib_framework_framework_mkthread" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBFRAMEWORK 1
-_ACEOF
-
-  LIBS="-lframework $LIBS"
-
-fi
-
-fi
-fi
-
-if (test "x$ac_cv_lib_framework_framework_mkthread" = "xyes") && (test "$have_libframework" = "xyes") ; then
-   FRAMEWORK_INCL="$LIBFRAMEWORK_CFLAGS"
-  else
-   FRAMEWORK_INCL="-I\$(srcdir)/../framework/include"
-   FRAMEWORK_LIBS="../framework/libframework.la"
-fi;
-
 if test "x$enable_dev_mode" = "xyes" ; then
  DEVELOPER_CFLAGS="-g -Wall -Werror -pedantic-errors"
 fi;
@@ -16610,26 +16406,97 @@ $as_echo "yes" >&6; }
 
 fi
 
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for DTSAPPLIB" >&5
+$as_echo_n "checking for DTSAPPLIB... " >&6; }
 
-
-
-
-
- if test "x$enable_framework_install" = xyes; then
-  FRAMEWORK_INSTALL_TRUE=
-  FRAMEWORK_INSTALL_FALSE='#'
+if test -n "$DTSAPPLIB_CFLAGS"; then
+    pkg_cv_DTSAPPLIB_CFLAGS="$DTSAPPLIB_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libdtsapp >= 0.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libdtsapp >= 0.2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_DTSAPPLIB_CFLAGS=`$PKG_CONFIG --cflags "libdtsapp >= 0.2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
-  FRAMEWORK_INSTALL_TRUE='#'
-  FRAMEWORK_INSTALL_FALSE=
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$DTSAPPLIB_LIBS"; then
+    pkg_cv_DTSAPPLIB_LIBS="$DTSAPPLIB_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libdtsapp >= 0.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libdtsapp >= 0.2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_DTSAPPLIB_LIBS=`$PKG_CONFIG --libs "libdtsapp >= 0.2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
 fi
 
- if test "x$ac_cv_lib_framework_framework_mkthread" != "xyes"; then
-  FRAMEWORK_SYSTEM_TRUE=
-  FRAMEWORK_SYSTEM_FALSE='#'
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
 else
-  FRAMEWORK_SYSTEM_TRUE='#'
-  FRAMEWORK_SYSTEM_FALSE=
+        _pkg_short_errors_supported=no
 fi
+        if test $_pkg_short_errors_supported = yes; then
+	        DTSAPPLIB_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libdtsapp >= 0.2" 2>&1`
+        else
+	        DTSAPPLIB_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libdtsapp >= 0.2" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$DTSAPPLIB_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements (libdtsapp >= 0.2) were not met:
+
+$DTSAPPLIB_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables DTSAPPLIB_CFLAGS
+and DTSAPPLIB_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables DTSAPPLIB_CFLAGS
+and DTSAPPLIB_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	DTSAPPLIB_CFLAGS=$pkg_cv_DTSAPPLIB_CFLAGS
+	DTSAPPLIB_LIBS=$pkg_cv_DTSAPPLIB_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+fi
+
 
 
 # Checks for header files.
@@ -17475,7 +17342,7 @@ fi
 done
 
 
-ac_config_files="$ac_config_files Makefile framework/Makefile framework/libnetlink/Makefile framework/framework.pc src/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -17614,14 +17481,6 @@ else
   am__EXEEXT_FALSE=
 fi
 
-if test -z "${FRAMEWORK_INSTALL_TRUE}" && test -z "${FRAMEWORK_INSTALL_FALSE}"; then
-  as_fn_error $? "conditional \"FRAMEWORK_INSTALL\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${FRAMEWORK_SYSTEM_TRUE}" && test -z "${FRAMEWORK_SYSTEM_FALSE}"; then
-  as_fn_error $? "conditional \"FRAMEWORK_SYSTEM\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 
 : "${CONFIG_STATUS=./config.status}"
 ac_write_fail=0
@@ -18089,7 +17948,7 @@ taploop config.status 0.1
 configured by $0, generated by GNU Autoconf 2.69,
   with options \\"\$ac_cs_config\\"
 
-Copyright (C) 2012 Free Software Foundation, Inc.
+Copyright (C)  Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
@@ -18593,9 +18452,6 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-    "framework/Makefile") CONFIG_FILES="$CONFIG_FILES framework/Makefile" ;;
-    "framework/libnetlink/Makefile") CONFIG_FILES="$CONFIG_FILES framework/libnetlink/Makefile" ;;
-    "framework/framework.pc") CONFIG_FILES="$CONFIG_FILES framework/framework.pc" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
@@ -19244,7 +19100,7 @@ $as_echo X"$mf" |
     DEPDIR=`sed -n 's/^DEPDIR = //p' < "$mf"`
     test -z "$DEPDIR" && continue
     am__include=`sed -n 's/^am__include = //p' < "$mf"`
-    test -z "am__include" && continue
+    test -z "$am__include" && continue
     am__quote=`sed -n 's/^am__quote = //p' < "$mf"`
     # Find all dependency output files, they are included files with
     # $(DEPDIR) in their names.  We invoke sed twice because it is the

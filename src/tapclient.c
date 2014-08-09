@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/socket.h>
 
 #include "include/client.h"
-#include <framework.h>
+#include <dtsapp.h>
 
 static int connect_socket(char *sock) {
 	struct sockaddr_un	adr;
