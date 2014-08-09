@@ -188,7 +188,7 @@ static void stoptap(void *data) {
 		}
 		objunref(socket);
 	}
-	remove_bucket_loop(bloop);
+	objunref(bloop);
 
 	/*close the tap*/
 	if (virt) {
@@ -329,7 +329,7 @@ static void *mainloop(void *data) {
 			}
 			objunref(tlsock);
 		}
-		remove_bucket_loop(bloop);
+		objunref(bloop);
 	}
 
 	/*remove ref's*/
