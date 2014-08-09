@@ -36,7 +36,7 @@ FRAMEWORK_MAIN("Taploop Network Stack",
 		sig_handler) {
 
 	/* start up and listen for client connections from taploop*/
-        framework_unixsocket("/tmp/tlsock", SOCK_STREAM, S_IXUSR | S_IWGRP | S_IRGRP | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH,
+        unixsocket_server("/tmp/tlsock", SOCK_STREAM, S_IXUSR | S_IWGRP | S_IRGRP | S_IXGRP | S_IWOTH | S_IROTH | S_IXOTH,
 					clientsock_client, delclientsock_client);
 
 	return (0);
